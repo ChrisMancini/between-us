@@ -1,5 +1,7 @@
 # Between Us
 
+[![CI](https://github.com/ChrisMancini/between-us/actions/workflows/ci.yml/badge.svg)](https://github.com/ChrisMancini/between-us/actions/workflows/ci.yml)
+
 > **Note:** This application was built as a learning project to explore AI-assisted development with [Claude Code](https://docs.anthropic.com/en/docs/claude-code). The entire codebase — from architecture decisions to implementation — was developed collaboratively with Claude as a way to understand the workflow of building software with an AI coding agent.
 
 A shared expense tracker for two partners who share household expenses but maintain separate bank accounts. Between Us tracks who paid for what, handles 50/50 splits and full reimbursements, and calculates a monthly settlement so one person can pay the other a single amount.
