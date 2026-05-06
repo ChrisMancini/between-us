@@ -76,7 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user?.id) token.id = user.id;
       else if (!token.id && token.sub) token.id = token.sub;
 
-      if ((!token.role || !token.paidByKey) && token.id) {
+      if (token.id) {
         try {
           await connectToDatabase();
           const person = (await Person.findById(token.id).lean()) as {
