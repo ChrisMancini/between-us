@@ -1,10 +1,14 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import type { SerializedExpense } from "@/lib/models/expense";
+import type { SerializedCategory } from "@/lib/models/category";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
+import { EditExpenseDialog } from "./edit-expense-dialog";
 
 function formatAmount(cents: number) {
   return (cents / 100).toLocaleString("en-US", {
@@ -26,9 +30,19 @@ interface ExpenseListProps {
   expenses: SerializedExpense[];
   closedMonths: Set<string>;
   isFiltered?: boolean;
+  isAdmin?: boolean;
+  categories?: SerializedCategory[];
+  closedMonthsList?: string[];
 }
 
-export function ExpenseList({ expenses, closedMonths, isFiltered = false }: ExpenseListProps) {
+export function ExpenseList({
+  expenses,
+  closedMonths,
+  isFiltered = false,
+  isAdmin = false,
+  categories,
+  closedMonthsList,
+}: ExpenseListProps) {
   const { personMap } = usePersons();
 
   if (expenses.length === 0) {
@@ -62,6 +76,7 @@ export function ExpenseList({ expenses, closedMonths, isFiltered = false }: Expe
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Amount</th>
+            {isAdmin && <th className="w-12" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -98,6 +113,26 @@ export function ExpenseList({ expenses, closedMonths, isFiltered = false }: Expe
               <td className="px-4 py-3 text-right font-semibold tabular-nums text-foreground">
                 {formatAmount(e.amount)}
               </td>
+              {isAdmin && (
+                <td className="px-2 py-3">
+                  {!isSettled && (
+                    <EditExpenseDialog
+                      expense={e}
+                      categories={categories!}
+                      closedMonths={closedMonthsList!}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          className="text-muted-foreground"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      }
+                    />
+                  )}
+                </td>
+              )}
             </tr>
             );
           })}

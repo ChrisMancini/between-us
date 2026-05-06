@@ -28,6 +28,7 @@ interface PageProps {
 export default async function ExpensesPage({ searchParams }: PageProps) {
   const session = await auth();
   const paidBy = session?.user?.paidByKey ?? "";
+  const isAdmin = session?.user?.role === "admin";
 
   const params = await searchParams;
   const now = new Date();
@@ -161,6 +162,9 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
         expenses={expenses}
         closedMonths={closedMonths}
         isFiltered={isFiltered}
+        isAdmin={isAdmin}
+        categories={categories}
+        closedMonthsList={[...closedMonths]}
       />
     </div>
   );
