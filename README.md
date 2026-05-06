@@ -97,8 +97,10 @@ Two authentication methods are available, chosen during initial setup and change
 ### Admin
 
 - Category management: add, edit, reorder, and delete expense categories
-- CSV format management: define column mappings for different credit card CSV exports  
+- CSV format management: define column mappings for different credit card CSV exports
+- People management: view people and swap admin/user roles
 - Authentication settings: switch between person selector and OAuth, manage provider and email mappings
+- Edit unsettled expenses (all fields except payer) from the expense list
 - Admin-only access enforced at both the UI and API level
 
 ## Tech Stack

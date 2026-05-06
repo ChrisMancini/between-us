@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const adminNavItems = [
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/csv-formats", label: "CSV Formats" },
+  { href: "/admin/people", label: "People" },
   { href: "/admin/auth", label: "Auth" },
 ];
 
