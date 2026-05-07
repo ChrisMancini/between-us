@@ -10,6 +10,7 @@ const config: Config = {
   testMatch: ["**/__tests__/**/*.test.ts"],
   collectCoverageFrom: [
     "src/lib/**/*.ts",
+    "src/app/api/**/route.ts",
     "!src/lib/**/__tests__/**",
     "!src/lib/models/**",
     "!src/lib/validations/**",
