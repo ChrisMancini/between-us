@@ -4,14 +4,14 @@ import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
 import { Category } from "@/lib/models/category";
 import { expenseUpdateApiSchema } from "@/lib/validations/expense";
-import { withAdmin } from "@/lib/auth-guard";
+import { withAuth, canModifyExpense } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
+export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const { id } = await context.params;
   if (!mongoose.isValidObjectId(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
@@ -38,6 +38,10 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
   const existing = await Expense.findById(id);
   if (!existing) {
     return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+  }
+
+  if (!canModifyExpense(session, existing.paidBy)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const settlementError = await assertMonthsOpen([existing.date, date]);

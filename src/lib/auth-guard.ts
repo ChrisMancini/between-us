@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import type { Session } from "next-auth";
 
+export function canModifyExpense(session: Session, expensePaidBy: string): boolean {
+  return session.user.role === "admin" || session.user.paidByKey === expensePaidBy;
+}
+
 export function withAuth(
   handler: (req: NextRequest, session: Session) => Promise<NextResponse>
 ): (req: NextRequest) => Promise<NextResponse>;
