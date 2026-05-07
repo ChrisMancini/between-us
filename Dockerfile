@@ -1,9 +1,9 @@
-  FROM node:20-slim AS base
+  FROM node:22-slim AS base
 
   FROM base AS builder
   WORKDIR /app
   RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
-  RUN corepack enable
+  RUN corepack enable && corepack prepare pnpm@10 --activate
   COPY package.json package-lock.json ./
   RUN pnpm import && pnpm install --frozen-lockfile
   COPY . .
