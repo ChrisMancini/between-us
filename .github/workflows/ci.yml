@@ -27,3 +27,14 @@ jobs:
 
       - name: Run tests
         run: npm run test:ci
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t between-us:ci .

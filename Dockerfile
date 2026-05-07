@@ -7,6 +7,9 @@
   COPY package.json package-lock.json ./
   RUN pnpm import && pnpm install --frozen-lockfile
   COPY . .
+  # Next.js requires these at build time; real values are provided at runtime via docker run --env-file
+  ENV MONGODB_URI=mongodb://placeholder:27017/placeholder
+  ENV AUTH_SECRET=build-placeholder
   RUN pnpm run build
   
 
