@@ -18,7 +18,7 @@ A shared expense tracker for two partners who share household expenses but maint
 - Log expenses with category, amount, merchant/location, and optional notes
 - Assign each expense to the person who paid
 - Mark expenses as 50/50 split or full reimbursement
-- Edit and delete expenses
+- Edit unsettled expenses you created (all fields except payer)
 - Filter expenses by month, category, payer, and merchant search
 - Month-by-month expense list with category and payer badges
 
@@ -100,7 +100,6 @@ Two authentication methods are available, chosen during initial setup and change
 - CSV format management: define column mappings for different credit card CSV exports
 - People management: view people and swap admin/user roles
 - Authentication settings: switch between person selector and OAuth, manage provider and email mappings
-- Edit unsettled expenses (all fields except payer) from the expense list
 - Admin-only access enforced at both the UI and API level
 
 ## Tech Stack

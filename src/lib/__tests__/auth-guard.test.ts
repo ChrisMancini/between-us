@@ -6,13 +6,13 @@ jest.mock("@/auth", () => ({
 }));
 
 import { auth } from "@/auth";
-import { withAuth, withAdmin } from "@/lib/auth-guard";
+import { withAuth, withAdmin, canModifyExpense } from "@/lib/auth-guard";
 
 const mockAuth = auth as unknown as jest.Mock<Promise<Session | null>>;
 
-function makeSession(role: "admin" | "user" = "user"): Session {
+function makeSession(role: "admin" | "user" = "user", paidByKey = "chris"): Session {
   return {
-    user: { id: "user-1", role, name: "Test" },
+    user: { id: "user-1", role, paidByKey, name: "Test" },
     expires: "2099-01-01",
   } as Session;
 }
@@ -104,5 +104,27 @@ describe("withAdmin", () => {
     const req = makeRequest();
     await wrapped(req, context);
     expect(handler).toHaveBeenCalledWith(req, session, context);
+  });
+});
+
+describe("canModifyExpense", () => {
+  it("returns true when user is the expense owner", () => {
+    const session = makeSession("user", "john");
+    expect(canModifyExpense(session, "john")).toBe(true);
+  });
+
+  it("returns false when user is not the owner", () => {
+    const session = makeSession("user", "john");
+    expect(canModifyExpense(session, "jane")).toBe(false);
+  });
+
+  it("returns true when user is admin regardless of ownership", () => {
+    const session = makeSession("admin", "john");
+    expect(canModifyExpense(session, "jane")).toBe(true);
+  });
+
+  it("returns true when user is both admin and owner", () => {
+    const session = makeSession("admin", "john");
+    expect(canModifyExpense(session, "john")).toBe(true);
   });
 });

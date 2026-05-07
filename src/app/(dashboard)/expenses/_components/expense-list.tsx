@@ -30,7 +30,7 @@ interface ExpenseListProps {
   expenses: SerializedExpense[];
   closedMonths: Set<string>;
   isFiltered?: boolean;
-  isAdmin?: boolean;
+  currentUserKey?: string;
   categories?: SerializedCategory[];
   closedMonthsList?: string[];
 }
@@ -39,7 +39,7 @@ export function ExpenseList({
   expenses,
   closedMonths,
   isFiltered = false,
-  isAdmin = false,
+  currentUserKey,
   categories,
   closedMonthsList,
 }: ExpenseListProps) {
@@ -76,7 +76,7 @@ export function ExpenseList({
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Amount</th>
-            {isAdmin && <th className="w-12" />}
+            {currentUserKey && <th className="w-12" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -113,9 +113,9 @@ export function ExpenseList({
               <td className="px-4 py-3 text-right font-semibold tabular-nums text-foreground">
                 {formatAmount(e.amount)}
               </td>
-              {isAdmin && (
+              {currentUserKey && (
                 <td className="px-2 py-3">
-                  {!isSettled && (
+                  {!isSettled && e.paidBy === currentUserKey && (
                     <EditExpenseDialog
                       expense={e}
                       categories={categories!}
