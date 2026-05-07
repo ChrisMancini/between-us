@@ -19,6 +19,7 @@ A shared expense tracker for two partners who share household expenses but maint
 - Assign each expense to the person who paid
 - Mark expenses as 50/50 split or full reimbursement
 - Edit unsettled expenses you created (all fields except payer)
+- Delete unsettled expenses you created, with confirmation dialog
 - Filter expenses by month, category, payer, and merchant search
 - Month-by-month expense list with category and payer badges
 
