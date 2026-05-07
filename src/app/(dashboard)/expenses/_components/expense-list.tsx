@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedCategory } from "@/lib/models/category";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
 import { EditExpenseDialog } from "./edit-expense-dialog";
+import { DeleteExpenseDialog } from "./delete-expense-dialog";
 
 function formatAmount(cents: number) {
   return (cents / 100).toLocaleString("en-US", {
@@ -44,6 +46,7 @@ export function ExpenseList({
   closedMonthsList,
 }: ExpenseListProps) {
   const { personMap } = usePersons();
+  const [deleteTarget, setDeleteTarget] = useState<SerializedExpense | null>(null);
 
   if (expenses.length === 0) {
     return (
@@ -76,7 +79,7 @@ export function ExpenseList({
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Amount</th>
-            {currentUserKey && <th className="w-12" />}
+            {currentUserKey && <th className="w-20" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -116,20 +119,30 @@ export function ExpenseList({
               {currentUserKey && (
                 <td className="px-2 py-3">
                   {!isSettled && e.paidBy === currentUserKey && (
-                    <EditExpenseDialog
-                      expense={e}
-                      categories={categories!}
-                      closedMonths={closedMonthsList!}
-                      trigger={
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="text-muted-foreground"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      }
-                    />
+                    <div className="flex items-center gap-0.5">
+                      <EditExpenseDialog
+                        expense={e}
+                        categories={categories!}
+                        closedMonths={closedMonthsList!}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        }
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleteTarget(e)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
                 </td>
               )}
@@ -138,6 +151,17 @@ export function ExpenseList({
           })}
         </tbody>
       </table>
+
+      {deleteTarget && (
+        <DeleteExpenseDialog
+          expenseId={deleteTarget._id}
+          expenseWhere={deleteTarget.where}
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }
