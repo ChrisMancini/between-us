@@ -7,6 +7,7 @@ import { Expense } from "@/lib/models/expense";
 import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { logActivity } from "@/lib/activity-logger";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -80,6 +81,12 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
       splitType: item.splitType,
     }))
   );
+
+  await logActivity(session.user.paidByKey, "recurring_apply", `applied "${template.name}" (${expenses.length} expenses)`, {
+    templateName: template.name,
+    count: expenses.length,
+    date,
+  });
 
   return NextResponse.json(
     { count: expenses.length },

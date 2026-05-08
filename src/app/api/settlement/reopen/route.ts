@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Settlement } from "@/lib/models/settlement";
 import { withAuth } from "@/lib/auth-guard";
+import { logActivity } from "@/lib/activity-logger";
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const month = parseInt(body.month);
   const year = parseInt(body.year);
@@ -40,6 +41,12 @@ export const POST = withAuth(async (req) => {
     },
     { strict: false }
   );
+
+  const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  await logActivity(session.user.paidByKey, "settlement_reopen", `reopened ${monthName} settlement`, {
+    month,
+    year,
+  });
 
   return NextResponse.json({ ok: true });
 });

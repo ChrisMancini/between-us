@@ -25,12 +25,14 @@ jest.mock("@/lib/settlement-calc", () => ({
 jest.mock("@/lib/persons", () => ({
   getPersons: jest.fn(),
 }));
+jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import { calculateSettlement } from "@/lib/settlement-calc";
 import { getPersons } from "@/lib/persons";
+import { logActivity } from "@/lib/activity-logger";
 import { POST } from "../route";
 
 const mockAuth = asMock(auth);
@@ -102,6 +104,12 @@ describe("POST /api/settlement", () => {
     );
     const body = await expectStatus(res, 201);
     expect(body.settlement.totalOwed).toBe(5000);
+    expect(logActivity).toHaveBeenCalledWith(
+      "john",
+      "settlement_close",
+      expect.stringContaining("closed"),
+      expect.objectContaining({ month: 4, year: 2026 })
+    );
   });
 
   it("returns 200 when re-closing an open settlement", async () => {

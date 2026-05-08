@@ -6,6 +6,8 @@ import { Category } from "@/lib/models/category";
 import { expenseApiSchema } from "@/lib/validations/expense";
 import { withAuth } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { logActivity } from "@/lib/activity-logger";
+import { formatCurrency } from "@/lib/utils";
 
 export const GET = withAuth(async () => {
   await connectToDatabase();
@@ -47,7 +49,7 @@ export const GET = withAuth(async () => {
   });
 });
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const parsed = expenseApiSchema.safeParse(body);
 
@@ -82,6 +84,15 @@ export const POST = withAuth(async (req) => {
     amount,
     where,
     notes,
+    splitType,
+  });
+
+  await logActivity(session.user.paidByKey, "expense_create", `added ${formatCurrency(amount)} at ${where}`, {
+    expenseId: expense._id.toString(),
+    amount,
+    where,
+    categoryName: category.name,
+    paidBy,
     splitType,
   });
 

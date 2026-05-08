@@ -11,9 +11,11 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/settlement", () => ({
   Settlement: { findOne: jest.fn(), findByIdAndUpdate: jest.fn() },
 }));
+jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
 
 import { auth } from "@/auth";
 import { Settlement } from "@/lib/models/settlement";
+import { logActivity } from "@/lib/activity-logger";
 import { POST } from "../route";
 
 const mockAuth = asMock(auth);
@@ -70,5 +72,11 @@ describe("POST /api/settlement/reopen", () => {
     );
     const body = await expectStatus(res, 200);
     expect(body.ok).toBe(true);
+    expect(logActivity).toHaveBeenCalledWith(
+      "john",
+      "settlement_reopen",
+      expect.stringContaining("reopened"),
+      expect.objectContaining({ month: 4, year: 2026 })
+    );
   });
 });

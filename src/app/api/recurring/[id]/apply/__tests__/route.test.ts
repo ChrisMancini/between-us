@@ -27,6 +27,7 @@ jest.mock("@/lib/validations/recurring-template", () => ({
   applyTemplateSchema: { safeParse: jest.fn() },
 }));
 jest.mock("@/lib/settlement-guard", () => ({ assertMonthsOpen: jest.fn() }));
+jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
 
 import { auth } from "@/auth";
 import { RecurringTemplate } from "@/lib/models/recurring-template";
@@ -34,6 +35,7 @@ import { Category } from "@/lib/models/category";
 import { Expense } from "@/lib/models/expense";
 import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { logActivity } from "@/lib/activity-logger";
 import { POST } from "../route";
 
 const mockAuth = asMock(auth);
@@ -145,5 +147,11 @@ describe("POST /api/recurring/[id]/apply", () => {
     const res = await POST(makeJsonRequest("/api/recurring/apply", {}), makeIdContext());
     const body = await expectStatus(res, 201);
     expect(body.count).toBe(1);
+    expect(logActivity).toHaveBeenCalledWith(
+      "john",
+      "recurring_apply",
+      expect.stringContaining("applied"),
+      expect.objectContaining({ count: 1 })
+    );
   });
 });

@@ -3,6 +3,7 @@ import { Receipt } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { AppFooter } from "@/components/app-footer";
 import { NavLinks } from "@/components/nav-links";
+import { ActivityPoller } from "@/components/activity-poller";
 import { PersonsProvider } from "@/components/persons-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,10 @@ export default async function DashboardLayout({
       </header>
 
       <main className="flex-1 px-6 py-8 max-w-screen-xl mx-auto w-full">
-        <PersonsProvider persons={persons}>{children}</PersonsProvider>
+        <PersonsProvider persons={persons}>
+          <ActivityPoller />
+          {children}
+        </PersonsProvider>
       </main>
 
       <AppFooter />

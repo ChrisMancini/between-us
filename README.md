@@ -45,6 +45,15 @@ A shared expense tracker for two partners who share household expenses but maint
 - Apply a template to quickly create expenses for a given month with editable amounts
 - Templates are scoped per user
 
+### Activity Feed
+
+- See what your partner has been doing — every expense, edit, deletion, settlement, template application, and CSV import is logged
+- Dashboard widget shows the 5 most recent partner activities at a glance
+- Dedicated `/activity` page with full history and cursor-based pagination
+- Filter toggle: view partner-only activity (default) or switch to all activity
+- Toast notifications — when your partner does something, a toast pops up within 30 seconds (polling-based, no WebSocket infrastructure needed)
+- Each activity shows an action icon, person badge, summary text, and relative timestamp
+
 ### CSV Import
 
 - Import expenses directly from credit card CSV exports (Citi, Chase, or any card)

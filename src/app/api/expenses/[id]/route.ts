@@ -7,6 +7,8 @@ import { expenseUpdateApiSchema } from "@/lib/validations/expense";
 import { withAuth, canModifyExpense } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { Settlement } from "@/lib/models/settlement";
+import { logActivity } from "@/lib/activity-logger";
+import { formatCurrency } from "@/lib/utils";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -70,6 +72,14 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
     sortOrder: number;
   };
 
+  await logActivity(session.user.paidByKey, "expense_edit", `edited ${formatCurrency(amount)} at ${where}`, {
+    expenseId: id,
+    amount,
+    where,
+    categoryName: cat.name,
+    paidBy: updated.paidBy,
+  });
+
   return NextResponse.json({
     expense: {
       _id: updated._id.toString(),
@@ -120,7 +130,16 @@ export const DELETE = withAuth<RouteContext>(async (_req, session, context) => {
     );
   }
 
+  const category = await Category.findById(existing.category).lean();
+
   await Expense.findByIdAndDelete(id);
+
+  await logActivity(session.user.paidByKey, "expense_delete", `deleted ${formatCurrency(existing.amount)} at ${existing.where}`, {
+    amount: existing.amount,
+    where: existing.where,
+    categoryName: category?.name ?? "Unknown",
+    paidBy: existing.paidBy,
+  });
 
   return NextResponse.json({ success: true });
 });

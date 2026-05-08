@@ -5,8 +5,9 @@ import { Category } from "@/lib/models/category";
 import { csvImportApiSchema } from "@/lib/validations/csv-import";
 import { withAuth } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { logActivity } from "@/lib/activity-logger";
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const parsed = csvImportApiSchema.safeParse(body);
 
@@ -49,6 +50,10 @@ export const POST = withAuth(async (req) => {
   }));
 
   const result = await Expense.insertMany(docs);
+
+  await logActivity(session.user.paidByKey, "csv_import", `imported ${result.length} expenses from CSV`, {
+    count: result.length,
+  });
 
   return NextResponse.json({ imported: result.length }, { status: 201 });
 });

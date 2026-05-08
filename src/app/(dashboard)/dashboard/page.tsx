@@ -10,10 +10,12 @@ import {
   calculateSettlement,
   type SettlementExpenseRow,
 } from "@/lib/settlement-calc";
+import { Activity, type IActivity } from "@/lib/models/activity";
 import { SpendingSummaryCard } from "../reports/_components/spending-summary-card";
 import { SettlementStatusCard } from "./_components/settlement-status-card";
 import { RecentExpenses } from "./_components/recent-expenses";
 import { QuickActions } from "./_components/quick-actions";
+import { ActivityWidget } from "./_components/activity-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,7 @@ export default async function DashboardPage() {
     expenseMonths,
     closedSettlements,
     currentMonthExpensesRaw,
+    recentActivitiesRaw,
   ] = await Promise.all([
     // 1. Current month spending by category × person
     Expense.aggregate<{
@@ -117,6 +120,12 @@ export default async function DashboardPage() {
       .sort({ date: 1, createdAt: 1 })
       .populate("category")
       .lean(),
+
+    // 7. Recent partner activity for widget
+    Activity.find({ actorKey: { $ne: session.user.paidByKey } })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean<IActivity[]>(),
   ]);
 
   // ── Spending summary totals ───────────────────────────────────────────
@@ -234,6 +243,16 @@ export default async function DashboardPage() {
       };
     });
 
+  // ── Recent partner activity ────────────────────────────────────────────
+  const recentActivities = recentActivitiesRaw.map((a) => ({
+    _id: a._id.toString(),
+    action: a.action,
+    actorKey: a.actorKey,
+    summary: a.summary,
+    metadata: a.metadata ?? {},
+    createdAt: (a.createdAt as Date).toISOString(),
+  }));
+
   const hasExpenses = totalSpending > 0;
   const label = monthLabel(month, year);
 
@@ -281,6 +300,8 @@ export default async function DashboardPage() {
             netAmount={netAmount}
             unsettledMonthCount={unsettledMonthCount}
           />
+
+          <ActivityWidget activities={recentActivities} />
 
           <QuickActions />
         </div>
