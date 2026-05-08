@@ -23,12 +23,14 @@ jest.mock("@/lib/validations/expense", () => ({
   expenseApiSchema: { safeParse: jest.fn() },
 }));
 jest.mock("@/lib/settlement-guard", () => ({ assertMonthsOpen: jest.fn() }));
+jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
 import { Category } from "@/lib/models/category";
 import { expenseApiSchema } from "@/lib/validations/expense";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { logActivity } from "@/lib/activity-logger";
 import { POST } from "../route";
 
 const mockAuth = asMock(auth);
@@ -123,5 +125,11 @@ describe("POST /api/expenses", () => {
     const body = await expectStatus(res, 201);
     expect(body.expense.where).toBe("Publix");
     expect(body.expense.category.name).toBe("Groceries");
+    expect(logActivity).toHaveBeenCalledWith(
+      "john",
+      "expense_create",
+      expect.stringContaining("Publix"),
+      expect.objectContaining({ amount: 5000, where: "Publix" })
+    );
   });
 });

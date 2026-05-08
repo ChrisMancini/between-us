@@ -9,6 +9,7 @@ const baseNavItems = [
   { href: "/expenses",   label: "Expenses"   },
   { href: "/reports",    label: "Reports"    },
   { href: "/settlement", label: "Settlement" },
+  { href: "/activity",   label: "Activity"   },
   { href: "/recurring",  label: "Recurring"  },
 ];
 

@@ -6,6 +6,8 @@ import { Settlement } from "@/lib/models/settlement";
 import { calculateSettlement, type SettlementExpenseRow } from "@/lib/settlement-calc";
 import { getPersons } from "@/lib/persons";
 import { withAuth } from "@/lib/auth-guard";
+import { logActivity } from "@/lib/activity-logger";
+import { formatCurrency } from "@/lib/utils";
 
 function serializeExpenseRow(e: Record<string, unknown>): SettlementExpenseRow | null {
   const cat = e.category as Record<string, unknown> | null;
@@ -87,7 +89,7 @@ export const GET = withAuth(async (req) => {
   });
 });
 
-export const POST = withAuth(async (req) => {
+export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const month = parseInt(body.month);
   const year = parseInt(body.year);
@@ -158,6 +160,20 @@ export const POST = withAuth(async (req) => {
       closedAt: new Date(),
     });
   }
+
+  const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const owedByName = owedBy === p1.key ? p1.displayName : p2.displayName;
+  const owedToName = owedTo === p1.key ? p1.displayName : p2.displayName;
+  const settlementSummary = breakdown.netOwedBy === "even"
+    ? `closed ${monthName} — even`
+    : `closed ${monthName} — ${owedByName} owes ${owedToName} ${formatCurrency(breakdown.netAmount)}`;
+  await logActivity(session.user.paidByKey, "settlement_close", settlementSummary, {
+    month,
+    year,
+    totalOwed: breakdown.netAmount,
+    owedBy,
+    owedTo,
+  });
 
   return NextResponse.json(
     {

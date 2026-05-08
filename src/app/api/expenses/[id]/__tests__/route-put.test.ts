@@ -29,12 +29,14 @@ jest.mock("@/lib/validations/expense", () => ({
   expenseUpdateApiSchema: { safeParse: jest.fn() },
 }));
 jest.mock("@/lib/settlement-guard", () => ({ assertMonthsOpen: jest.fn() }));
+jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
 import { Category } from "@/lib/models/category";
 import { expenseUpdateApiSchema } from "@/lib/validations/expense";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { logActivity } from "@/lib/activity-logger";
 import { PUT } from "../route";
 
 const mockAuth = asMock(auth);
@@ -153,6 +155,12 @@ describe("PUT /api/expenses/[id]", () => {
     const res = await PUT(putRequest(), makeIdContext());
     const body = await expectStatus(res, 200);
     expect(body.expense.where).toBe("Costco");
+    expect(logActivity).toHaveBeenCalledWith(
+      "john",
+      "expense_edit",
+      expect.stringContaining("Costco"),
+      expect.objectContaining({ expenseId: VALID_ID, amount: 6000 })
+    );
   });
 
   it("returns 200 when admin edits another user's expense", async () => {

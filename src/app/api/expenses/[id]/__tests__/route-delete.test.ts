@@ -32,7 +32,7 @@ jest.mock("@/lib/models/settlement", () => ({
 }));
 
 jest.mock("@/lib/models/category", () => ({
-  Category: {},
+  Category: { findById: jest.fn() },
 }));
 
 jest.mock("@/lib/validations/expense", () => ({
@@ -42,10 +42,13 @@ jest.mock("@/lib/validations/expense", () => ({
 jest.mock("@/lib/settlement-guard", () => ({
   assertMonthsOpen: jest.fn(),
 }));
+jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
+import { Category } from "@/lib/models/category";
 import { Settlement } from "@/lib/models/settlement";
+import { logActivity } from "@/lib/activity-logger";
 import { DELETE } from "../route";
 
 const mockAuth = asMock(auth);
@@ -104,12 +107,21 @@ describe("DELETE /api/expenses/[id]", () => {
     mockSettlementFindOne.mockReturnValue({
       lean: jest.fn().mockResolvedValue(null),
     });
+    asMock(Category.findById).mockReturnValue({
+      lean: jest.fn().mockResolvedValue({ name: "Groceries" }),
+    });
     mockFindByIdAndDelete.mockResolvedValue(null);
 
     const res = await DELETE(deleteRequest(), makeIdContext());
     const body = await expectStatus(res, 200);
     expect(body).toEqual({ success: true });
     expect(mockFindByIdAndDelete).toHaveBeenCalledWith(VALID_ID);
+    expect(logActivity).toHaveBeenCalledWith(
+      "john",
+      "expense_delete",
+      expect.stringContaining("Publix"),
+      expect.objectContaining({ amount: 5000, where: "Publix" })
+    );
   });
 
   it("allows admin to delete another user's expense", async () => {
@@ -117,6 +129,9 @@ describe("DELETE /api/expenses/[id]", () => {
     mockFindById.mockResolvedValue(makeExpense({ paidBy: "jane" }));
     mockSettlementFindOne.mockReturnValue({
       lean: jest.fn().mockResolvedValue(null),
+    });
+    asMock(Category.findById).mockReturnValue({
+      lean: jest.fn().mockResolvedValue({ name: "Groceries" }),
     });
     mockFindByIdAndDelete.mockResolvedValue(null);
 

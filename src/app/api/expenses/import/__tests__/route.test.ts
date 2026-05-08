@@ -23,12 +23,14 @@ jest.mock("@/lib/validations/csv-import", () => ({
   csvImportApiSchema: { safeParse: jest.fn() },
 }));
 jest.mock("@/lib/settlement-guard", () => ({ assertMonthsOpen: jest.fn() }));
+jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
 import { Category } from "@/lib/models/category";
 import { csvImportApiSchema } from "@/lib/validations/csv-import";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { logActivity } from "@/lib/activity-logger";
 import { POST } from "../route";
 
 const mockAuth = asMock(auth);
@@ -98,5 +100,11 @@ describe("POST /api/expenses/import", () => {
     const res = await POST(makeJsonRequest("/api/expenses/import", {}));
     const body = await expectStatus(res, 201);
     expect(body.imported).toBe(1);
+    expect(logActivity).toHaveBeenCalledWith(
+      "john",
+      "csv_import",
+      expect.stringContaining("imported"),
+      expect.objectContaining({ count: 1 })
+    );
   });
 });
