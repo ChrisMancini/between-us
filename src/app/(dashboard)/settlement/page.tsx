@@ -340,6 +340,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
       {/* Readiness status */}
       {!isClosed && breakdown.deferredExpenses.length > 0 && (
         <ReadinessStatus
+          key={`${year}-${month}`}
           month={month}
           year={year}
           doneBy={readiness?.doneBy ?? []}
