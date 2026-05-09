@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
+import { MonthReadiness } from "@/lib/models/month-readiness";
 import { calculateSettlement, type SettlementExpenseRow } from "@/lib/settlement-calc";
 import { getPersons } from "@/lib/persons";
 import { withAuth } from "@/lib/auth-guard";
@@ -167,6 +168,8 @@ export const POST = withAuth(async (req, session) => {
   const settlementSummary = breakdown.netOwedBy === "even"
     ? `closed ${monthName} — even`
     : `closed ${monthName} — ${owedByName} owes ${owedToName} ${formatCurrency(breakdown.netAmount)}`;
+  await MonthReadiness.deleteOne({ month, year });
+
   await logActivity(session.user.paidByKey, "settlement_close", settlementSummary, {
     month,
     year,

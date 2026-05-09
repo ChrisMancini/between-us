@@ -8,6 +8,8 @@ export const ACTIVITY_ACTIONS = [
   "settlement_reopen",
   "recurring_apply",
   "csv_import",
+  "expenses_done",
+  "expenses_undone",
 ] as const;
 
 export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];

@@ -43,6 +43,7 @@ jest.mock("@/lib/settlement-guard", () => ({
   assertMonthsOpen: jest.fn(),
 }));
 jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
+jest.mock("@/lib/readiness-reset", () => ({ resetReadinessForMonths: jest.fn() }));
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";

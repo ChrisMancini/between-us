@@ -7,6 +7,7 @@ import {
   Pencil,
   Trash2,
   CheckCircle2,
+  Circle,
   RotateCcw,
   Repeat,
   FileUp,
@@ -27,6 +28,8 @@ const ACTION_ICONS: Record<string, typeof Plus> = {
   settlement_reopen: RotateCcw,
   recurring_apply: Repeat,
   csv_import: FileUp,
+  expenses_done: CheckCircle2,
+  expenses_undone: Circle,
 };
 
 const ACTION_COLORS: Record<string, string> = {
@@ -37,6 +40,8 @@ const ACTION_COLORS: Record<string, string> = {
   settlement_reopen: "text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40",
   recurring_apply: "text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/40",
   csv_import: "text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/40",
+  expenses_done: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
+  expenses_undone: "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40",
 };
 
 interface ActivityFeedProps {

@@ -12,6 +12,9 @@ jest.mock("@/lib/models/settlement", () => ({
   Settlement: { findOne: jest.fn(), findByIdAndUpdate: jest.fn() },
 }));
 jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
+jest.mock("@/lib/models/month-readiness", () => ({
+  MonthReadiness: { deleteOne: jest.fn().mockResolvedValue({}) },
+}));
 
 import { auth } from "@/auth";
 import { Settlement } from "@/lib/models/settlement";
