@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import mongoose from "mongoose";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
@@ -277,9 +278,17 @@ export default async function ReportsPage({ searchParams }: PageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Spending breakdown and trends.
-          </p>
+          <div className="flex items-center gap-3 mt-0.5">
+            <p className="text-sm text-muted-foreground">
+              Spending breakdown and trends.
+            </p>
+            <Link
+              href={`/reports/annual?year=${year}`}
+              className="text-sm text-primary/70 hover:text-primary transition-colors"
+            >
+              Year in Review &rarr;
+            </Link>
+          </div>
         </div>
         <MonthNav month={month} year={year} basePath="/reports" />
       </div>
