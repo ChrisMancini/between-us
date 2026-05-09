@@ -17,6 +17,8 @@ import type { SerializedPerson } from "@/lib/models/person";
 import { MonthNav } from "@/components/month-nav";
 import { CloseMonthDialog } from "./_components/close-month-dialog";
 import { ReopenMonthDialog } from "./_components/reopen-month-dialog";
+import { ReadinessStatus } from "./_components/readiness-status";
+import { MonthReadiness } from "@/lib/models/month-readiness";
 import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +60,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  const [existing, reopenedSettlements, expenseMonths, closedSettlements] =
+  const [existing, reopenedSettlements, expenseMonths, closedSettlements, readiness] =
     await Promise.all([
       Settlement.findOne({ month, year }).lean(),
       Settlement.find(
@@ -86,6 +88,8 @@ export default async function SettlementPage({ searchParams }: PageProps) {
         { status: "closed" },
         { month: 1, year: 1, _id: 0 }
       ).lean(),
+      // Readiness flags for this month
+      MonthReadiness.findOne({ month, year }).lean(),
     ]);
 
   const closedSet = new Set(
@@ -217,6 +221,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
                 newTotalOwed={breakdown.netAmount}
                 newOwedBy={breakdown.netOwedBy}
                 previous={previousSettlement}
+                disabled={(readiness?.doneBy?.length ?? 0) < 2}
               />
             )
           )}
@@ -330,6 +335,17 @@ export default async function SettlementPage({ searchParams }: PageProps) {
             Closed
           </Badge>
         </div>
+      )}
+
+      {/* Readiness status */}
+      {!isClosed && breakdown.deferredExpenses.length > 0 && (
+        <ReadinessStatus
+          month={month}
+          year={year}
+          doneBy={readiness?.doneBy ?? []}
+          persons={persons}
+          currentUserKey={session.user.paidByKey}
+        />
       )}
 
       {/* Net result card */}

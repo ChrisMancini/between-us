@@ -6,6 +6,7 @@ import { csvImportApiSchema } from "@/lib/validations/csv-import";
 import { withAuth } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
+import { resetReadinessForMonths } from "@/lib/readiness-reset";
 
 export const POST = withAuth(async (req, session) => {
   const body = await req.json();
@@ -50,6 +51,8 @@ export const POST = withAuth(async (req, session) => {
   }));
 
   const result = await Expense.insertMany(docs);
+
+  await resetReadinessForMonths(session.user.paidByKey, expenses.map((e) => e.date));
 
   await logActivity(session.user.paidByKey, "csv_import", `imported ${result.length} expenses from CSV`, {
     count: result.length,

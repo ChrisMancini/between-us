@@ -214,6 +214,19 @@ export function makeCsvFormat(overrides?: Partial<{
   };
 }
 
+export function makeReadiness(overrides?: Partial<{
+  month: number;
+  year: number;
+  doneBy: string[];
+}>) {
+  return {
+    month: 4,
+    year: 2026,
+    doneBy: [],
+    ...overrides,
+  };
+}
+
 // --- Assertion Helpers ---
 
 export async function expectStatus(res: Response, status: number) {

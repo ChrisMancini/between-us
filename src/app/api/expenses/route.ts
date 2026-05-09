@@ -7,6 +7,7 @@ import { expenseApiSchema } from "@/lib/validations/expense";
 import { withAuth } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
+import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
 
 export const GET = withAuth(async () => {
@@ -86,6 +87,8 @@ export const POST = withAuth(async (req, session) => {
     notes,
     splitType,
   });
+
+  await resetReadinessForMonths(session.user.paidByKey, [date]);
 
   await logActivity(session.user.paidByKey, "expense_create", `added ${formatCurrency(amount)} at ${where}`, {
     expenseId: expense._id.toString(),

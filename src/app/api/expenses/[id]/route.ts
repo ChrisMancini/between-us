@@ -8,6 +8,7 @@ import { withAuth, canModifyExpense } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { Settlement } from "@/lib/models/settlement";
 import { logActivity } from "@/lib/activity-logger";
+import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
 
 interface RouteContext {
@@ -71,6 +72,8 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
     settlementType: string;
     sortOrder: number;
   };
+
+  await resetReadinessForMonths(session.user.paidByKey, [existing.date, date]);
 
   const changes: string[] = [];
   if (existing.amount !== amount) changes.push("amount");
@@ -144,6 +147,8 @@ export const DELETE = withAuth<RouteContext>(async (_req, session, context) => {
   const category = await Category.findById(existing.category).lean();
 
   await Expense.findByIdAndDelete(id);
+
+  await resetReadinessForMonths(session.user.paidByKey, [existing.date]);
 
   await logActivity(session.user.paidByKey, "expense_delete", `deleted ${formatCurrency(existing.amount)} at ${existing.where}`, {
     amount: existing.amount,

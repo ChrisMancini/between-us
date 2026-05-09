@@ -35,6 +35,7 @@ interface CloseMonthDialogProps {
   newTotalOwed: number;
   newOwedBy: string;
   previous?: PreviousSettlement;
+  disabled?: boolean;
 }
 
 export function CloseMonthDialog({
@@ -44,6 +45,7 @@ export function CloseMonthDialog({
   newTotalOwed,
   newOwedBy,
   previous,
+  disabled,
 }: CloseMonthDialogProps) {
   const router = useRouter();
   const { personMap } = usePersons();
@@ -119,7 +121,15 @@ export function CloseMonthDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="gap-2" />}>
+      <DialogTrigger
+        render={
+          <Button
+            className="gap-2"
+            disabled={disabled}
+            title={disabled ? "Both people must mark as done first" : undefined}
+          />
+        }
+      >
         <Lock className="h-4 w-4" />
         {isReclose ? "Re-close Month" : "Close Month"}
       </DialogTrigger>

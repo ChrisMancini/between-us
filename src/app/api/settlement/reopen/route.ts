@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Settlement } from "@/lib/models/settlement";
+import { MonthReadiness } from "@/lib/models/month-readiness";
 import { withAuth } from "@/lib/auth-guard";
 import { logActivity } from "@/lib/activity-logger";
 
@@ -41,6 +42,8 @@ export const POST = withAuth(async (req, session) => {
     },
     { strict: false }
   );
+
+  await MonthReadiness.deleteOne({ month, year });
 
   const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   await logActivity(session.user.paidByKey, "settlement_reopen", `reopened ${monthName} settlement`, {

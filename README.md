@@ -25,6 +25,9 @@ A shared expense tracker for two partners who share household expenses but maint
 
 ### Monthly Settlement
 
+- Ready-to-settle gate: both people must mark themselves as "done entering expenses" before the month can be closed
+- Expense changes (add, edit, delete, import, template apply) auto-reset the done flag for the affected month
+- Reopening a closed month resets both done flags
 - One-click month close calculates the net amount owed between partners
 - Separates expenses into "settled monthly" (deferred) and "settled immediately" (e.g. mortgage)
 - Reopen a closed month to add corrections, then re-close

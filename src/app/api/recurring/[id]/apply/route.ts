@@ -8,6 +8,7 @@ import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
+import { resetReadinessForMonths } from "@/lib/readiness-reset";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -81,6 +82,8 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
       splitType: item.splitType,
     }))
   );
+
+  await resetReadinessForMonths(session.user.paidByKey, [date]);
 
   await logActivity(session.user.paidByKey, "recurring_apply", `applied "${template.name}" (${expenses.length} expenses)`, {
     templateName: template.name,
