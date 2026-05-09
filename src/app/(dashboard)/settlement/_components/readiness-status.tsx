@@ -112,7 +112,7 @@ export function ReadinessStatus({
                 <button
                   onClick={handleToggle}
                   disabled={loading}
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-muted/60 disabled:opacity-50"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-muted/60 disabled:opacity-50 cursor-pointer"
                   title={isDone ? "Mark as not done" : "Mark as done"}
                 >
                   {loading ? (
