@@ -72,12 +72,23 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
     sortOrder: number;
   };
 
-  await logActivity(session.user.paidByKey, "expense_edit", `edited ${formatCurrency(amount)} at ${where}`, {
+  const changes: string[] = [];
+  if (existing.amount !== amount) changes.push("amount");
+  if (existing.where !== where) changes.push("where");
+  if (existing.category.toString() !== categoryId) changes.push("category");
+  if (existing.date.toISOString() !== new Date(date).toISOString()) changes.push("date");
+  if (existing.splitType !== splitType) changes.push("split type");
+  if ((existing.notes ?? "") !== (notes ?? "")) changes.push("notes");
+
+  const changedLabel = changes.length > 0 ? ` (${changes.join(", ")})` : "";
+
+  await logActivity(session.user.paidByKey, "expense_edit", `edited ${formatCurrency(amount)} at ${where}${changedLabel}`, {
     expenseId: id,
     amount,
     where,
     categoryName: cat.name,
     paidBy: updated.paidBy,
+    changedFields: changes,
   });
 
   return NextResponse.json({
