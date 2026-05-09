@@ -38,6 +38,15 @@ A shared expense tracker for two partners who share household expenses but maint
 - Person-by-category matrix showing who paid what, with expandable drill-down to individual expenses
 - 6-month spending trend table
 
+### Year in Review
+
+- Annual spending summary accessible from the Reports page
+- Year navigation with prev/next controls
+- Reuses the same spending summary, category breakdown, and trend components as monthly reports
+- Annual highlights: biggest single expense, most frequent merchant, and busiest month
+- Who-paid-more visual bar showing each person's share of total spending
+- Annual settlement summary netting all closed months into a single total
+
 ### Recurring Templates
 
 - Create templates for groups of expenses entered together each month (e.g. "Monthly Bills")
