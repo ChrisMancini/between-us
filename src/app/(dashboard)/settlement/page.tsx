@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { PersonBadge } from "@/components/person-badge";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
+import "@/lib/models/category";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import type { SerializedSettlement } from "@/lib/models/settlement";
