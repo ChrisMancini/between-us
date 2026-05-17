@@ -14,7 +14,8 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth;
       const isLoginPage = nextUrl.pathname === "/login";
-      const isSetupPage = nextUrl.pathname === "/setup";
+      const isSetupPage = nextUrl.pathname === "/setup" ||
+        nextUrl.pathname.startsWith("/api/setup");
 
       if (isLoginPage) {
         if (isLoggedIn) {
