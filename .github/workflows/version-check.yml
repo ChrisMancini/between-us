@@ -1,0 +1,53 @@
+name: Version Check
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  version-bump:
+    name: Version Bump Check
+    if: startsWith(github.head_ref, 'feature/') || startsWith(github.head_ref, 'bug/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v5
+
+      - name: Get PR version
+        id: pr
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Get master version
+        id: master
+        run: |
+          git fetch origin master --depth=1
+          echo "version=$(git show origin/master:package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")" >> "$GITHUB_OUTPUT"
+
+      - name: Compare versions
+        run: |
+          PR_VERSION="${{ steps.pr.outputs.version }}"
+          MASTER_VERSION="${{ steps.master.outputs.version }}"
+
+          echo "PR version:     $PR_VERSION"
+          echo "Master version: $MASTER_VERSION"
+
+          IFS='.' read -r pr_major pr_minor pr_patch <<< "$PR_VERSION"
+          IFS='.' read -r m_major m_minor m_patch <<< "$MASTER_VERSION"
+
+          if [ "$pr_major" -gt "$m_major" ]; then
+            echo "Major version bumped."
+            exit 0
+          elif [ "$pr_major" -eq "$m_major" ] && [ "$pr_minor" -gt "$m_minor" ]; then
+            echo "Minor version bumped."
+            exit 0
+          elif [ "$pr_major" -eq "$m_major" ] && [ "$pr_minor" -eq "$m_minor" ] && [ "$pr_patch" -gt "$m_patch" ]; then
+            echo "Patch version bumped."
+            exit 0
+          fi
+
+          echo "::error::Version in package.json ($PR_VERSION) must be greater than master ($MASTER_VERSION)."
+          exit 1
