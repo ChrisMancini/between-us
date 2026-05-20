@@ -12,7 +12,7 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/recurring-template", () => ({
   RecurringTemplate: { find: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({ Category: {} }));
+jest.mock("@/lib/models/tag", () => ({ Tag: {} }));
 jest.mock("@/lib/validations/recurring-template", () => ({
   recurringTemplateApiSchema: {},
 }));

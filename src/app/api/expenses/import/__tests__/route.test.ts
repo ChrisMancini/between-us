@@ -16,8 +16,8 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/expense", () => ({
   Expense: { insertMany: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({
-  Category: { find: jest.fn() },
+jest.mock("@/lib/models/tag", () => ({
+  Tag: { find: jest.fn() },
 }));
 jest.mock("@/lib/validations/csv-import", () => ({
   csvImportApiSchema: { safeParse: jest.fn() },
@@ -28,7 +28,7 @@ jest.mock("@/lib/readiness-reset", () => ({ resetReadinessForMonths: jest.fn() }
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { csvImportApiSchema } from "@/lib/validations/csv-import";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
@@ -42,11 +42,12 @@ const validExpenses = [
   {
     paidBy: "john",
     date: "2026-04-15",
-    categoryId: VALID_ID,
+    tagIds: [VALID_ID],
     amount: 5000,
     where: "Publix",
     notes: "",
     splitType: "split",
+    settlementType: "deferred",
   },
 ];
 
@@ -66,20 +67,20 @@ describe("POST /api/expenses/import", () => {
     await expectError(res, 400, "Validation failed");
   });
 
-  it("returns 422 when categories do not exist", async () => {
+  it("returns 422 when tags do not exist", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ expenses: validExpenses }));
-    asMock(Category.find).mockReturnValue({
+    asMock(Tag.find).mockReturnValue({
       lean: jest.fn().mockResolvedValue([]),
     });
     const res = await POST(makeJsonRequest("/api/expenses/import", {}));
-    await expectError(res, 422, "One or more categories do not exist");
+    await expectError(res, 422, "One or more tags do not exist");
   });
 
   it("returns 422 when month is settled", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ expenses: validExpenses }));
-    asMock(Category.find).mockReturnValue({
+    asMock(Tag.find).mockReturnValue({
       lean: jest.fn().mockResolvedValue([{ _id: VALID_ID }]),
     });
     mockAssertMonthsOpen.mockResolvedValue(
@@ -92,7 +93,7 @@ describe("POST /api/expenses/import", () => {
   it("returns 201 on success", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ expenses: validExpenses }));
-    asMock(Category.find).mockReturnValue({
+    asMock(Tag.find).mockReturnValue({
       lean: jest.fn().mockResolvedValue([{ _id: VALID_ID }]),
     });
     mockAssertMonthsOpen.mockResolvedValue(null);

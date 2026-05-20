@@ -5,27 +5,26 @@ import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import { MonthReadiness } from "@/lib/models/month-readiness";
 import { calculateSettlement, type SettlementExpenseRow } from "@/lib/settlement-calc";
+import { serializeTag } from "@/lib/tag-utils";
 import { getPersons } from "@/lib/persons";
 import { withAuth } from "@/lib/auth-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { formatCurrency } from "@/lib/utils";
 
 function serializeExpenseRow(e: Record<string, unknown>): SettlementExpenseRow | null {
-  const cat = e.category as Record<string, unknown> | null;
-  if (!cat) return null;
+  const tags = e.tags as Array<Record<string, unknown>> | null;
+  if (!tags || tags.length === 0) return null;
   return {
     _id: (e._id as mongoose.Types.ObjectId).toString(),
     paidBy: e.paidBy as string,
     amount: e.amount as number,
     splitType: e.splitType as "split" | "full",
+    settlementType: e.settlementType as "immediate" | "deferred",
     where: e.where as string,
     date: (e.date as Date).toISOString(),
-    category: {
-      _id: (cat._id as mongoose.Types.ObjectId).toString(),
-      name: cat.name as string,
-      settlementType: cat.settlementType as "immediate" | "deferred",
-      sortOrder: cat.sortOrder as number,
-    },
+    tags: tags.map((t) =>
+      serializeTag(t as { _id: unknown; path: string; sortOrder: number }),
+    ),
   };
 }
 
@@ -70,7 +69,7 @@ export const GET = withAuth(async (req) => {
   const expenses = await Expense.find({
     date: { $gte: start, $lt: end },
   })
-    .populate("category")
+    .populate("tags")
     .lean();
 
   const rows = (expenses as unknown as Record<string, unknown>[])
@@ -106,7 +105,7 @@ export const POST = withAuth(async (req, session) => {
   if (existing && existing.status !== "open") {
     return NextResponse.json(
       { error: "Month already closed" },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -119,7 +118,7 @@ export const POST = withAuth(async (req, session) => {
   const expenses = await Expense.find({
     date: { $gte: start, $lt: end },
   })
-    .populate("category")
+    .populate("tags")
     .lean();
 
   const rows = (expenses as unknown as Record<string, unknown>[])
@@ -148,7 +147,7 @@ export const POST = withAuth(async (req, session) => {
         owedTo,
         closedAt: new Date(),
       },
-      { returnDocument: "after" }
+      { returnDocument: "after" },
     );
   } else {
     settlement = await Settlement.create({
@@ -193,6 +192,6 @@ export const POST = withAuth(async (req, session) => {
         previousOwedBy: settlement!.previousOwedBy,
       },
     },
-    { status: existing ? 200 : 201 }
+    { status: existing ? 200 : 201 },
   );
 });

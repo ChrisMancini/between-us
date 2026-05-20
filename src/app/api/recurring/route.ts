@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
-import { RecurringTemplate, type IRecurringTemplateItem } from "@/lib/models/recurring-template";
-import { Category } from "@/lib/models/category";
+import { RecurringTemplate } from "@/lib/models/recurring-template";
+import { Tag } from "@/lib/models/tag";
 import { recurringTemplateApiSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
+import { serializeTemplate } from "@/lib/recurring-template-utils";
 
 export const GET = withAuth(async (_req, session) => {
   await connectToDatabase();
@@ -16,20 +18,7 @@ export const GET = withAuth(async (_req, session) => {
     .lean();
 
   return NextResponse.json({
-    templates: templates.map((t) => ({
-      _id: t._id.toString(),
-      name: t.name,
-      items: t.items.map((item: IRecurringTemplateItem) => ({
-        paidBy: item.paidBy,
-        categoryId: item.categoryId.toString(),
-        amount: item.amount,
-        where: item.where,
-        notes: item.notes,
-        splitType: item.splitType,
-      })),
-      createdAt: (t.createdAt as Date).toISOString(),
-      updatedAt: (t.updatedAt as Date).toISOString(),
-    })),
+    templates: templates.map(serializeTemplate),
   });
 });
 
@@ -37,35 +26,31 @@ export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const parsed = recurringTemplateApiSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
   const { name, items } = parsed.data;
 
-  // Validate all categoryIds
   for (const item of items) {
-    if (!mongoose.isValidObjectId(item.categoryId)) {
-      return NextResponse.json(
-        { error: `Invalid category ID: ${item.categoryId}` },
-        { status: 400 }
-      );
+    for (const tagId of item.tagIds) {
+      if (!mongoose.isValidObjectId(tagId)) {
+        return NextResponse.json(
+          { error: `Invalid tag ID: ${tagId}` },
+          { status: 400 },
+        );
+      }
     }
   }
 
   await connectToDatabase();
 
-  const categoryIds = [...new Set(items.map((i) => i.categoryId))];
-  const existingCategories = await Category.find({
-    _id: { $in: categoryIds },
+  const allTagIds = [...new Set(items.flatMap((i) => i.tagIds))];
+  const existingTags = await Tag.find({
+    _id: { $in: allTagIds },
   }).lean();
-  if (existingCategories.length !== categoryIds.length) {
+  if (existingTags.length !== allTagIds.length) {
     return NextResponse.json(
-      { error: "One or more categories not found" },
-      { status: 422 }
+      { error: "One or more tags not found" },
+      { status: 422 },
     );
   }
 
@@ -76,22 +61,7 @@ export const POST = withAuth(async (req, session) => {
   });
 
   return NextResponse.json(
-    {
-      template: {
-        _id: template._id.toString(),
-        name: template.name,
-        items: template.items.map((item: IRecurringTemplateItem) => ({
-          paidBy: item.paidBy,
-          categoryId: item.categoryId.toString(),
-          amount: item.amount,
-          where: item.where,
-          notes: item.notes,
-          splitType: item.splitType,
-        })),
-        createdAt: template.createdAt.toISOString(),
-        updatedAt: template.updatedAt.toISOString(),
-      },
-    },
-    { status: 201 }
+    { template: serializeTemplate(template) },
+    { status: 201 },
   );
 });

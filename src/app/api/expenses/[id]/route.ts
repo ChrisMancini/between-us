@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { expenseUpdateApiSchema } from "@/lib/validations/expense";
+import { serializeTag } from "@/lib/tag-utils";
 import { withAuth, canModifyExpense } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { Settlement } from "@/lib/models/settlement";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatMonthYear } from "@/lib/utils";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -24,17 +26,14 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const body = await req.json();
   const parsed = expenseUpdateApiSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
-  const { date, categoryId, amount, where, notes, splitType } = parsed.data;
+  const { date, tagIds, amount, where, notes, splitType, settlementType } = parsed.data;
 
-  if (!mongoose.isValidObjectId(categoryId)) {
-    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+  for (const tagId of tagIds) {
+    if (!mongoose.isValidObjectId(tagId)) {
+      return NextResponse.json({ error: "Invalid tag ID" }, { status: 400 });
+    }
   }
 
   await connectToDatabase();
@@ -51,45 +50,48 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const settlementError = await assertMonthsOpen([existing.date, date]);
   if (settlementError) return settlementError;
 
-  const category = await Category.findById(categoryId);
-  if (!category) {
-    return NextResponse.json({ error: "Category not found" }, { status: 422 });
+  const existingTags = await Tag.find({ _id: { $in: tagIds } }).lean();
+  if (existingTags.length !== tagIds.length) {
+    return NextResponse.json({ error: "One or more tags not found" }, { status: 422 });
   }
 
   const updated = await Expense.findByIdAndUpdate(
     id,
-    { date: new Date(date), category: categoryId, amount, where, notes, splitType },
-    { new: true }
-  ).populate("category");
+    { date: new Date(date), tags: tagIds, amount, where, notes, splitType, settlementType },
+    { new: true },
+  ).populate("tags");
 
   if (!updated) {
     return NextResponse.json({ error: "Expense not found" }, { status: 404 });
   }
 
-  const cat = updated.category as unknown as {
+  const tags = updated.tags as unknown as Array<{
     _id: mongoose.Types.ObjectId;
-    name: string;
-    settlementType: string;
+    path: string;
     sortOrder: number;
-  };
+  }>;
 
   await resetReadinessForMonths(session.user.paidByKey, [existing.date, date]);
 
   const changes: string[] = [];
   if (existing.amount !== amount) changes.push("amount");
   if (existing.where !== where) changes.push("where");
-  if (existing.category.toString() !== categoryId) changes.push("category");
+  const oldTagIds = existing.tags.map((t: mongoose.Types.ObjectId) => t.toString()).sort().join(",");
+  const newTagIds = tagIds.sort().join(",");
+  if (oldTagIds !== newTagIds) changes.push("tags");
   if (existing.date.toISOString() !== new Date(date).toISOString()) changes.push("date");
   if (existing.splitType !== splitType) changes.push("split type");
+  if (existing.settlementType !== settlementType) changes.push("settlement type");
   if ((existing.notes ?? "") !== (notes ?? "")) changes.push("notes");
 
   const changedLabel = changes.length > 0 ? ` (${changes.join(", ")})` : "";
+  const tagNames = tags.map((t) => t.path).join(", ");
 
   await logActivity(session.user.paidByKey, "expense_edit", `edited ${formatCurrency(amount)} at ${where}${changedLabel}`, {
     expenseId: id,
     amount,
     where,
-    categoryName: cat.name,
+    tagNames,
     paidBy: updated.paidBy,
     changedFields: changes,
   });
@@ -99,16 +101,12 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
       _id: updated._id.toString(),
       paidBy: updated.paidBy,
       date: updated.date.toISOString(),
-      category: {
-        _id: cat._id.toString(),
-        name: cat.name,
-        settlementType: cat.settlementType,
-        sortOrder: cat.sortOrder,
-      },
+      tags: tags.map(serializeTag),
       amount: updated.amount,
       where: updated.where,
       notes: updated.notes,
       splitType: updated.splitType,
+      settlementType: updated.settlementType,
     },
   });
 });
@@ -121,39 +119,38 @@ export const DELETE = withAuth<RouteContext>(async (_req, session, context) => {
 
   await connectToDatabase();
 
-  const existing = await Expense.findById(id);
+  const existing = await Expense.findById(id).populate("tags").lean();
   if (!existing) {
     return NextResponse.json({ error: "Expense not found" }, { status: 404 });
   }
 
-  if (!canModifyExpense(session, existing.paidBy)) {
+  if (!canModifyExpense(session, existing.paidBy as string)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const month = existing.date.getUTCMonth() + 1;
-  const year = existing.date.getUTCFullYear();
+  const expDate = existing.date as Date;
+  const month = expDate.getUTCMonth() + 1;
+  const year = expDate.getUTCFullYear();
   const closed = await Settlement.findOne({ month, year, status: { $ne: "open" } }).lean();
   if (closed) {
-    const label = new Date(year, month - 1).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
+    const label = formatMonthYear(month, year);
     return NextResponse.json(
       { error: `${label} has already been settled. Reopen the month first.` },
-      { status: 422 }
+      { status: 422 },
     );
   }
 
-  const category = await Category.findById(existing.category).lean();
+  const tags = (existing.tags ?? []) as unknown as Array<{ path: string }>;
+  const tagNames = tags.map((t) => t.path).join(", ");
 
   await Expense.findByIdAndDelete(id);
 
   await resetReadinessForMonths(session.user.paidByKey, [existing.date]);
 
-  await logActivity(session.user.paidByKey, "expense_delete", `deleted ${formatCurrency(existing.amount)} at ${existing.where}`, {
+  await logActivity(session.user.paidByKey, "expense_delete", `deleted ${formatCurrency(existing.amount as number)} at ${existing.where}`, {
     amount: existing.amount,
     where: existing.where,
-    categoryName: category?.name ?? "Unknown",
+    tagNames,
     paidBy: existing.paidBy,
   });
 

@@ -9,7 +9,7 @@ The product optimizes for:
 - Clean, polished, intuitive UI — this should feel like a real product, not a side project
 - Speed of expense entry — users log expenses frequently, so the flow must be fast
 - Accurate settlement calculations — the whole point is knowing who owes whom
-- Simplicity — two users, five categories, no over-engineering
+- Simplicity — two users, hierarchical tags, no over-engineering
 
 ## Tech Stack
 
@@ -40,7 +40,7 @@ src/
 │   │   ├── reports/        # Reporting and date-range queries
 │   │   ├── settlement/     # Monthly close-out and settlement
 │   │   ├── recurring/      # Recurring expense templates
-│   │   └── admin/          # Admin-only pages (category management)
+│   │   └── admin/          # Admin-only pages (tag management, CSV formats, people)
 │   ├── api/                # API route handlers
 │   └── layout.tsx          # Root layout
 ├── components/
@@ -60,21 +60,22 @@ src/
 
 - `paidBy` — which user paid (Chris or Lauren)
 - `date` — date of the expense
-- `category` — one of the fixed categories
-- `amount` — dollar amount
+- `tags` — one or more tags (refs to Tag), at least one required
+- `amount` — dollar amount (stored as cents)
 - `where` — free-form merchant/location (e.g., "Publix", "Amazon", "FPL")
 - `notes` — optional description
 - `splitType` — "split" (50/50) or "full" (fully reimbursed to payer)
+- `settlementType` — "immediate" or "deferred"
+  - **Immediate:** settled at time of expense. Excluded from monthly settlement totals.
+  - **Deferred:** accumulated and settled monthly.
 - `createdAt` / `updatedAt` — timestamps
 
-**Category:**
-Categories are stored in the database and managed by an admin user (Chris). Lauren does not have access to category management. Categories are not user-editable through the main UI — there is a separate admin-only interface for adding, editing, and reordering them.
+**Tag:**
+Tags are hierarchical labels for organizing expenses. Tags use slash-separated paths (e.g., "Vacation/Italy 2026"). Both users can create tags on-the-fly; only the admin can rename, delete, or reorder tags. Tags are case-insensitive (enforced via MongoDB collation).
 
-- `name` — Mortgage, Groceries, Bills, Miscellaneous, Insurance
-- `settlementType` — "immediate" or "deferred"
-  - **Immediate:** settled at time of expense (Mortgage). Excluded from monthly settlement totals.
-  - **Deferred:** accumulated and settled monthly (everything else).
+- `path` — full path string (e.g., "Bills/Electric"), unique (case-insensitive)
 - `sortOrder` — display order in dropdowns and reports
+- Computed fields (via serialization): `name` (last segment), `parent` (prefix), `depth`
 
 **RecurringTemplate:**
 A template represents a group of one or more expenses that are submitted together. For example, a "Monthly Bills" template might contain electric, internet, and water bills as separate line items.
@@ -82,10 +83,11 @@ A template represents a group of one or more expenses that are submitted togethe
 - `name` — template name (e.g., "Monthly Bills")
 - `items` — array of expense entries:
   - `paidBy` — default payer
-  - `category` — default category
+  - `tagIds` — default tags
   - `amount` — default amount
   - `notes` — default description
   - `splitType` — default split type
+  - `settlementType` — default settlement type
 
 **Settlement:**
 
@@ -106,7 +108,7 @@ When "Close the Month" is triggered:
 3. Sum what Lauren owes Chris and what Chris owes Lauren
 4. Net the two amounts: "Chris owes Lauren $X" or "Lauren owes Chris $X"
 
-Mortgage (immediate settlement) is shown separately in reports but excluded from the monthly settlement calculation.
+Expenses with `settlementType: "immediate"` are shown separately in reports but excluded from the monthly settlement calculation.
 
 ## Coding Rules
 

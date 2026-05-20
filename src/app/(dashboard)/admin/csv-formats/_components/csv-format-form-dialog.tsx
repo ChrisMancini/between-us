@@ -27,8 +27,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { TagPicker } from "@/components/tag-picker";
 import type { SerializedCsvFormat } from "@/lib/models/csv-format";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -40,13 +41,13 @@ const formSchema = z.object({
   creditColumn: z.string().max(100).optional(),
   amountColumn: z.string().max(100).optional(),
   purchaseSign: z.enum(["positive", "negative"]).optional(),
-  categoryColumn: z.string().max(100).optional(),
+  tagColumn: z.string().max(100).optional(),
   notesColumn: z.string().max(100).optional(),
-  categoryMappings: z
+  tagMappings: z
     .array(
       z.object({
         sourceValue: z.string().min(1, "Source value is required"),
-        categoryId: z.string().min(1, "Category is required"),
+        tagIds: z.array(z.string()).min(1, "At least one tag is required"),
       })
     )
     .optional(),
@@ -56,18 +57,19 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface CsvFormatFormDialogProps {
   format?: SerializedCsvFormat;
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   trigger: React.ReactElement;
 }
 
 export function CsvFormatFormDialog({
   format,
-  categories,
+  tags: initialTags,
   trigger,
 }: CsvFormatFormDialogProps) {
   const isEdit = !!format;
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [tags, setTags] = useState(initialTags);
 
   const defaultValues: FormValues = {
     name: format?.name ?? "",
@@ -79,9 +81,9 @@ export function CsvFormatFormDialog({
     creditColumn: format?.creditColumn ?? "",
     amountColumn: format?.amountColumn ?? "",
     purchaseSign: format?.purchaseSign,
-    categoryColumn: format?.categoryColumn ?? "",
+    tagColumn: format?.tagColumn ?? "",
     notesColumn: format?.notesColumn ?? "",
-    categoryMappings: format?.categoryMappings ?? [],
+    tagMappings: format?.tagMappings ?? [],
   };
 
   const form = useForm<FormValues>({
@@ -100,11 +102,11 @@ export function CsvFormatFormDialog({
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "categoryMappings",
+    name: "tagMappings",
   });
 
   const amountType = useWatch({ control, name: "amountType" });
-  const categoryColumn = useWatch({ control, name: "categoryColumn" });
+  const tagColumn = useWatch({ control, name: "tagColumn" });
 
   function handleOpenChange(next: boolean) {
     if (next) reset(defaultValues);
@@ -383,37 +385,37 @@ export function CsvFormatFormDialog({
               </div>
             )}
 
-            {/* Category Column (optional) */}
+            {/* Tag Column (optional) */}
             <div className="space-y-1.5">
-              <Label htmlFor="category-column">
-                Category Column{" "}
+              <Label htmlFor="tag-column">
+                Tag Column{" "}
                 <span className="text-muted-foreground font-normal">
                   (optional)
                 </span>
               </Label>
               <Input
-                id="category-column"
-                placeholder="e.g. Category"
-                {...register("categoryColumn")}
+                id="tag-column"
+                placeholder="e.g. Tag, Category, Type"
+                {...register("tagColumn")}
               />
               <p className="text-xs text-muted-foreground">
-                If the CSV includes a category column, enter the header name to
-                enable category mapping.
+                If the CSV includes a category or tag column, enter the header
+                name to enable tag mapping.
               </p>
             </div>
 
-            {/* Category Mappings (shown when categoryColumn is set) */}
-            {categoryColumn && categoryColumn.trim() !== "" && (
+            {/* Tag Mappings (shown when tagColumn is set) */}
+            {tagColumn && tagColumn.trim() !== "" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>Category Mappings</Label>
+                  <Label>Tag Mappings</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="gap-1.5 h-7 text-xs"
                     onClick={() =>
-                      append({ sourceValue: "", categoryId: "" })
+                      append({ sourceValue: "", tagIds: [] })
                     }
                   >
                     <Plus className="h-3 w-3" />
@@ -423,8 +425,8 @@ export function CsvFormatFormDialog({
 
                 {fields.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    No mappings yet. Unmapped categories will default to
-                    Miscellaneous.
+                    No mappings yet. Unmapped values will need tags assigned
+                    during import.
                   </p>
                 )}
 
@@ -435,11 +437,11 @@ export function CsvFormatFormDialog({
                         <Input
                           placeholder="CSV category value"
                           {...register(
-                            `categoryMappings.${index}.sourceValue`
+                            `tagMappings.${index}.sourceValue`
                           )}
                           className={cn(
                             "h-8 text-sm",
-                            errors.categoryMappings?.[index]?.sourceValue &&
+                            errors.tagMappings?.[index]?.sourceValue &&
                               "border-destructive"
                           )}
                         />
@@ -450,31 +452,17 @@ export function CsvFormatFormDialog({
                       <div className="flex-1 space-y-1">
                         <Controller
                           control={control}
-                          name={`categoryMappings.${index}.categoryId`}
+                          name={`tagMappings.${index}.tagIds`}
                           render={({ field: f }) => (
-                            <Select
-                              value={f.value}
-                              onValueChange={f.onChange}
-                            >
-                              <SelectTrigger
-                                className={cn(
-                                  "h-8 text-sm",
-                                  errors.categoryMappings?.[index]
-                                    ?.categoryId && "border-destructive"
-                                )}
-                              >
-                                <SelectValue placeholder="Select category">
-                                {categories.find((c) => c._id === f.value)?.name}
-                              </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories.map((cat) => (
-                                  <SelectItem key={cat._id} value={cat._id}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <TagPicker
+                              tags={tags}
+                              selectedTagIds={f.value ?? []}
+                              onSelectedChange={f.onChange}
+                              onTagCreated={(tag) =>
+                                setTags((prev) => [...prev, tag])
+                              }
+                              error={!!errors.tagMappings?.[index]?.tagIds}
+                            />
                           )}
                         />
                       </div>

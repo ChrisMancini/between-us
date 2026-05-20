@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedRecurringTemplate } from "@/lib/models/recurring-template";
 import { TemplateFormDialog } from "./template-form-dialog";
-import { DeleteTemplateDialog } from "./delete-template-dialog";
+import { DeleteDialog } from "@/components/delete-dialog";
 import { ApplyTemplateDialog } from "./apply-template-dialog";
 
 function fmt(cents: number) {
@@ -21,18 +21,18 @@ function fmt(cents: number) {
 
 interface TemplateListProps {
   templates: SerializedRecurringTemplate[];
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   closedMonths: string[];
   paidBy: string;
 }
 
 export function TemplateList({
   templates,
-  categories,
+  tags,
   closedMonths,
   paidBy,
 }: TemplateListProps) {
-  const categoryMap = new Map(categories.map((c) => [c._id, c.name]));
+  const tagMap = new Map(tags.map((t) => [t._id, t.path]));
 
   if (templates.length === 0) {
     return (
@@ -51,8 +51,8 @@ export function TemplateList({
         <TemplateCard
           key={template._id}
           template={template}
-          categories={categories}
-          categoryMap={categoryMap}
+          tags={tags}
+          tagMap={tagMap}
           closedMonths={closedMonths}
           paidBy={paidBy}
         />
@@ -63,14 +63,14 @@ export function TemplateList({
 
 function TemplateCard({
   template,
-  categories,
-  categoryMap,
+  tags,
+  tagMap,
   closedMonths,
   paidBy,
 }: {
   template: SerializedRecurringTemplate;
-  categories: SerializedCategory[];
-  categoryMap: Map<string, string>;
+  tags: SerializedTag[];
+  tagMap: Map<string, string>;
   closedMonths: string[];
   paidBy: string;
 }) {
@@ -101,7 +101,7 @@ function TemplateCard({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{item.where}</p>
                 <p className="text-xs text-muted-foreground">
-                  {categoryMap.get(item.categoryId) ?? "Unknown"}
+                  {item.tagIds.map((id) => tagMap.get(id) ?? "Unknown").join(", ")}
                   {item.notes && ` — ${item.notes}`}
                 </p>
               </div>
@@ -125,7 +125,7 @@ function TemplateCard({
             Delete
           </Button>
           <TemplateFormDialog
-            categories={categories}
+            tags={tags}
             paidBy={paidBy}
             template={template}
             trigger={
@@ -146,16 +146,17 @@ function TemplateCard({
         </div>
       </div>
 
-      <DeleteTemplateDialog
-        templateId={template._id}
-        templateName={template.name}
+      <DeleteDialog
+        endpoint={`/api/recurring/${template._id}`}
+        itemType="template"
+        itemLabel={template.name}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
       />
 
       <ApplyTemplateDialog
         template={template}
-        categories={categories}
+        tags={tags}
         closedMonths={closedMonths}
         open={applyOpen}
         onOpenChange={setApplyOpen}

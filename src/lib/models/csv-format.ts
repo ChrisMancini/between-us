@@ -1,8 +1,8 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-export interface ICategoryMapping {
+export interface ITagMapping {
   sourceValue: string;
-  categoryId: mongoose.Types.ObjectId;
+  tagIds: mongoose.Types.ObjectId[];
 }
 
 export interface ICsvFormat extends Document {
@@ -15,14 +15,14 @@ export interface ICsvFormat extends Document {
   creditColumn?: string;
   amountColumn?: string;
   purchaseSign?: "positive" | "negative";
-  categoryColumn?: string;
+  tagColumn?: string;
   notesColumn?: string;
-  categoryMappings: ICategoryMapping[];
+  tagMappings: ITagMapping[];
 }
 
-export interface SerializedCategoryMapping {
+export interface SerializedTagMapping {
   sourceValue: string;
-  categoryId: string;
+  tagIds: string[];
 }
 
 export interface SerializedCsvFormat {
@@ -36,15 +36,18 @@ export interface SerializedCsvFormat {
   creditColumn?: string;
   amountColumn?: string;
   purchaseSign?: "positive" | "negative";
-  categoryColumn?: string;
+  tagColumn?: string;
   notesColumn?: string;
-  categoryMappings: SerializedCategoryMapping[];
+  tagMappings: SerializedTagMapping[];
 }
 
-const CategoryMappingSchema = new Schema<ICategoryMapping>(
+const TagMappingSchema = new Schema<ITagMapping>(
   {
     sourceValue: { type: String, required: true },
-    categoryId: { type: Schema.Types.ObjectId, ref: "Category", required: true },
+    tagIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
+      required: true,
+    },
   },
   { _id: false }
 );
@@ -68,9 +71,9 @@ const CsvFormatSchema = new Schema<ICsvFormat>(
     creditColumn: { type: String },
     amountColumn: { type: String },
     purchaseSign: { type: String, enum: ["positive", "negative"] },
-    categoryColumn: { type: String },
+    tagColumn: { type: String },
     notesColumn: { type: String },
-    categoryMappings: { type: [CategoryMappingSchema], default: [] },
+    tagMappings: { type: [TagMappingSchema], default: [] },
   },
   { timestamps: false }
 );

@@ -17,8 +17,8 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/recurring-template", () => ({
   RecurringTemplate: { findOne: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({
-  Category: { find: jest.fn() },
+jest.mock("@/lib/models/tag", () => ({
+  Tag: { find: jest.fn() },
 }));
 jest.mock("@/lib/models/expense", () => ({
   Expense: { insertMany: jest.fn() },
@@ -32,7 +32,7 @@ jest.mock("@/lib/readiness-reset", () => ({ resetReadinessForMonths: jest.fn() }
 
 import { auth } from "@/auth";
 import { RecurringTemplate } from "@/lib/models/recurring-template";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { Expense } from "@/lib/models/expense";
 import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
@@ -46,11 +46,12 @@ const mockAssertMonthsOpen = asMock(assertMonthsOpen);
 const templateItems = [
   {
     paidBy: "john",
-    categoryId: VALID_ID_2,
+    tagIds: [VALID_ID_2],
     amount: 10000,
     where: "FPL",
     notes: "Electric",
     splitType: "split",
+    settlementType: "deferred",
   },
 ];
 
@@ -119,14 +120,14 @@ describe("POST /api/recurring/[id]/apply", () => {
     await expectStatus(res, 422);
   });
 
-  it("returns 422 when categories no longer exist", async () => {
+  it("returns 422 when tags no longer exist", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
     asMock(RecurringTemplate.findOne).mockReturnValue({
       lean: jest.fn().mockResolvedValue({ items: templateItems }),
     });
     mockAssertMonthsOpen.mockResolvedValue(null);
-    asMock(Category.find).mockReturnValue({
+    asMock(Tag.find).mockReturnValue({
       lean: jest.fn().mockResolvedValue([]),
     });
     const res = await POST(makeJsonRequest("/api/recurring/apply", {}), makeIdContext());
@@ -140,7 +141,7 @@ describe("POST /api/recurring/[id]/apply", () => {
       lean: jest.fn().mockResolvedValue({ items: templateItems }),
     });
     mockAssertMonthsOpen.mockResolvedValue(null);
-    asMock(Category.find).mockReturnValue({
+    asMock(Tag.find).mockReturnValue({
       lean: jest.fn().mockResolvedValue([{ _id: VALID_ID_2 }]),
     });
     asMock(Expense.insertMany).mockResolvedValue([{ _id: VALID_ID }]);

@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { format, parse } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatMonthYear } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,13 +19,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { TagPicker } from "@/components/tag-picker";
+import { SettlementTypeSelect } from "@/components/settlement-type-select";
 import {
   Dialog,
   DialogContent,
@@ -35,51 +30,54 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedExpense } from "@/lib/models/expense";
 
 const editFormSchema = z.object({
-  date:       z.string().min(1, "Date is required"),
-  categoryId: z.string().min(1, "Category is required"),
-  amount:     z
+  date:           z.string().min(1, "Date is required"),
+  tagIds:         z.array(z.string().min(1)).min(1, "At least one tag is required"),
+  amount:         z
     .string()
     .min(1, "Amount is required")
     .refine(
       (v) => /^\d+(\.\d{1,2})?$/.test(v) && parseFloat(v) > 0,
       "Enter a valid amount (e.g. 42.50)"
     ),
-  where:      z.string().min(1, "Required").max(100),
-  notes:      z.string().max(500).optional(),
-  splitType:  z.enum(["split", "full"]),
+  where:          z.string().min(1, "Required").max(100),
+  notes:          z.string().max(500).optional(),
+  splitType:      z.enum(["split", "full"]),
+  settlementType: z.enum(["immediate", "deferred"]),
 });
 
 type FormValues = z.infer<typeof editFormSchema>;
 
 interface EditExpenseDialogProps {
   expense: SerializedExpense;
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   closedMonths: string[];
   trigger: React.ReactElement;
 }
 
 export function EditExpenseDialog({
   expense,
-  categories,
+  tags: initialTags,
   closedMonths,
   trigger,
 }: EditExpenseDialogProps) {
+  const [tags, setTags] = useState(initialTags);
   const router = useRouter();
   const closedSet = new Set(closedMonths);
   const [open, setOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const defaultValues: FormValues = {
-    date:       expense.date.split("T")[0],
-    categoryId: expense.category._id,
-    amount:     (expense.amount / 100).toFixed(2),
-    where:      expense.where,
-    notes:      expense.notes ?? "",
-    splitType:  expense.splitType,
+    date:           expense.date.split("T")[0],
+    tagIds:         expense.tags.map((t) => t._id),
+    amount:         (expense.amount / 100).toFixed(2),
+    where:          expense.where,
+    notes:          expense.notes ?? "",
+    splitType:      expense.splitType,
+    settlementType: expense.settlementType,
   };
 
   const {
@@ -102,10 +100,7 @@ export function EditExpenseDialog({
 
   function settledMonthLabel(iso: string) {
     const d = new Date(iso);
-    return new Date(d.getUTCFullYear(), d.getUTCMonth()).toLocaleDateString(
-      "en-US",
-      { month: "long", year: "numeric" }
-    );
+    return formatMonthYear(d.getUTCMonth() + 1, d.getUTCFullYear());
   }
 
   function handleOpenChange(next: boolean) {
@@ -117,12 +112,13 @@ export function EditExpenseDialog({
     if (dateIsSettled) return;
 
     const body = {
-      date:       values.date,
-      categoryId: values.categoryId,
-      amount:     Math.round(parseFloat(values.amount) * 100),
-      where:      values.where,
-      notes:      values.notes || undefined,
-      splitType:  values.splitType,
+      date:           values.date,
+      tagIds:         values.tagIds,
+      amount:         Math.round(parseFloat(values.amount) * 100),
+      where:          values.where,
+      notes:          values.notes || undefined,
+      splitType:      values.splitType,
+      settlementType: values.settlementType,
     };
 
     const res = await fetch(`/api/expenses/${expense._id}`, {
@@ -213,34 +209,22 @@ export function EditExpenseDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-categoryId">Category</Label>
+              <Label>Tags</Label>
               <Controller
                 control={control}
-                name="categoryId"
+                name="tagIds"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      id="edit-categoryId"
-                      className={cn(errors.categoryId && "border-destructive")}
-                    >
-                      <SelectValue>
-                        {field.value
-                          ? categories.find((c) => c._id === field.value)?.name
-                          : <span className="text-muted-foreground">Select a category…</span>}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c._id} value={c._id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <TagPicker
+                    tags={tags}
+                    selectedTagIds={field.value}
+                    onSelectedChange={field.onChange}
+                    onTagCreated={(tag) => setTags((prev) => [...prev, tag])}
+                    error={!!errors.tagIds}
+                  />
                 )}
               />
-              {errors.categoryId && (
-                <p className="text-xs text-destructive">{errors.categoryId.message}</p>
+              {errors.tagIds && (
+                <p className="text-xs text-destructive">{errors.tagIds.message}</p>
               )}
             </div>
           </div>
@@ -296,25 +280,41 @@ export function EditExpenseDialog({
             />
           </div>
 
-          {/* Split checkbox */}
-          <Controller
-            control={control}
-            name="splitType"
-            render={({ field }) => (
-              <div className="flex items-center gap-2.5">
-                <Checkbox
-                  id="edit-splitType"
-                  checked={field.value === "split"}
-                  onCheckedChange={(checked) =>
-                    field.onChange(checked ? "split" : "full")
-                  }
-                />
-                <Label htmlFor="edit-splitType" className="font-normal cursor-pointer">
-                  Split 50/50
-                </Label>
-              </div>
-            )}
-          />
+          {/* Settlement type + Split */}
+          <div className="flex items-end justify-between">
+            <div className="space-y-1.5">
+              <Label>Settlement</Label>
+              <Controller
+                control={control}
+                name="settlementType"
+                render={({ field }) => (
+                  <SettlementTypeSelect
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+
+            <Controller
+              control={control}
+              name="splitType"
+              render={({ field }) => (
+                <div className="flex items-center gap-2.5 pb-2">
+                  <Checkbox
+                    id="edit-splitType"
+                    checked={field.value === "split"}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked ? "split" : "full")
+                    }
+                  />
+                  <Label htmlFor="edit-splitType" className="font-normal cursor-pointer">
+                    Split 50/50
+                  </Label>
+                </div>
+              )}
+            />
+          </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button

@@ -1,19 +1,4 @@
 import { calculateSettlement, type SettlementExpenseRow } from "@/lib/settlement-calc";
-import type { SerializedCategory } from "@/lib/models/category";
-
-const deferredCategory: SerializedCategory = {
-  _id: "cat1",
-  name: "Groceries",
-  settlementType: "deferred",
-  sortOrder: 1,
-};
-
-const immediateCategory: SerializedCategory = {
-  _id: "cat2",
-  name: "Mortgage",
-  settlementType: "immediate",
-  sortOrder: 0,
-};
 
 function makeExpense(
   overrides: Partial<SettlementExpenseRow> = {}
@@ -23,9 +8,10 @@ function makeExpense(
     paidBy: "john",
     amount: 1000,
     splitType: "split",
+    settlementType: "deferred",
     where: "Store",
     date: "2025-01-15",
-    category: deferredCategory,
+    tags: [],
     ...overrides,
   };
 }
@@ -43,7 +29,7 @@ describe("calculateSettlement", () => {
   });
 
   it("filters out immediate settlement type expenses", () => {
-    const expenses = [makeExpense({ category: immediateCategory })];
+    const expenses = [makeExpense({ settlementType: "immediate" })];
     const result = calculateSettlement(expenses, "john", "jane");
     expect(result.person1OwesPerson2).toBe(0);
     expect(result.person2OwesPerson1).toBe(0);
@@ -109,9 +95,9 @@ describe("calculateSettlement", () => {
 
   it("includes only deferred expenses in deferredExpenses output", () => {
     const expenses = [
-      makeExpense({ _id: "e1", category: deferredCategory }),
-      makeExpense({ _id: "e2", category: immediateCategory }),
-      makeExpense({ _id: "e3", category: deferredCategory }),
+      makeExpense({ _id: "e1", settlementType: "deferred" }),
+      makeExpense({ _id: "e2", settlementType: "immediate" }),
+      makeExpense({ _id: "e3", settlementType: "deferred" }),
     ];
     const result = calculateSettlement(expenses, "john", "jane");
     expect(result.deferredExpenses).toHaveLength(2);

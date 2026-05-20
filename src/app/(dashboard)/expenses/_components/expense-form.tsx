@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addDays, format, parse } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatMonthYear } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,30 +19,26 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { SerializedCategory } from "@/lib/models/category";
+import { TagPicker } from "@/components/tag-picker";
+import { SettlementTypeSelect } from "@/components/settlement-type-select";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { ExpenseApiInput } from "@/lib/validations/expense";
 
 const formSchema = z.object({
-  paidBy:     z.string().min(1),
-  date:       z.string().min(1, "Date is required"),
-  categoryId: z.string().min(1, "Category is required"),
-  amount:     z
+  paidBy:         z.string().min(1),
+  date:           z.string().min(1, "Date is required"),
+  tagIds:         z.array(z.string().min(1)).min(1, "At least one tag is required"),
+  amount:         z
     .string()
     .min(1, "Amount is required")
     .refine(
       (v) => /^\d+(\.\d{1,2})?$/.test(v) && parseFloat(v) > 0,
       "Enter a valid amount (e.g. 42.50)"
     ),
-  where:      z.string().min(1, "Required").max(100),
-  notes:      z.string().max(500).optional(),
-  splitType:  z.enum(["split", "full"]),
+  where:          z.string().min(1, "Required").max(100),
+  notes:          z.string().max(500).optional(),
+  splitType:      z.enum(["split", "full"]),
+  settlementType: z.enum(["immediate", "deferred"]),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -52,12 +48,13 @@ function today() {
 }
 
 interface ExpenseFormProps {
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   paidBy: string;
   closedMonths: string[]; // "year-month" strings, e.g. "2026-3"
 }
 
-export function ExpenseForm({ categories, paidBy, closedMonths }: ExpenseFormProps) {
+export function ExpenseForm({ tags: initialTags, paidBy, closedMonths }: ExpenseFormProps) {
+  const [tags, setTags] = useState(initialTags);
   const closedSet = new Set(closedMonths);
   const router = useRouter();
 
@@ -82,12 +79,13 @@ export function ExpenseForm({ categories, paidBy, closedMonths }: ExpenseFormPro
     resolver: zodResolver(formSchema),
     defaultValues: {
       paidBy,
-      date:       today(),
-      categoryId: "",
-      amount:     "",
-      where:      "",
-      notes:      "",
-      splitType:  "split",
+      date:           today(),
+      tagIds:         [],
+      amount:         "",
+      where:          "",
+      notes:          "",
+      splitType:      "split",
+      settlementType: "deferred",
     },
   });
 
@@ -100,23 +98,21 @@ export function ExpenseForm({ categories, paidBy, closedMonths }: ExpenseFormPro
 
   function settledMonthLabel(iso: string) {
     const d = new Date(iso);
-    return new Date(d.getUTCFullYear(), d.getUTCMonth()).toLocaleDateString(
-      "en-US",
-      { month: "long", year: "numeric" }
-    );
+    return formatMonthYear(d.getUTCMonth() + 1, d.getUTCFullYear());
   }
 
   async function onSubmit(values: FormValues) {
     if (dateIsSettled) return;
 
     const body: ExpenseApiInput = {
-      paidBy:     values.paidBy,
-      date:       values.date,
-      categoryId: values.categoryId,
-      amount:     Math.round(parseFloat(values.amount) * 100),
-      where:      values.where,
-      notes:      values.notes || undefined,
-      splitType:  values.splitType,
+      paidBy:         values.paidBy,
+      date:           values.date,
+      tagIds:         values.tagIds,
+      amount:         Math.round(parseFloat(values.amount) * 100),
+      where:          values.where,
+      notes:          values.notes || undefined,
+      splitType:      values.splitType,
+      settlementType: values.settlementType,
     };
 
     const res = await fetch("/api/expenses", {
@@ -220,34 +216,22 @@ export function ExpenseForm({ categories, paidBy, closedMonths }: ExpenseFormPro
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="categoryId">Category</Label>
+          <Label>Tags</Label>
           <Controller
             control={control}
-            name="categoryId"
+            name="tagIds"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger
-                  id="categoryId"
-                  className={cn(errors.categoryId && "border-destructive")}
-                >
-                  <SelectValue>
-                    {field.value
-                      ? categories.find((c) => c._id === field.value)?.name
-                      : <span className="text-muted-foreground">Select a category…</span>}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <TagPicker
+                tags={tags}
+                selectedTagIds={field.value}
+                onSelectedChange={field.onChange}
+                onTagCreated={(tag) => setTags((prev) => [...prev, tag])}
+                error={!!errors.tagIds}
+              />
             )}
           />
-          {errors.categoryId && (
-            <p className="text-xs text-destructive">{errors.categoryId.message}</p>
+          {errors.tagIds && (
+            <p className="text-xs text-destructive">{errors.tagIds.message}</p>
           )}
         </div>
       </div>
@@ -303,25 +287,41 @@ export function ExpenseForm({ categories, paidBy, closedMonths }: ExpenseFormPro
         />
       </div>
 
-      {/* Split checkbox */}
-      <Controller
-        control={control}
-        name="splitType"
-        render={({ field }) => (
-          <div className="flex items-center gap-2.5">
-            <Checkbox
-              id="splitType"
-              checked={field.value === "split"}
-              onCheckedChange={(checked) =>
-                field.onChange(checked ? "split" : "full")
-              }
-            />
-            <Label htmlFor="splitType" className="font-normal cursor-pointer">
-              Split 50/50
-            </Label>
-          </div>
-        )}
-      />
+      {/* Settlement type + Split */}
+      <div className="flex items-end justify-between">
+        <div className="space-y-1.5">
+          <Label>Settlement</Label>
+          <Controller
+            control={control}
+            name="settlementType"
+            render={({ field }) => (
+              <SettlementTypeSelect
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </div>
+
+        <Controller
+          control={control}
+          name="splitType"
+          render={({ field }) => (
+            <div className="flex items-center gap-2.5 pb-2">
+              <Checkbox
+                id="splitType"
+                checked={field.value === "split"}
+                onCheckedChange={(checked) =>
+                  field.onChange(checked ? "split" : "full")
+                }
+              />
+              <Label htmlFor="splitType" className="font-normal cursor-pointer">
+                Split 50/50
+              </Label>
+            </div>
+          )}
+        />
+      </div>
 
       <Button type="submit" disabled={isSubmitting || dateIsSettled} className="w-full">
         {isSubmitting ? "Saving…" : "Add Expense"}

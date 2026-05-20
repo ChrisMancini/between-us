@@ -15,13 +15,16 @@ A shared expense tracker for two partners who share household expenses but maint
 
 ### Expense Tracking
 
-- Log expenses with category, amount, merchant/location, and optional notes
+- Log expenses with tags, amount, merchant/location, settlement type, and optional notes
 - Assign each expense to the person who paid
+- Tag expenses with one or more hierarchical tags (e.g., "Vacation/Italy 2026")
+- Create tags on the fly while entering expenses
 - Mark expenses as 50/50 split or full reimbursement
+- Choose settlement type per expense: deferred (monthly) or immediate
 - Edit unsettled expenses you created (all fields except payer)
 - Delete unsettled expenses you created, with confirmation dialog
-- Filter expenses by month, category, payer, and merchant search
-- Month-by-month expense list with category and payer badges
+- Filter expenses by month, tag (hierarchical — selecting a parent matches descendants), payer, and merchant search
+- Month-by-month expense list with tag and payer badges
 
 ### Monthly Settlement
 
@@ -37,15 +40,15 @@ A shared expense tracker for two partners who share household expenses but maint
 ### Reports
 
 - Monthly spending summary with deferred/immediate breakdown
-- Category breakdown with visual bar charts
-- Person-by-category matrix showing who paid what, with expandable drill-down to individual expenses
+- Tag breakdown with visual bar charts (groupable by tag level)
+- Person-by-tag matrix showing who paid what, with expandable drill-down to individual expenses
 - 6-month spending trend table
 
 ### Year in Review
 
 - Annual spending summary accessible from the Reports page
 - Year navigation with prev/next controls
-- Reuses the same spending summary, category breakdown, and trend components as monthly reports
+- Reuses the same spending summary, tag breakdown, and trend components as monthly reports
 - Annual highlights: biggest single expense, most frequent merchant, and busiest month
 - Who-paid-more visual bar showing each person's share of total spending
 - Annual settlement summary netting all closed months into a single total
@@ -71,9 +74,9 @@ A shared expense tracker for two partners who share household expenses but maint
 - Import expenses directly from credit card CSV exports (Citi, Chase, or any card)
 - Admin-defined CSV format profiles with column mappings for date, description, and amount
 - Supports both separate Debit/Credit columns (Citi) and single Amount columns (Chase)
-- Optional category column mapping — map CSV categories to app categories automatically
-- Interactive preview table: select/deselect rows, edit descriptions, set categories and split types
-- Bulk actions to set category or split type across all selected rows
+- Optional tag column mapping — map CSV categories to app tags automatically
+- Interactive preview table: select/deselect rows, edit descriptions, set tags and split types
+- Bulk actions to set tag or split type across all selected rows
 - Automatic duplicate detection — flags expenses that match existing entries by date and amount
 - Payments and credits are automatically excluded (only purchases are imported)
 - Available to both users from the Expenses page
@@ -118,7 +121,7 @@ Two authentication methods are available, chosen during initial setup and change
 
 ### Admin
 
-- Category management: add, edit, reorder, and delete expense categories
+- Tag management: add, edit, reorder, and delete hierarchical expense tags
 - CSV format management: define column mappings for different credit card CSV exports
 - People management: view people and swap admin/user roles
 - Authentication settings: switch between person selector and OAuth, manage provider and email mappings

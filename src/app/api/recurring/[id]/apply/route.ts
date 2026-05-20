@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { RecurringTemplate, type IRecurringTemplateItem } from "@/lib/models/recurring-template";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { Expense } from "@/lib/models/expense";
 import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
@@ -23,12 +24,7 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
   const body = await req.json();
   const parsed = applyTemplateSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
   const { date, items: overrides } = parsed.data;
 
@@ -42,45 +38,45 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
   if (!template) {
     return NextResponse.json(
       { error: "Template not found" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
   if (overrides.length !== template.items.length) {
     return NextResponse.json(
       { error: "Items count does not match template" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   const settlementError = await assertMonthsOpen([date]);
   if (settlementError) return settlementError;
 
-  // Validate all categories still exist
-  const categoryIds = [
-    ...new Set(template.items.map((i: IRecurringTemplateItem) => i.categoryId.toString())),
+  // Validate all tags still exist
+  const allTagIds = [
+    ...new Set(template.items.flatMap((i: IRecurringTemplateItem) => i.tagIds.map((id) => id.toString()))),
   ];
-  const existingCategories = await Category.find({
-    _id: { $in: categoryIds },
+  const existingTags = await Tag.find({
+    _id: { $in: allTagIds },
   }).lean();
-  if (existingCategories.length !== categoryIds.length) {
+  if (existingTags.length !== allTagIds.length) {
     return NextResponse.json(
-      { error: "One or more categories in the template no longer exist" },
-      { status: 422 }
+      { error: "One or more tags in the template no longer exist" },
+      { status: 422 },
     );
   }
 
-  // Create all expenses
   const expenses = await Expense.insertMany(
     template.items.map((item: IRecurringTemplateItem, i: number) => ({
       paidBy: item.paidBy,
       date: new Date(date),
-      category: item.categoryId,
+      tags: item.tagIds,
       amount: overrides[i].amount,
       where: item.where,
       notes: item.notes,
       splitType: item.splitType,
-    }))
+      settlementType: item.settlementType,
+    })),
   );
 
   await resetReadinessForMonths(session.user.paidByKey, [date]);
@@ -93,6 +89,6 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
 
   return NextResponse.json(
     { count: expenses.length },
-    { status: 201 }
+    { status: 201 },
   );
 });

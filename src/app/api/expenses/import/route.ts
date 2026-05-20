@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { csvImportApiSchema } from "@/lib/validations/csv-import";
 import { withAuth } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
@@ -12,42 +13,37 @@ export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const parsed = csvImportApiSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
   const { expenses } = parsed.data;
 
   await connectToDatabase();
 
-  // Verify all categories exist
-  const uniqueCategoryIds = [...new Set(expenses.map((e) => e.categoryId))];
-  const existingCategories = await Category.find({
-    _id: { $in: uniqueCategoryIds },
+  // Verify all tags exist
+  const uniqueTagIds = [...new Set(expenses.flatMap((e) => e.tagIds))];
+  const existingTags = await Tag.find({
+    _id: { $in: uniqueTagIds },
   }).lean();
 
-  if (existingCategories.length !== uniqueCategoryIds.length) {
+  if (existingTags.length !== uniqueTagIds.length) {
     return NextResponse.json(
-      { error: "One or more categories do not exist" },
-      { status: 422 }
+      { error: "One or more tags do not exist" },
+      { status: 422 },
     );
   }
 
   const settlementError = await assertMonthsOpen(expenses.map((e) => e.date));
   if (settlementError) return settlementError;
 
-  // Batch insert
   const docs = expenses.map((e) => ({
     paidBy: e.paidBy,
     date: new Date(e.date),
-    category: e.categoryId,
+    tags: e.tagIds,
     amount: e.amount,
     where: e.where,
     notes: e.notes,
     splitType: e.splitType,
+    settlementType: e.settlementType,
   }));
 
   const result = await Expense.insertMany(docs);

@@ -1,13 +1,12 @@
-import mongoose from "mongoose";
+import { auth } from "@/auth";
 import Link from "next/link";
 import { Upload } from "lucide-react";
-import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
-import { seedCategoriesIfEmpty } from "@/lib/category-seed";
-import type { SerializedCategory } from "@/lib/models/category";
+import { serializeTag } from "@/lib/tag-utils";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedExpense } from "@/lib/models/expense";
 import { ExpenseForm } from "./_components/expense-form";
 import { ExpenseList } from "./_components/expense-list";
@@ -18,7 +17,7 @@ export const dynamic = "force-dynamic";
 interface PageProps {
   searchParams: Promise<{
     q?: string;
-    category?: string;
+    tag?: string;
     paidBy?: string;
     month?: string;
     year?: string;
@@ -32,22 +31,19 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const now = new Date();
 
-  // Parse filter params — default to current month
   const month = params.month === "all" ? null : (params.month ? parseInt(params.month) : now.getMonth() + 1);
   const year = params.year ? parseInt(params.year) : now.getFullYear();
   const q = params.q?.trim() || "";
-  const categoryFilter = params.category || "";
+  const tagFilter = params.tag || "";
   const paidByFilter = params.paidBy || "";
 
   await connectToDatabase();
-  await seedCategoriesIfEmpty();
 
-  const [rawCategories, closedSettlements] = await Promise.all([
-    Category.find().sort({ sortOrder: 1 }).lean(),
+  const [rawTags, closedSettlements] = await Promise.all([
+    Tag.find().sort({ sortOrder: 1 }).lean(),
     Settlement.find({ status: "closed" }, { month: 1, year: 1, _id: 0 }).lean(),
   ]);
 
-  // Build dynamic query
   const query: Record<string, unknown> = {};
 
   if (month !== null) {
@@ -64,61 +60,58 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
     query.paidBy = paidByFilter;
   }
 
-  if (categoryFilter) {
-    const cat = rawCategories.find(
-      (c) => c.name.toLowerCase() === categoryFilter.toLowerCase()
+  if (tagFilter) {
+    // Match by exact tag path or any descendant (hierarchical filter)
+    const matchingTag = rawTags.find(
+      (t) => t.path.toLowerCase() === tagFilter.toLowerCase()
     );
-    if (cat) {
-      query.category = cat._id;
+    if (matchingTag) {
+      // Find this tag and all descendants
+      const matchingIds = rawTags
+        .filter(
+          (t) =>
+            t._id.toString() === matchingTag._id.toString() ||
+            t.path.toLowerCase().startsWith(matchingTag.path.toLowerCase() + "/")
+        )
+        .map((t) => t._id);
+      query.tags = { $in: matchingIds };
     }
   }
 
   const rawExpenses = await Expense.find(query)
     .sort({ date: -1, createdAt: -1 })
     .limit(month === null ? 200 : 0)
-    .populate("category")
+    .populate("tags")
     .lean();
 
   const closedMonths = new Set(
     closedSettlements.map((s) => `${s.year}-${s.month}`)
   );
 
-  const categories: SerializedCategory[] = rawCategories.map((c) => ({
-    _id: c._id.toString(),
-    name: c.name,
-    settlementType: c.settlementType,
-    sortOrder: c.sortOrder,
-  }));
+  const tags: SerializedTag[] = rawTags.map(serializeTag);
 
-  const expenses: SerializedExpense[] = rawExpenses
-    .filter((e) => e.category != null)
-    .map((e) => {
-      const cat = e.category as unknown as {
-        _id: mongoose.Types.ObjectId;
-        name: string;
-        settlementType: string;
-        sortOrder: number;
-      };
-      return {
-        _id: e._id.toString(),
-        paidBy: e.paidBy,
-        date: (e.date as Date).toISOString(),
-        category: {
-          _id: cat._id.toString(),
-          name: cat.name,
-          settlementType: cat.settlementType as "immediate" | "deferred",
-          sortOrder: cat.sortOrder,
-        },
-        amount: e.amount,
-        where: e.where,
-        notes: e.notes,
-        splitType: e.splitType,
-        createdAt: (e.createdAt as Date).toISOString(),
-        updatedAt: (e.updatedAt as Date).toISOString(),
-      };
-    });
+  const expenses: SerializedExpense[] = rawExpenses.map((e) => {
+    const expTags = (e.tags ?? []) as unknown as Array<{
+      _id: { toString(): string };
+      path: string;
+      sortOrder: number;
+    }>;
+    return {
+      _id: e._id.toString(),
+      paidBy: e.paidBy,
+      date: (e.date as Date).toISOString(),
+      tags: expTags.map(serializeTag),
+      amount: e.amount,
+      where: e.where,
+      notes: e.notes,
+      splitType: e.splitType,
+      settlementType: e.settlementType,
+      createdAt: (e.createdAt as Date).toISOString(),
+      updatedAt: (e.updatedAt as Date).toISOString(),
+    };
+  });
 
-  const isFiltered = !!(q || categoryFilter || paidByFilter);
+  const isFiltered = !!(q || tagFilter || paidByFilter);
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -140,17 +133,17 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
 
       <div className="border rounded-xl p-6 bg-card shadow-sm">
         <ExpenseForm
-          categories={categories}
+          tags={tags}
           paidBy={paidBy}
           closedMonths={[...closedMonths]}
         />
       </div>
 
       <ExpenseFilters
-        categories={categories}
+        tags={tags}
         filters={{
           q,
-          category: categoryFilter,
+          tag: tagFilter,
           paidBy: paidByFilter,
           month,
           year,
@@ -162,7 +155,7 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
         closedMonths={closedMonths}
         isFiltered={isFiltered}
         currentUserKey={paidBy}
-        categories={categories}
+        tags={tags}
         closedMonthsList={[...closedMonths]}
       />
     </div>

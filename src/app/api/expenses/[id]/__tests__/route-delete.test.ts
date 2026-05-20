@@ -31,8 +31,17 @@ jest.mock("@/lib/models/settlement", () => ({
   },
 }));
 
-jest.mock("@/lib/models/category", () => ({
-  Category: { findById: jest.fn() },
+jest.mock("@/lib/models/tag", () => ({ Tag: {} }));
+
+jest.mock("@/lib/tag-utils", () => ({
+  serializeTag: (t: { _id: unknown; path: string; sortOrder: number }) => ({
+    _id: String(t._id),
+    path: t.path,
+    sortOrder: t.sortOrder,
+    name: t.path.split("/").pop(),
+    parent: "",
+    depth: 1,
+  }),
 }));
 
 jest.mock("@/lib/validations/expense", () => ({
@@ -47,7 +56,6 @@ jest.mock("@/lib/readiness-reset", () => ({ resetReadinessForMonths: jest.fn() }
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
 import { Settlement } from "@/lib/models/settlement";
 import { logActivity } from "@/lib/activity-logger";
 import { DELETE } from "../route";
@@ -80,21 +88,33 @@ describe("DELETE /api/expenses/[id]", () => {
 
   it("returns 404 when expense does not exist", async () => {
     mockAuth.mockResolvedValue(makeSession());
-    mockFindById.mockResolvedValue(null);
+    mockFindById.mockReturnValue({
+      populate: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      }),
+    });
     const res = await DELETE(deleteRequest(), makeIdContext());
     await expectStatus(res, 404);
   });
 
   it("returns 403 when user is not the owner", async () => {
     mockAuth.mockResolvedValue(makeSession("user", "john"));
-    mockFindById.mockResolvedValue(makeExpense({ paidBy: "jane" }));
+    mockFindById.mockReturnValue({
+      populate: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(makeExpense({ paidBy: "jane" })),
+      }),
+    });
     const res = await DELETE(deleteRequest(), makeIdContext());
     await expectError(res, 403, "Forbidden");
   });
 
   it("returns 422 when the expense month is settled", async () => {
     mockAuth.mockResolvedValue(makeSession());
-    mockFindById.mockResolvedValue(makeExpense());
+    mockFindById.mockReturnValue({
+      populate: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(makeExpense()),
+      }),
+    });
     mockSettlementFindOne.mockReturnValue({
       lean: jest.fn().mockResolvedValue({ month: 4, year: 2026, status: "closed" }),
     });
@@ -104,12 +124,13 @@ describe("DELETE /api/expenses/[id]", () => {
 
   it("deletes the expense and returns success for the owner", async () => {
     mockAuth.mockResolvedValue(makeSession("user", "john"));
-    mockFindById.mockResolvedValue(makeExpense());
+    mockFindById.mockReturnValue({
+      populate: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(makeExpense()),
+      }),
+    });
     mockSettlementFindOne.mockReturnValue({
       lean: jest.fn().mockResolvedValue(null),
-    });
-    asMock(Category.findById).mockReturnValue({
-      lean: jest.fn().mockResolvedValue({ name: "Groceries" }),
     });
     mockFindByIdAndDelete.mockResolvedValue(null);
 
@@ -127,12 +148,13 @@ describe("DELETE /api/expenses/[id]", () => {
 
   it("allows admin to delete another user's expense", async () => {
     mockAuth.mockResolvedValue(makeAdminSession());
-    mockFindById.mockResolvedValue(makeExpense({ paidBy: "jane" }));
+    mockFindById.mockReturnValue({
+      populate: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(makeExpense({ paidBy: "jane" })),
+      }),
+    });
     mockSettlementFindOne.mockReturnValue({
       lean: jest.fn().mockResolvedValue(null),
-    });
-    asMock(Category.findById).mockReturnValue({
-      lean: jest.fn().mockResolvedValue({ name: "Groceries" }),
     });
     mockFindByIdAndDelete.mockResolvedValue(null);
 

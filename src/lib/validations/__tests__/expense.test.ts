@@ -2,11 +2,12 @@ import { expenseUpdateApiSchema } from "@/lib/validations/expense";
 
 const validPayload = {
   date: "2026-05-01",
-  categoryId: "507f1f77bcf86cd799439011",
+  tagIds: ["507f1f77bcf86cd799439011"],
   amount: 4250,
   where: "Publix",
   notes: "Groceries",
   splitType: "split" as const,
+  settlementType: "deferred" as const,
 };
 
 describe("expenseUpdateApiSchema", () => {
@@ -30,9 +31,15 @@ describe("expenseUpdateApiSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects missing categoryId", () => {
+  it("rejects missing tagIds", () => {
     expect(
-      expenseUpdateApiSchema.safeParse({ ...validPayload, categoryId: undefined }).success
+      expenseUpdateApiSchema.safeParse({ ...validPayload, tagIds: undefined }).success
+    ).toBe(false);
+  });
+
+  it("rejects empty tagIds", () => {
+    expect(
+      expenseUpdateApiSchema.safeParse({ ...validPayload, tagIds: [] }).success
     ).toBe(false);
   });
 

@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedRecurringTemplate } from "@/lib/models/recurring-template";
 
 function fmt(cents: number) {
@@ -54,7 +54,7 @@ type ApplyFormValues = z.infer<typeof applyFormSchema>;
 
 interface ApplyTemplateDialogProps {
   template: SerializedRecurringTemplate;
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   closedMonths: string[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -62,7 +62,7 @@ interface ApplyTemplateDialogProps {
 
 export function ApplyTemplateDialog({
   template,
-  categories,
+  tags,
   closedMonths,
   open,
   onOpenChange,
@@ -72,7 +72,7 @@ export function ApplyTemplateDialog({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const categoryMap = new Map(categories.map((c) => [c._id, c.name]));
+  const tagMap = new Map(tags.map((t) => [t._id, t.path]));
 
   const {
     register,
@@ -195,7 +195,7 @@ export function ApplyTemplateDialog({
                     Where
                   </th>
                   <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
-                    Category
+                    Tags
                   </th>
                   <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
                     Paid By
@@ -212,7 +212,7 @@ export function ApplyTemplateDialog({
                     <tr key={field.id}>
                       <td className="px-3 py-2 font-medium">{item.where}</td>
                       <td className="px-3 py-2 text-muted-foreground">
-                        {categoryMap.get(item.categoryId) ?? "Unknown"}
+                        {item.tagIds.map((id) => tagMap.get(id) ?? "Unknown").join(", ")}
                       </td>
                       <td className="px-3 py-2">
                         <PersonBadge {...badgeProps(item.paidBy, personMap)} />

@@ -1,13 +1,14 @@
-import type { SerializedCategory } from "./models/category";
+import type { SerializedTag } from "./models/tag";
 
 export interface SettlementExpenseRow {
   _id: string;
   paidBy: string;
   amount: number; // cents
   splitType: "split" | "full";
+  settlementType: "immediate" | "deferred";
   where: string;
   date: string;
-  category: SerializedCategory;
+  tags: SerializedTag[];
 }
 
 export interface SettlementBreakdown {
@@ -27,7 +28,7 @@ export function calculateSettlement(
   let person2OwesPerson1 = 0;
 
   for (const e of expenses) {
-    if (e.category.settlementType !== "deferred") continue;
+    if (e.settlementType !== "deferred") continue;
 
     const owedAmount =
       e.splitType === "split" ? Math.round(e.amount / 2) : e.amount;
@@ -41,7 +42,7 @@ export function calculateSettlement(
 
   const net = person2OwesPerson1 - person1OwesPerson2;
   const deferredExpenses = expenses.filter(
-    (e) => e.category.settlementType === "deferred"
+    (e) => e.settlementType === "deferred"
   );
 
   if (net > 0) {

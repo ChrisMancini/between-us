@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-const categoryMappingSchema = z.object({
+const tagMappingSchema = z.object({
   sourceValue: z.string().min(1, "Source value is required").max(100).trim(),
-  categoryId: z.string().min(1, "Category is required"),
+  tagIds: z.array(z.string().min(1)).min(1, "At least one tag is required"),
 });
 
 export const csvFormatApiSchema = z
@@ -16,9 +16,9 @@ export const csvFormatApiSchema = z
     creditColumn: z.string().max(100).trim().optional(),
     amountColumn: z.string().max(100).trim().optional(),
     purchaseSign: z.enum(["positive", "negative"]).optional(),
-    categoryColumn: z.string().max(100).trim().optional().default(""),
+    tagColumn: z.string().max(100).trim().optional().default(""),
     notesColumn: z.string().max(100).trim().optional().default(""),
-    categoryMappings: z.array(categoryMappingSchema).optional().default([]),
+    tagMappings: z.array(tagMappingSchema).optional().default([]),
   })
   .superRefine((data, ctx) => {
     if (data.amountType === "separate") {

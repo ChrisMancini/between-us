@@ -2,12 +2,13 @@ import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
-import { Category } from "@/lib/models/category";
-import { RecurringTemplate, type IRecurringTemplateItem } from "@/lib/models/recurring-template";
+import { Tag } from "@/lib/models/tag";
+import { RecurringTemplate } from "@/lib/models/recurring-template";
 import { Settlement } from "@/lib/models/settlement";
-import { seedCategoriesIfEmpty } from "@/lib/category-seed";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
+import { serializeTag } from "@/lib/tag-utils";
 import type { SerializedRecurringTemplate } from "@/lib/models/recurring-template";
+import { serializeTemplate } from "@/lib/recurring-template-utils";
 import { Button } from "@/components/ui/button";
 import { TemplateFormDialog } from "./_components/template-form-dialog";
 import { TemplateList } from "./_components/template-list";
@@ -21,37 +22,18 @@ export default async function RecurringPage() {
   const paidBy = session.user.paidByKey ?? "";
 
   await connectToDatabase();
-  await seedCategoriesIfEmpty();
 
-  const [rawCategories, rawTemplates, closedSettlements] = await Promise.all([
-    Category.find().sort({ sortOrder: 1 }).lean(),
+  const [rawTags, rawTemplates, closedSettlements] = await Promise.all([
+    Tag.find().sort({ sortOrder: 1 }).lean(),
     RecurringTemplate.find({ createdBy: session.user.id })
       .sort({ name: 1 })
       .lean(),
     Settlement.find({ status: "closed" }, { month: 1, year: 1, _id: 0 }).lean(),
   ]);
 
-  const categories: SerializedCategory[] = rawCategories.map((c) => ({
-    _id: c._id.toString(),
-    name: c.name,
-    settlementType: c.settlementType,
-    sortOrder: c.sortOrder,
-  }));
+  const tags: SerializedTag[] = rawTags.map((t) => serializeTag(t));
 
-  const templates: SerializedRecurringTemplate[] = rawTemplates.map((t) => ({
-    _id: t._id.toString(),
-    name: t.name,
-    items: t.items.map((item: IRecurringTemplateItem) => ({
-      paidBy: item.paidBy,
-      categoryId: item.categoryId.toString(),
-      amount: item.amount,
-      where: item.where,
-      notes: item.notes,
-      splitType: item.splitType,
-    })),
-    createdAt: (t.createdAt as Date).toISOString(),
-    updatedAt: (t.updatedAt as Date).toISOString(),
-  }));
+  const templates: SerializedRecurringTemplate[] = rawTemplates.map(serializeTemplate);
 
   const closedMonths = closedSettlements.map((s) => `${s.year}-${s.month}`);
 
@@ -66,7 +48,7 @@ export default async function RecurringPage() {
         </div>
 
         <TemplateFormDialog
-          categories={categories}
+          tags={tags}
           paidBy={paidBy}
           trigger={
             <Button className="gap-2">
@@ -79,7 +61,7 @@ export default async function RecurringPage() {
 
       <TemplateList
         templates={templates}
-        categories={categories}
+        tags={tags}
         closedMonths={closedMonths}
         paidBy={paidBy}
       />

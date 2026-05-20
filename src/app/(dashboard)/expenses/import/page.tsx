@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { CsvFormat } from "@/lib/models/csv-format";
 import { Settlement } from "@/lib/models/settlement";
-import { seedCategoriesIfEmpty } from "@/lib/category-seed";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
+import { serializeTag } from "@/lib/tag-utils";
 import type { SerializedCsvFormat } from "@/lib/models/csv-format";
 import { CsvImportForm } from "./_components/csv-import-form";
 
@@ -15,20 +15,14 @@ export default async function ImportPage() {
   const paidBy = session?.user?.paidByKey ?? "";
 
   await connectToDatabase();
-  await seedCategoriesIfEmpty();
 
-  const [rawCategories, rawFormats, closedSettlements] = await Promise.all([
-    Category.find().sort({ sortOrder: 1 }).lean(),
+  const [rawTags, rawFormats, closedSettlements] = await Promise.all([
+    Tag.find().sort({ sortOrder: 1 }).lean(),
     CsvFormat.find().sort({ name: 1 }).lean(),
     Settlement.find({ status: "closed" }, { month: 1, year: 1, _id: 0 }).lean(),
   ]);
 
-  const categories: SerializedCategory[] = rawCategories.map((c) => ({
-    _id: c._id.toString(),
-    name: c.name,
-    settlementType: c.settlementType,
-    sortOrder: c.sortOrder,
-  }));
+  const tags: SerializedTag[] = rawTags.map((t) => serializeTag(t));
 
   const formats: SerializedCsvFormat[] = rawFormats.map((f) => ({
     _id: f._id.toString(),
@@ -41,11 +35,11 @@ export default async function ImportPage() {
     creditColumn: f.creditColumn,
     amountColumn: f.amountColumn,
     purchaseSign: f.purchaseSign,
-    categoryColumn: f.categoryColumn,
+    tagColumn: f.tagColumn,
     notesColumn: f.notesColumn,
-    categoryMappings: (f.categoryMappings || []).map((m: { sourceValue: string; categoryId: { toString(): string } }) => ({
+    tagMappings: (f.tagMappings || []).map((m: { sourceValue: string; tagIds: { toString(): string }[] }) => ({
       sourceValue: m.sourceValue,
-      categoryId: m.categoryId.toString(),
+      tagIds: m.tagIds.map((id) => id.toString()),
     })),
   }));
 
@@ -63,7 +57,7 @@ export default async function ImportPage() {
       </div>
 
       <CsvImportForm
-        categories={categories}
+        tags={tags}
         formats={formats}
         paidBy={paidBy}
         closedMonths={[...closedMonths]}

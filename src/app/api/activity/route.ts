@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db";
 import { Activity, type IActivity } from "@/lib/models/activity";
 import { activityQuerySchema } from "@/lib/validations/activity";
 import { withAuth } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
 
 export const GET = withAuth(async (req, session) => {
   const { searchParams } = new URL(req.url);
@@ -12,12 +13,7 @@ export const GET = withAuth(async (req, session) => {
     filter: searchParams.get("filter") ?? undefined,
   });
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
   const { limit, cursor, filter } = parsed.data;
 

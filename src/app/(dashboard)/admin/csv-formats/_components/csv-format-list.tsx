@@ -5,16 +5,16 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { SerializedCsvFormat } from "@/lib/models/csv-format";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 import { CsvFormatFormDialog } from "./csv-format-form-dialog";
-import { DeleteCsvFormatDialog } from "./delete-csv-format-dialog";
+import { DeleteDialog } from "@/components/delete-dialog";
 
 interface CsvFormatListProps {
   formats: SerializedCsvFormat[];
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
 }
 
-export function CsvFormatList({ formats, categories }: CsvFormatListProps) {
+export function CsvFormatList({ formats, tags }: CsvFormatListProps) {
   const [deleteTarget, setDeleteTarget] = useState<SerializedCsvFormat | null>(
     null
   );
@@ -64,15 +64,15 @@ export function CsvFormatList({ formats, categories }: CsvFormatListProps) {
                   </Badge>
                 </td>
                 <td className="px-4 py-2.5 text-muted-foreground">
-                  {fmt.categoryMappings.length > 0
-                    ? `${fmt.categoryMappings.length} category mapping${fmt.categoryMappings.length !== 1 ? "s" : ""}`
+                  {fmt.tagMappings.length > 0
+                    ? `${fmt.tagMappings.length} tag mapping${fmt.tagMappings.length !== 1 ? "s" : ""}`
                     : "None"}
                 </td>
                 <td className="px-4 py-2.5">
                   <div className="flex items-center justify-end gap-1">
                     <CsvFormatFormDialog
                       format={fmt}
-                      categories={categories}
+                      tags={tags}
                       trigger={
                         <Button
                           variant="ghost"
@@ -100,9 +100,10 @@ export function CsvFormatList({ formats, categories }: CsvFormatListProps) {
       </div>
 
       {deleteTarget && (
-        <DeleteCsvFormatDialog
-          formatId={deleteTarget._id}
-          formatName={deleteTarget.name}
+        <DeleteDialog
+          endpoint={`/api/csv-formats/${deleteTarget._id}`}
+          itemType="format"
+          itemLabel={deleteTarget.name}
           open={!!deleteTarget}
           onOpenChange={(open) => {
             if (!open) setDeleteTarget(null);

@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import type { SerializedExpense } from "@/lib/models/expense";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
 import { EditExpenseDialog } from "./edit-expense-dialog";
-import { DeleteExpenseDialog } from "./delete-expense-dialog";
+import { DeleteDialog } from "@/components/delete-dialog";
 
 function formatAmount(cents: number) {
   return (cents / 100).toLocaleString("en-US", {
@@ -33,7 +33,7 @@ interface ExpenseListProps {
   closedMonths: Set<string>;
   isFiltered?: boolean;
   currentUserKey?: string;
-  categories?: SerializedCategory[];
+  tags?: SerializedTag[];
   closedMonthsList?: string[];
 }
 
@@ -42,7 +42,7 @@ export function ExpenseList({
   closedMonths,
   isFiltered = false,
   currentUserKey,
-  categories,
+  tags,
   closedMonthsList,
 }: ExpenseListProps) {
   const { personMap } = usePersons();
@@ -75,7 +75,7 @@ export function ExpenseList({
           <tr className="border-b border-border">
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Date</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Where</th>
-            <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Category</th>
+            <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Tags</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Amount</th>
@@ -106,7 +106,9 @@ export function ExpenseList({
                   )}
                 </span>
               </td>
-              <td className="px-4 py-3 text-muted-foreground">{e.category.name}</td>
+              <td className="px-4 py-3 text-muted-foreground">
+                {e.tags.map((t) => t.path).join(", ")}
+              </td>
               <td className="px-4 py-3">
                 <PersonBadge {...badgeProps(e.paidBy, personMap)} />
               </td>
@@ -122,7 +124,7 @@ export function ExpenseList({
                     <div className="flex items-center gap-0.5">
                       <EditExpenseDialog
                         expense={e}
-                        categories={categories!}
+                        tags={tags!}
                         closedMonths={closedMonthsList!}
                         trigger={
                           <Button
@@ -153,9 +155,10 @@ export function ExpenseList({
       </table>
 
       {deleteTarget && (
-        <DeleteExpenseDialog
-          expenseId={deleteTarget._id}
-          expenseWhere={deleteTarget.where}
+        <DeleteDialog
+          endpoint={`/api/expenses/${deleteTarget._id}`}
+          itemType="expense"
+          itemLabel={deleteTarget.where}
           open={!!deleteTarget}
           onOpenChange={(open) => {
             if (!open) setDeleteTarget(null);

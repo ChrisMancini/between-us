@@ -15,8 +15,8 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/recurring-template", () => ({
   RecurringTemplate: { find: jest.fn(), create: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({
-  Category: { find: jest.fn() },
+jest.mock("@/lib/models/tag", () => ({
+  Tag: { find: jest.fn() },
 }));
 jest.mock("@/lib/validations/recurring-template", () => ({
   recurringTemplateApiSchema: { safeParse: jest.fn() },
@@ -24,7 +24,7 @@ jest.mock("@/lib/validations/recurring-template", () => ({
 
 import { auth } from "@/auth";
 import { RecurringTemplate } from "@/lib/models/recurring-template";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { recurringTemplateApiSchema } from "@/lib/validations/recurring-template";
 import { POST } from "../route";
 
@@ -36,11 +36,12 @@ const validData = {
   items: [
     {
       paidBy: "john",
-      categoryId: VALID_ID_2,
+      tagIds: [VALID_ID_2],
       amount: 10000,
       where: "FPL",
       notes: "Electric",
       splitType: "split",
+      settlementType: "deferred",
     },
   ],
 };
@@ -61,32 +62,32 @@ describe("POST /api/recurring", () => {
     await expectError(res, 400, "Validation failed");
   });
 
-  it("returns 400 when categoryId is invalid", async () => {
+  it("returns 400 when tagId is invalid", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(
       makeParsedSuccess({
         ...validData,
-        items: [{ ...validData.items[0], categoryId: "bad" }],
+        items: [{ ...validData.items[0], tagIds: ["bad"] }],
       })
     );
     const res = await POST(makeJsonRequest("/api/recurring", {}));
-    await expectError(res, 400, "Invalid category ID");
+    await expectError(res, 400, "Invalid tag ID");
   });
 
-  it("returns 422 when categories not found", async () => {
+  it("returns 422 when tags not found", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
-    asMock(Category.find).mockReturnValue({
+    asMock(Tag.find).mockReturnValue({
       lean: jest.fn().mockResolvedValue([]),
     });
     const res = await POST(makeJsonRequest("/api/recurring", {}));
-    await expectError(res, 422, "One or more categories not found");
+    await expectError(res, 422, "One or more tags not found");
   });
 
   it("returns 201 on success", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
-    asMock(Category.find).mockReturnValue({
+    asMock(Tag.find).mockReturnValue({
       lean: jest.fn().mockResolvedValue([{ _id: VALID_ID_2 }]),
     });
     const created = {
@@ -95,11 +96,12 @@ describe("POST /api/recurring", () => {
       items: [
         {
           paidBy: "john",
-          categoryId: VALID_ID_2,
+          tagIds: [VALID_ID_2],
           amount: 10000,
           where: "FPL",
           notes: "Electric",
           splitType: "split",
+          settlementType: "deferred",
         },
       ],
       createdAt: new Date(),

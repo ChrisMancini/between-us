@@ -1,9 +1,10 @@
 import { Plus } from "lucide-react";
 import { connectToDatabase } from "@/lib/db";
 import { CsvFormat } from "@/lib/models/csv-format";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import type { SerializedCsvFormat } from "@/lib/models/csv-format";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
+import { serializeTag } from "@/lib/tag-utils";
 import { Button } from "@/components/ui/button";
 import { CsvFormatFormDialog } from "./_components/csv-format-form-dialog";
 import { CsvFormatList } from "./_components/csv-format-list";
@@ -13,9 +14,9 @@ export const dynamic = "force-dynamic";
 export default async function CsvFormatsPage() {
   await connectToDatabase();
 
-  const [rawFormats, rawCategories] = await Promise.all([
+  const [rawFormats, rawTags] = await Promise.all([
     CsvFormat.find().sort({ name: 1 }).lean(),
-    Category.find().sort({ sortOrder: 1 }).lean(),
+    Tag.find().sort({ sortOrder: 1 }).lean(),
   ]);
 
   const formats: SerializedCsvFormat[] = rawFormats.map((f) => ({
@@ -29,20 +30,15 @@ export default async function CsvFormatsPage() {
     creditColumn: f.creditColumn,
     amountColumn: f.amountColumn,
     purchaseSign: f.purchaseSign,
-    categoryColumn: f.categoryColumn,
+    tagColumn: f.tagColumn,
     notesColumn: f.notesColumn,
-    categoryMappings: (f.categoryMappings || []).map((m: { sourceValue: string; categoryId: { toString(): string } }) => ({
+    tagMappings: (f.tagMappings || []).map((m: { sourceValue: string; tagIds: { toString(): string }[] }) => ({
       sourceValue: m.sourceValue,
-      categoryId: m.categoryId.toString(),
+      tagIds: m.tagIds.map((id) => id.toString()),
     })),
   }));
 
-  const categories: SerializedCategory[] = rawCategories.map((c) => ({
-    _id: c._id.toString(),
-    name: c.name,
-    settlementType: c.settlementType,
-    sortOrder: c.sortOrder,
-  }));
+  const tags: SerializedTag[] = rawTags.map((t) => serializeTag(t));
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -55,7 +51,7 @@ export default async function CsvFormatsPage() {
         </div>
 
         <CsvFormatFormDialog
-          categories={categories}
+          tags={tags}
           trigger={
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -65,7 +61,7 @@ export default async function CsvFormatsPage() {
         />
       </div>
 
-      <CsvFormatList formats={formats} categories={categories} />
+      <CsvFormatList formats={formats} tags={tags} />
     </div>
   );
 }

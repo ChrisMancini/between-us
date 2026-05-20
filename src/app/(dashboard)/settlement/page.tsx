@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { PersonBadge } from "@/components/person-badge";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
-import "@/lib/models/category";
+import "@/lib/models/tag";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import type { SerializedSettlement } from "@/lib/models/settlement";
@@ -13,6 +13,7 @@ import {
   calculateSettlement,
   type SettlementExpenseRow,
 } from "@/lib/settlement-calc";
+import { serializeTag } from "@/lib/tag-utils";
 import { getPersons, buildPersonMap, badgeProps } from "@/lib/persons";
 import type { SerializedPerson } from "@/lib/models/person";
 import { MonthNav } from "@/components/month-nav";
@@ -116,30 +117,26 @@ export default async function SettlementPage({ searchParams }: PageProps) {
     date: { $gte: start, $lt: end },
   })
     .sort({ date: 1, createdAt: 1 })
-    .populate("category")
+    .populate("tags")
     .lean();
 
   const expenses: SettlementExpenseRow[] = (
     rawExpenses as unknown as Record<string, unknown>[]
-  )
-    .filter((e) => e.category != null)
-    .map((e) => {
-      const cat = e.category as Record<string, unknown>;
-      return {
-        _id: (e._id as mongoose.Types.ObjectId).toString(),
-        paidBy: e.paidBy as string,
-        amount: e.amount as number,
-        splitType: e.splitType as "split" | "full",
-        where: e.where as string,
-        date: (e.date as Date).toISOString(),
-        category: {
-          _id: (cat._id as mongoose.Types.ObjectId).toString(),
-          name: cat.name as string,
-          settlementType: cat.settlementType as "immediate" | "deferred",
-          sortOrder: cat.sortOrder as number,
-        },
-      };
-    });
+  ).map((e) => {
+    const rawTags = (e.tags as Record<string, unknown>[] | undefined) ?? [];
+    return {
+      _id: (e._id as mongoose.Types.ObjectId).toString(),
+      paidBy: e.paidBy as string,
+      amount: e.amount as number,
+      splitType: e.splitType as "split" | "full",
+      settlementType: e.settlementType as "immediate" | "deferred",
+      where: e.where as string,
+      date: (e.date as Date).toISOString(),
+      tags: rawTags.map((t) =>
+        serializeTag(t as { _id: unknown; path: string; sortOrder: number })
+      ),
+    };
+  });
 
   const breakdown = calculateSettlement(expenses, p1.key, p2.key);
 
@@ -186,7 +183,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
     : netSummaryText(breakdown.netOwedBy, breakdown.netAmount);
 
   const immediateExpenses = expenses.filter(
-    (e) => e.category.settlementType === "immediate"
+    (e) => e.settlementType === "immediate"
   );
 
   return (
@@ -514,7 +511,7 @@ function ExpenseTable({
           <tr className="border-b border-border">
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Date</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Where</th>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Category</th>
+            <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Tags</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Amount</th>
@@ -531,7 +528,7 @@ function ExpenseTable({
                 })}
               </td>
               <td className="px-4 py-2.5 font-medium text-foreground">{e.where}</td>
-              <td className="px-4 py-2.5 text-muted-foreground">{e.category.name}</td>
+              <td className="px-4 py-2.5 text-muted-foreground">{e.tags.map((t) => t.path).join(", ")}</td>
               <td className="px-4 py-2.5">
                 <PersonBadge {...badgeProps(e.paidBy, personMap)} />
               </td>

@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { expenseApiSchema } from "@/lib/validations/expense";
+import { serializeTag } from "@/lib/tag-utils";
 import { withAuth } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
@@ -16,37 +18,30 @@ export const GET = withAuth(async () => {
   const expenses = await Expense.find()
     .sort({ date: -1, createdAt: -1 })
     .limit(30)
-    .populate("category")
+    .populate("tags")
     .lean();
 
   return NextResponse.json({
-    expenses: expenses
-      .filter((e) => e.category != null)
-      .map((e) => {
-        const cat = e.category as unknown as {
-          _id: mongoose.Types.ObjectId;
-          name: string;
-          settlementType: string;
-          sortOrder: number;
-        };
-        return {
-          _id: e._id.toString(),
-          paidBy: e.paidBy,
-          date: (e.date as Date).toISOString(),
-          category: {
-            _id: cat._id.toString(),
-            name: cat.name,
-            settlementType: cat.settlementType,
-            sortOrder: cat.sortOrder,
-          },
-          amount: e.amount,
-          where: e.where,
-          notes: e.notes,
-          splitType: e.splitType,
-          createdAt: (e.createdAt as Date).toISOString(),
-          updatedAt: (e.updatedAt as Date).toISOString(),
-        };
-      }),
+    expenses: expenses.map((e) => {
+      const tags = (e.tags ?? []) as unknown as Array<{
+        _id: mongoose.Types.ObjectId;
+        path: string;
+        sortOrder: number;
+      }>;
+      return {
+        _id: e._id.toString(),
+        paidBy: e.paidBy,
+        date: (e.date as Date).toISOString(),
+        tags: tags.map(serializeTag),
+        amount: e.amount,
+        where: e.where,
+        notes: e.notes,
+        splitType: e.splitType,
+        settlementType: e.settlementType,
+        createdAt: (e.createdAt as Date).toISOString(),
+        updatedAt: (e.updatedAt as Date).toISOString(),
+      };
+    }),
   });
 });
 
@@ -54,18 +49,15 @@ export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const parsed = expenseApiSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
-  const { paidBy, date, categoryId, amount, where, notes, splitType } =
+  const { paidBy, date, tagIds, amount, where, notes, splitType, settlementType } =
     parsed.data;
 
-  if (!mongoose.isValidObjectId(categoryId)) {
-    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+  for (const tagId of tagIds) {
+    if (!mongoose.isValidObjectId(tagId)) {
+      return NextResponse.json({ error: "Invalid tag ID" }, { status: 400 });
+    }
   }
 
   await connectToDatabase();
@@ -73,33 +65,41 @@ export const POST = withAuth(async (req, session) => {
   const settlementError = await assertMonthsOpen([date]);
   if (settlementError) return settlementError;
 
-  const category = await Category.findById(categoryId);
-  if (!category) {
-    return NextResponse.json({ error: "Category not found" }, { status: 422 });
+  const existingTags = await Tag.find({ _id: { $in: tagIds } }).lean();
+  if (existingTags.length !== tagIds.length) {
+    return NextResponse.json({ error: "One or more tags not found" }, { status: 422 });
   }
 
   const expense = await Expense.create({
     paidBy,
     date: new Date(date),
-    category: categoryId,
+    tags: tagIds,
     amount,
     where,
     notes,
     splitType,
+    settlementType,
   });
 
   await resetReadinessForMonths(session.user.paidByKey, [date]);
 
+  const tagNames = existingTags.map((t) => t.path).join(", ");
   await logActivity(session.user.paidByKey, "expense_create", `added ${formatCurrency(amount)} at ${where}`, {
     expenseId: expense._id.toString(),
     amount,
     where,
-    categoryName: category.name,
+    tagNames,
     paidBy,
     splitType,
   });
 
-  const populated = await expense.populate("category");
+  const populated = await expense.populate("tags");
+
+  const tags = populated.tags as unknown as Array<{
+    _id: mongoose.Types.ObjectId;
+    path: string;
+    sortOrder: number;
+  }>;
 
   return NextResponse.json(
     {
@@ -107,18 +107,14 @@ export const POST = withAuth(async (req, session) => {
         _id: populated._id.toString(),
         paidBy: populated.paidBy,
         date: populated.date.toISOString(),
-        category: {
-          _id: (populated.category as unknown as { _id: mongoose.Types.ObjectId })._id.toString(),
-          name: (populated.category as unknown as { name: string }).name,
-          settlementType: (populated.category as unknown as { settlementType: string }).settlementType,
-          sortOrder: (populated.category as unknown as { sortOrder: number }).sortOrder,
-        },
+        tags: tags.map(serializeTag),
         amount: populated.amount,
         where: populated.where,
         notes: populated.notes,
         splitType: populated.splitType,
+        settlementType: populated.settlementType,
       },
     },
-    { status: 201 }
+    { status: 201 },
   );
 });

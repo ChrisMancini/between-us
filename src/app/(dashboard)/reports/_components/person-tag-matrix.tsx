@@ -8,93 +8,73 @@ import { usePersons } from "@/components/persons-context";
 import { PERSON_COLORS, badgeProps } from "@/lib/person-utils";
 import type { ExpenseDetail } from "../page";
 
-interface CategoryTotal {
-  categoryName: string;
+interface TagTotal {
+  tagPath: string;
+  tagName: string;
   settlementType: "immediate" | "deferred";
   person1Paid: number;
   person2Paid: number;
   total: number;
 }
 
-interface PersonCategoryMatrixProps {
-  categories: CategoryTotal[];
-  expensesByCategory: Record<string, ExpenseDetail[]>;
+interface PersonTagMatrixProps {
+  tags: TagTotal[];
+  expensesByTag: Record<string, ExpenseDetail[]>;
 }
 
-export function PersonCategoryMatrix({
-  categories,
-  expensesByCategory,
-}: PersonCategoryMatrixProps) {
-  const deferred = categories.filter((c) => c.settlementType === "deferred");
-  const immediate = categories.filter((c) => c.settlementType === "immediate");
+export function PersonTagMatrix({
+  tags,
+  expensesByTag,
+}: PersonTagMatrixProps) {
+  if (tags.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="space-y-4">
-      <MatrixTable
-        title="Settled Monthly"
-        description="Who paid what in each category. Click a row to see details."
-        categories={deferred}
-        expensesByCategory={expensesByCategory}
-      />
-      {immediate.length > 0 && (
-        <MatrixTable
-          title="Settled Immediately"
-          description="Direct payments by category. Click a row to see details."
-          categories={immediate}
-          expensesByCategory={expensesByCategory}
-          muted
-        />
-      )}
-    </div>
+    <MatrixTable
+      title="By Tag"
+      description="Who paid what per tag. Click a row to see details."
+      tags={tags}
+      expensesByTag={expensesByTag}
+    />
   );
 }
 
 function MatrixTable({
   title,
   description,
-  categories,
-  expensesByCategory,
-  muted = false,
+  tags,
+  expensesByTag,
 }: {
   title: string;
   description: string;
-  categories: CategoryTotal[];
-  expensesByCategory: Record<string, ExpenseDetail[]>;
-  muted?: boolean;
+  tags: TagTotal[];
+  expensesByTag: Record<string, ExpenseDetail[]>;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const { persons } = usePersons();
 
-  if (categories.length === 0) {
-    return null;
-  }
-
-  function toggle(categoryName: string) {
+  function toggle(tagPath: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(categoryName)) {
-        next.delete(categoryName);
+      if (next.has(tagPath)) {
+        next.delete(tagPath);
       } else {
-        next.add(categoryName);
+        next.add(tagPath);
       }
       return next;
     });
   }
-  const person1Sum = categories.reduce((s, c) => s + c.person1Paid, 0);
-  const person2Sum = categories.reduce((s, c) => s + c.person2Paid, 0);
-  const grandTotal = categories.reduce((s, c) => s + c.total, 0);
+
+  const person1Sum = tags.reduce((s, t) => s + t.person1Paid, 0);
+  const person2Sum = tags.reduce((s, t) => s + t.person2Paid, 0);
+  const grandTotal = tags.reduce((s, t) => s + t.total, 0);
 
   return (
-    <div
-      className={`rounded-xl border overflow-hidden shadow-sm bg-card ${muted ? "border-border opacity-70" : "border-primary/10"}`}
-    >
-      <div
-        className={`border-b px-5 py-3 flex items-center justify-between ${muted ? "border-border bg-muted/60" : "border-primary/10 bg-primary/5"}`}
-      >
+    <div className="rounded-xl border border-primary/10 overflow-hidden shadow-sm bg-card">
+      <div className="border-b border-primary/10 bg-primary/5 px-5 py-3 flex items-center justify-between">
         <div>
-          <p
-            className={`text-xs font-semibold uppercase tracking-wide ${muted ? "text-muted-foreground" : "text-primary/70"}`}
-          >
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
             {title}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
@@ -106,7 +86,7 @@ function MatrixTable({
           <tr className="border-b border-border">
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 w-6" />
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
-              Category
+              Tag
             </th>
             <th className={`text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide ${PERSON_COLORS[persons[0].colorIndex].chartLabel}`}>
               {persons[0].displayName}
@@ -120,17 +100,17 @@ function MatrixTable({
           </tr>
         </thead>
         <tbody>
-          {categories.map((cat) => {
-            const isOpen = expanded.has(cat.categoryName);
-            const expenses = expensesByCategory[cat.categoryName] ?? [];
+          {tags.map((tag) => {
+            const isOpen = expanded.has(tag.tagPath);
+            const expenses = expensesByTag[tag.tagPath] ?? [];
 
             return (
-              <CategoryRow
-                key={cat.categoryName}
-                cat={cat}
+              <TagRow
+                key={tag.tagPath}
+                tag={tag}
                 isOpen={isOpen}
                 expenses={expenses}
-                onToggle={() => toggle(cat.categoryName)}
+                onToggle={() => toggle(tag.tagPath)}
               />
             );
           })}
@@ -155,13 +135,13 @@ function MatrixTable({
   );
 }
 
-function CategoryRow({
-  cat,
+function TagRow({
+  tag,
   isOpen,
   expenses,
   onToggle,
 }: {
-  cat: CategoryTotal;
+  tag: TagTotal;
   isOpen: boolean;
   expenses: ExpenseDetail[];
   onToggle: () => void;
@@ -181,15 +161,15 @@ function CategoryRow({
             )}
           />
         </td>
-        <td className="px-4 py-2.5 font-medium">{cat.categoryName}</td>
+        <td className="px-4 py-2.5 font-medium">{tag.tagPath}</td>
         <td className={`px-4 py-2.5 text-right tabular-nums ${PERSON_COLORS[persons[0].colorIndex].accent}`}>
-          {formatCurrency(cat.person1Paid)}
+          {formatCurrency(tag.person1Paid)}
         </td>
         <td className={`px-4 py-2.5 text-right tabular-nums ${PERSON_COLORS[persons[1].colorIndex].accent}`}>
-          {formatCurrency(cat.person2Paid)}
+          {formatCurrency(tag.person2Paid)}
         </td>
         <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
-          {formatCurrency(cat.total)}
+          {formatCurrency(tag.total)}
         </td>
       </tr>
       {isOpen && expenses.length > 0 && (
@@ -233,7 +213,7 @@ function CategoryRow({
                         {e.where}
                       </td>
                       <td className="px-3 py-1.5 text-muted-foreground">
-                        {e.notes || "—"}
+                        {e.notes || "---"}
                       </td>
                       <td className="px-3 py-1.5">
                         <PersonBadge {...badgeProps(e.paidBy, personMap)} />

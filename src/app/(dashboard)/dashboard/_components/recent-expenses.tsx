@@ -10,7 +10,7 @@ import { badgeProps } from "@/lib/person-utils";
 interface RecentExpense {
   date: string;
   where: string;
-  categoryName: string;
+  tagNames: string;
   paidBy: string;
   amount: number;
 }
@@ -45,7 +45,7 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
                 Where
               </th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
-                Category
+                Tags
               </th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
                 Paid by
@@ -69,7 +69,7 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
                   {e.where}
                 </td>
                 <td className="px-4 py-2.5 text-muted-foreground">
-                  {e.categoryName}
+                  {e.tagNames}
                 </td>
                 <td className="px-4 py-2.5">
                   <PersonBadge {...badgeProps(e.paidBy, personMap)} />

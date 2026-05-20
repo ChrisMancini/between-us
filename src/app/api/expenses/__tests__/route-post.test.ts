@@ -16,8 +16,18 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/expense", () => ({
   Expense: { find: jest.fn(), create: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({
-  Category: { findById: jest.fn() },
+jest.mock("@/lib/models/tag", () => ({
+  Tag: { find: jest.fn() },
+}));
+jest.mock("@/lib/tag-utils", () => ({
+  serializeTag: (t: { _id: unknown; path: string; sortOrder: number }) => ({
+    _id: String(t._id),
+    path: t.path,
+    sortOrder: t.sortOrder,
+    name: t.path.split("/").pop(),
+    parent: "",
+    depth: 1,
+  }),
 }));
 jest.mock("@/lib/validations/expense", () => ({
   expenseApiSchema: { safeParse: jest.fn() },
@@ -28,7 +38,7 @@ jest.mock("@/lib/readiness-reset", () => ({ resetReadinessForMonths: jest.fn() }
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { expenseApiSchema } from "@/lib/validations/expense";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
@@ -41,11 +51,12 @@ const mockAssertMonthsOpen = asMock(assertMonthsOpen);
 const validData = {
   paidBy: "john",
   date: "2026-04-15",
-  categoryId: VALID_ID_2,
+  tagIds: [VALID_ID_2],
   amount: 5000,
   where: "Publix",
   notes: "Groceries",
   splitType: "split",
+  settlementType: "deferred",
 };
 
 describe("POST /api/expenses", () => {
@@ -64,11 +75,11 @@ describe("POST /api/expenses", () => {
     await expectError(res, 400, "Validation failed");
   });
 
-  it("returns 400 when categoryId is invalid", async () => {
+  it("returns 400 when tagId is invalid", async () => {
     mockAuth.mockResolvedValue(makeSession());
-    mockSafeParse.mockReturnValue(makeParsedSuccess({ ...validData, categoryId: "bad" }));
+    mockSafeParse.mockReturnValue(makeParsedSuccess({ ...validData, tagIds: ["bad"] }));
     const res = await POST(makeJsonRequest("/api/expenses", {}));
-    await expectError(res, 400, "Invalid category");
+    await expectError(res, 400, "Invalid tag ID");
   });
 
   it("returns 422 when month is settled", async () => {
@@ -81,20 +92,24 @@ describe("POST /api/expenses", () => {
     await expectStatus(res, 422);
   });
 
-  it("returns 422 when category not found", async () => {
+  it("returns 422 when tags not found", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
     mockAssertMonthsOpen.mockResolvedValue(null);
-    asMock(Category.findById).mockResolvedValue(null);
+    asMock(Tag.find).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([]),
+    });
     const res = await POST(makeJsonRequest("/api/expenses", {}));
-    await expectError(res, 422, "Category not found");
+    await expectError(res, 422, "One or more tags not found");
   });
 
   it("returns 201 on success", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
     mockAssertMonthsOpen.mockResolvedValue(null);
-    asMock(Category.findById).mockResolvedValue({ _id: VALID_ID_2 });
+    asMock(Tag.find).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([{ _id: VALID_ID_2, path: "Groceries" }]),
+    });
 
     const created = {
       _id: VALID_ID,
@@ -104,6 +119,7 @@ describe("POST /api/expenses", () => {
       where: "Publix",
       notes: "Groceries",
       splitType: "split",
+      settlementType: "deferred",
       populate: jest.fn().mockResolvedValue({
         _id: VALID_ID,
         paidBy: "john",
@@ -112,12 +128,14 @@ describe("POST /api/expenses", () => {
         where: "Publix",
         notes: "Groceries",
         splitType: "split",
-        category: {
-          _id: VALID_ID_2,
-          name: "Groceries",
-          settlementType: "deferred",
-          sortOrder: 2,
-        },
+        settlementType: "deferred",
+        tags: [
+          {
+            _id: VALID_ID_2,
+            path: "Groceries",
+            sortOrder: 2,
+          },
+        ],
       }),
     };
     asMock(Expense.create).mockResolvedValue(created);
@@ -125,7 +143,7 @@ describe("POST /api/expenses", () => {
     const res = await POST(makeJsonRequest("/api/expenses", {}));
     const body = await expectStatus(res, 201);
     expect(body.expense.where).toBe("Publix");
-    expect(body.expense.category.name).toBe("Groceries");
+    expect(body.expense.tags[0].path).toBe("Groceries");
     expect(logActivity).toHaveBeenCalledWith(
       "john",
       "expense_create",

@@ -17,13 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -32,13 +25,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { TagPicker } from "@/components/tag-picker";
+import { SettlementTypeSelect } from "@/components/settlement-type-select";
 import { usePersons } from "@/components/persons-context";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedRecurringTemplate } from "@/lib/models/recurring-template";
 
 const itemSchema = z.object({
   paidBy: z.string().min(1),
-  categoryId: z.string().min(1, "Required"),
+  tagIds: z.array(z.string()).min(1, "At least one tag is required"),
   amount: z
     .string()
     .min(1, "Required")
@@ -49,6 +44,7 @@ const itemSchema = z.object({
   where: z.string().min(1, "Required").max(100),
   notes: z.string().max(500).optional(),
   splitType: z.enum(["split", "full"]),
+  settlementType: z.enum(["immediate", "deferred"]),
 });
 
 const formSchema = z.object({
@@ -59,14 +55,14 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface TemplateFormDialogProps {
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   paidBy: string;
   template?: SerializedRecurringTemplate;
   trigger: React.ReactElement;
 }
 
 export function TemplateFormDialog({
-  categories,
+  tags: initialTags,
   paidBy,
   template,
   trigger,
@@ -75,24 +71,27 @@ export function TemplateFormDialog({
   const { personMap } = usePersons();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [tags, setTags] = useState(initialTags);
 
   const defaultItems: FormValues["items"] = template
     ? template.items.map((i) => ({
         paidBy: i.paidBy,
-        categoryId: i.categoryId,
+        tagIds: i.tagIds,
         amount: (i.amount / 100).toFixed(2),
         where: i.where,
         notes: i.notes ?? "",
         splitType: i.splitType,
+        settlementType: i.settlementType,
       }))
     : [
         {
           paidBy,
-          categoryId: "",
+          tagIds: [],
           amount: "",
           where: "",
           notes: "",
           splitType: "split" as const,
+          settlementType: "deferred" as const,
         },
       ];
 
@@ -130,11 +129,12 @@ export function TemplateFormDialog({
       name: values.name,
       items: values.items.map((item) => ({
         paidBy: item.paidBy,
-        categoryId: item.categoryId,
+        tagIds: item.tagIds,
         amount: Math.round(parseFloat(item.amount) * 100),
         where: item.where,
         notes: item.notes || undefined,
         splitType: item.splitType,
+        settlementType: item.settlementType,
       })),
     };
 
@@ -200,11 +200,12 @@ export function TemplateFormDialog({
                 onClick={() =>
                   append({
                     paidBy,
-                    categoryId: "",
+                    tagIds: [],
                     amount: "",
                     where: "",
                     notes: "",
                     splitType: "split",
+                    settlementType: "deferred",
                   })
                 }
               >
@@ -276,38 +277,23 @@ export function TemplateFormDialog({
                     </div>
                   </div>
 
-                  {/* Category + Paid By */}
+                  {/* Tags + Paid By */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label>Category</Label>
+                      <Label>Tags</Label>
                       <Controller
                         control={control}
-                        name={`items.${index}.categoryId`}
+                        name={`items.${index}.tagIds`}
                         render={({ field: f }) => (
-                          <Select value={f.value} onValueChange={f.onChange}>
-                            <SelectTrigger
-                              className={cn(
-                                errors.items?.[index]?.categoryId &&
-                                  "border-destructive"
-                              )}
-                            >
-                              <SelectValue>
-                                {f.value
-                                  ? categories.find((c) => c._id === f.value)
-                                      ?.name
-                                  : <span className="text-muted-foreground">
-                                      Select…
-                                    </span>}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((c) => (
-                                <SelectItem key={c._id} value={c._id}>
-                                  {c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <TagPicker
+                            tags={tags}
+                            selectedTagIds={f.value}
+                            onSelectedChange={f.onChange}
+                            onTagCreated={(tag) =>
+                              setTags((prev) => [...prev, tag])
+                            }
+                            error={!!errors.items?.[index]?.tagIds}
+                          />
                         )}
                       />
                     </div>
@@ -319,6 +305,21 @@ export function TemplateFormDialog({
                         className="bg-muted"
                       />
                     </div>
+                  </div>
+
+                  {/* Settlement Type */}
+                  <div className="space-y-1">
+                    <Label>Settlement Type</Label>
+                    <Controller
+                      control={control}
+                      name={`items.${index}.settlementType`}
+                      render={({ field: f }) => (
+                        <SettlementTypeSelect
+                          value={f.value}
+                          onChange={f.onChange}
+                        />
+                      )}
+                    />
                   </div>
 
                   {/* Notes + Split */}
