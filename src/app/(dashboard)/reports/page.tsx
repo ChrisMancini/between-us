@@ -1,21 +1,21 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import mongoose from "mongoose";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { getPersons } from "@/lib/persons";
 import { MonthNav } from "@/components/month-nav";
 import { SpendingSummaryCard } from "./_components/spending-summary-card";
-import { CategoryBreakdown } from "./_components/category-breakdown";
-import { PersonCategoryMatrix } from "./_components/person-category-matrix";
+import { TagBreakdown } from "./_components/tag-breakdown";
+import { PersonTagMatrix } from "./_components/person-tag-matrix";
 import { MonthlyTrend } from "./_components/monthly-trend";
 
 export const dynamic = "force-dynamic";
 
-interface CategoryTotal {
-  categoryName: string;
+interface TagTotal {
+  tagPath: string;
+  tagName: string;
   settlementType: "immediate" | "deferred";
   person1Paid: number;
   person2Paid: number;
@@ -29,7 +29,7 @@ export interface ExpenseDetail {
   amount: number;
   splitType: "split" | "full";
   notes?: string;
-  categoryName: string;
+  tagName: string;
 }
 
 interface MonthlyTotal {
@@ -70,14 +70,12 @@ export default async function ReportsPage({ searchParams }: PageProps) {
   // 6-month trend: 5 months back + selected month
   const trendStart = new Date(Date.UTC(year, month - 6, 1));
 
-  const [categoryPersonAgg, trendAgg, allCategories, rawExpenses] = await Promise.all([
-    // Query 1: Category × Person breakdown for selected month
+  const [tagPersonAgg, trendAgg, allTags, rawExpenses] = await Promise.all([
+    // Query 1: Tag × Person breakdown for selected month (unwound by tag)
     Expense.aggregate<{
       _id: {
-        categoryId: string;
-        categoryName: string;
-        settlementType: "immediate" | "deferred";
-        sortOrder: number;
+        tagPath: string;
+        tagSortOrder: number;
         paidBy: string;
       };
       total: number;
@@ -86,30 +84,28 @@ export default async function ReportsPage({ searchParams }: PageProps) {
       { $match: { date: { $gte: start, $lt: end } } },
       {
         $lookup: {
-          from: "categories",
-          localField: "category",
+          from: "tags",
+          localField: "tags",
           foreignField: "_id",
-          as: "cat",
+          as: "tagDocs",
         },
       },
-      { $unwind: "$cat" },
+      { $unwind: "$tagDocs" },
       {
         $group: {
           _id: {
-            categoryId: "$cat._id",
-            categoryName: "$cat.name",
-            settlementType: "$cat.settlementType",
-            sortOrder: "$cat.sortOrder",
+            tagPath: "$tagDocs.path",
+            tagSortOrder: "$tagDocs.sortOrder",
             paidBy: "$paidBy",
           },
           total: { $sum: "$amount" },
           count: { $sum: 1 },
         },
       },
-      { $sort: { "_id.sortOrder": 1, "_id.paidBy": 1 } },
+      { $sort: { "_id.tagSortOrder": 1, "_id.paidBy": 1 } },
     ]),
 
-    // Query 2: Monthly trend (last 6 months)
+    // Query 2: Monthly trend (last 6 months) - uses expense settlementType directly
     Expense.aggregate<{
       _id: {
         year: number;
@@ -120,20 +116,11 @@ export default async function ReportsPage({ searchParams }: PageProps) {
     }>([
       { $match: { date: { $gte: trendStart, $lt: end } } },
       {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "cat",
-        },
-      },
-      { $unwind: "$cat" },
-      {
         $group: {
           _id: {
             year: { $year: "$date" },
             month: { $month: "$date" },
-            settlementType: "$cat.settlementType",
+            settlementType: "$settlementType",
           },
           total: { $sum: "$amount" },
         },
@@ -141,27 +128,26 @@ export default async function ReportsPage({ searchParams }: PageProps) {
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]),
 
-    // Query 3: All categories for zero-fill
-    Category.find().sort({ sortOrder: 1 }).lean(),
+    // Query 3: All tags for zero-fill
+    Tag.find().sort({ sortOrder: 1 }).lean(),
 
-    // Query 4: Raw expenses for drill-down
+    // Query 4: Raw expenses for drill-down and summary totals
     Expense.find({ date: { $gte: start, $lt: end } })
       .sort({ date: 1, createdAt: 1 })
-      .populate("category")
+      .populate("tags")
       .lean(),
   ]);
 
-  // ── Shape category totals ──────────────────────────────────────────────
-  const categoryMap = new Map<
-    string,
-    CategoryTotal
-  >();
+  // ── Shape tag totals (from unwound aggregation — for per-tag breakdown) ──
+  const tagMap = new Map<string, TagTotal>();
 
-  // Seed with all categories (so categories with 0 expenses still appear)
-  for (const cat of allCategories) {
-    categoryMap.set(cat.name, {
-      categoryName: cat.name,
-      settlementType: cat.settlementType,
+  // Seed with all tags (so tags with 0 expenses still appear)
+  for (const tag of allTags) {
+    const segments = tag.path.split("/");
+    tagMap.set(tag.path, {
+      tagPath: tag.path,
+      tagName: segments[segments.length - 1],
+      settlementType: "deferred", // tags don't have settlementType; will be overridden from expenses
       person1Paid: 0,
       person2Paid: 0,
       total: 0,
@@ -169,18 +155,20 @@ export default async function ReportsPage({ searchParams }: PageProps) {
   }
 
   // Fill from aggregation
-  for (const row of categoryPersonAgg) {
-    const key = row._id.categoryName;
-    let entry = categoryMap.get(key);
+  for (const row of tagPersonAgg) {
+    const key = row._id.tagPath;
+    let entry = tagMap.get(key);
     if (!entry) {
+      const segments = key.split("/");
       entry = {
-        categoryName: key,
-        settlementType: row._id.settlementType,
+        tagPath: key,
+        tagName: segments[segments.length - 1],
+        settlementType: "deferred",
         person1Paid: 0,
         person2Paid: 0,
         total: 0,
       };
-      categoryMap.set(key, entry);
+      tagMap.set(key, entry);
     }
     if (row._id.paidBy === persons[0].key) {
       entry.person1Paid += row.total;
@@ -190,41 +178,39 @@ export default async function ReportsPage({ searchParams }: PageProps) {
     entry.total += row.total;
   }
 
-  const categories = [...categoryMap.values()].sort((a, b) => {
-    const ai = allCategories.findIndex((c) => c.name === a.categoryName);
-    const bi = allCategories.findIndex((c) => c.name === b.categoryName);
+  const tagTotals = [...tagMap.values()].sort((a, b) => {
+    const ai = allTags.findIndex((t) => t.path === a.tagPath);
+    const bi = allTags.findIndex((t) => t.path === b.tagPath);
     return ai - bi;
   });
 
-  // Filter out categories with no spending for the breakdown view
-  const categoriesWithSpending = categories.filter((c) => c.total > 0);
+  // Filter out tags with no spending for the breakdown view
+  const tagsWithSpending = tagTotals.filter((t) => t.total > 0);
 
-  // ── Group expenses by category for drill-down ──────────────────────────
-  const expensesByCategory = new Map<string, ExpenseDetail[]>();
+  // ── Group expenses by tag for drill-down ──────────────────────────────
+  const expensesByTag = new Map<string, ExpenseDetail[]>();
   for (const e of rawExpenses) {
-    if (!e.category) continue;
-    const cat = e.category as unknown as {
-      _id: mongoose.Types.ObjectId;
-      name: string;
-    };
-    const catName = cat.name;
-    if (!expensesByCategory.has(catName)) {
-      expensesByCategory.set(catName, []);
+    const eTags = (e.tags ?? []) as unknown as { path: string }[];
+    for (const tag of eTags) {
+      const tagPath = tag.path;
+      if (!expensesByTag.has(tagPath)) {
+        expensesByTag.set(tagPath, []);
+      }
+      expensesByTag.get(tagPath)!.push({
+        date: (e.date as Date).toISOString(),
+        where: e.where,
+        paidBy: e.paidBy as string,
+        amount: e.amount,
+        splitType: e.splitType,
+        notes: e.notes,
+        tagName: tagPath,
+      });
     }
-    expensesByCategory.get(catName)!.push({
-      date: (e.date as Date).toISOString(),
-      where: e.where,
-      paidBy: e.paidBy as string,
-      amount: e.amount,
-      splitType: e.splitType,
-      notes: e.notes,
-      categoryName: catName,
-    });
   }
 
-  const expensesByCategoryObj: Record<string, ExpenseDetail[]> = {};
-  for (const [key, val] of expensesByCategory) {
-    expensesByCategoryObj[key] = val;
+  const expensesByTagObj: Record<string, ExpenseDetail[]> = {};
+  for (const [key, val] of expensesByTag) {
+    expensesByTagObj[key] = val;
   }
 
   // ── Shape monthly trend ────────────────────────────────────────────────
@@ -259,17 +245,30 @@ export default async function ReportsPage({ searchParams }: PageProps) {
 
   const monthlyTotals = [...trendMap.values()];
 
-  // ── Compute summary totals ─────────────────────────────────────────────
-  const deferredTotal = categories
-    .filter((c) => c.settlementType === "deferred")
-    .reduce((s, c) => s + c.total, 0);
-  const immediateTotal = categories
-    .filter((c) => c.settlementType === "immediate")
-    .reduce((s, c) => s + c.total, 0);
-  const totalSpending = deferredTotal + immediateTotal;
-  const person1Total = categories.reduce((s, c) => s + c.person1Paid, 0);
-  const person2Total = categories.reduce((s, c) => s + c.person2Paid, 0);
+  // ── Compute summary totals from raw expenses (not unwound) to avoid double-counting ──
+  let deferredTotal = 0;
+  let immediateTotal = 0;
+  let person1Total = 0;
+  let person2Total = 0;
 
+  for (const e of rawExpenses) {
+    const amount = e.amount as number;
+    const settlementType = e.settlementType as "immediate" | "deferred";
+    const paidBy = e.paidBy as string;
+
+    if (settlementType === "deferred") {
+      deferredTotal += amount;
+    } else {
+      immediateTotal += amount;
+    }
+    if (paidBy === persons[0].key) {
+      person1Total += amount;
+    } else {
+      person2Total += amount;
+    }
+  }
+
+  const totalSpending = deferredTotal + immediateTotal;
   const hasExpenses = totalSpending > 0;
 
   return (
@@ -312,24 +311,23 @@ export default async function ReportsPage({ searchParams }: PageProps) {
             persons={persons}
           />
 
-          {/* Category breakdown with bars */}
-          <CategoryBreakdown
-            categories={categoriesWithSpending.map((c) => ({
-              categoryName: c.categoryName,
-              settlementType: c.settlementType,
-              total: c.total,
+          {/* Tag breakdown with bars */}
+          <TagBreakdown
+            tags={tagsWithSpending.map((t) => ({
+              tagName: t.tagPath,
+              total: t.total,
             }))}
           />
 
-          {/* Person × Category matrix */}
-          <PersonCategoryMatrix
-            categories={categoriesWithSpending}
-            expensesByCategory={expensesByCategoryObj}
+          {/* Person x Tag matrix */}
+          <PersonTagMatrix
+            tags={tagsWithSpending}
+            expensesByTag={expensesByTagObj}
           />
         </>
       )}
 
-      {/* Monthly trend (always shown — even if current month is empty) */}
+      {/* Monthly trend (always shown -- even if current month is empty) */}
       <MonthlyTrend
         months={monthlyTotals}
         selectedMonth={month}

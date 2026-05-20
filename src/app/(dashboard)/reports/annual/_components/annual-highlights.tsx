@@ -10,7 +10,7 @@ export interface BiggestExpense {
   amount: number;
   where: string;
   date: string;
-  categoryName: string;
+  tagNames: string;
   paidBy: string;
 }
 
@@ -65,7 +65,7 @@ export function AnnualHighlights({
                 {biggestExpense.where}
               </p>
               <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-                <span>{biggestExpense.categoryName}</span>
+                <span>{biggestExpense.tagNames}</span>
                 <span>·</span>
                 <span>
                   {new Date(biggestExpense.date).toLocaleDateString("en-US", {

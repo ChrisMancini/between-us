@@ -19,8 +19,18 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/expense", () => ({
   Expense: { findById: jest.fn(), findByIdAndUpdate: jest.fn(), findByIdAndDelete: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({
-  Category: { findById: jest.fn() },
+jest.mock("@/lib/models/tag", () => ({
+  Tag: { find: jest.fn() },
+}));
+jest.mock("@/lib/tag-utils", () => ({
+  serializeTag: (t: { _id: unknown; path: string; sortOrder: number }) => ({
+    _id: String(t._id),
+    path: t.path,
+    sortOrder: t.sortOrder,
+    name: t.path.split("/").pop(),
+    parent: "",
+    depth: 1,
+  }),
 }));
 jest.mock("@/lib/models/settlement", () => ({
   Settlement: { findOne: jest.fn() },
@@ -34,7 +44,7 @@ jest.mock("@/lib/readiness-reset", () => ({ resetReadinessForMonths: jest.fn() }
 
 import { auth } from "@/auth";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { expenseUpdateApiSchema } from "@/lib/validations/expense";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
@@ -46,11 +56,12 @@ const mockAssertMonthsOpen = asMock(assertMonthsOpen);
 
 const validData = {
   date: "2026-04-15",
-  categoryId: VALID_ID_2,
+  tagIds: [VALID_ID_2],
   amount: 6000,
   where: "Costco",
   notes: "Bulk",
   splitType: "split",
+  settlementType: "deferred",
 };
 
 function putRequest() {
@@ -58,12 +69,13 @@ function putRequest() {
 }
 
 function mockPopulatedUpdate(overrides?: Record<string, unknown>) {
-  const cat = {
-    _id: VALID_ID_2,
-    name: "Groceries",
-    settlementType: "deferred",
-    sortOrder: 2,
-  };
+  const tags = [
+    {
+      _id: VALID_ID_2,
+      path: "Groceries",
+      sortOrder: 2,
+    },
+  ];
   return {
     populate: jest.fn().mockResolvedValue({
       _id: VALID_ID,
@@ -73,7 +85,8 @@ function mockPopulatedUpdate(overrides?: Record<string, unknown>) {
       where: "Costco",
       notes: "Bulk",
       splitType: "split",
-      category: cat,
+      settlementType: "deferred",
+      tags,
       ...overrides,
     }),
   };
@@ -101,11 +114,11 @@ describe("PUT /api/expenses/[id]", () => {
     await expectError(res, 400, "Validation failed");
   });
 
-  it("returns 400 when categoryId is invalid", async () => {
+  it("returns 400 when tagId is invalid", async () => {
     mockAuth.mockResolvedValue(makeSession());
-    mockSafeParse.mockReturnValue(makeParsedSuccess({ ...validData, categoryId: "bad" }));
+    mockSafeParse.mockReturnValue(makeParsedSuccess({ ...validData, tagIds: ["bad"] }));
     const res = await PUT(putRequest(), makeIdContext());
-    await expectError(res, 400, "Invalid category");
+    await expectError(res, 400, "Invalid tag ID");
   });
 
   it("returns 404 when expense not found", async () => {
@@ -135,14 +148,16 @@ describe("PUT /api/expenses/[id]", () => {
     await expectStatus(res, 422);
   });
 
-  it("returns 422 when category not found", async () => {
+  it("returns 422 when tags not found", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
     asMock(Expense.findById).mockResolvedValue(makeExpense());
     mockAssertMonthsOpen.mockResolvedValue(null);
-    asMock(Category.findById).mockResolvedValue(null);
+    asMock(Tag.find).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([]),
+    });
     const res = await PUT(putRequest(), makeIdContext());
-    await expectError(res, 422, "Category not found");
+    await expectError(res, 422, "One or more tags not found");
   });
 
   it("returns 200 on success for owner", async () => {
@@ -150,7 +165,9 @@ describe("PUT /api/expenses/[id]", () => {
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
     asMock(Expense.findById).mockResolvedValue(makeExpense());
     mockAssertMonthsOpen.mockResolvedValue(null);
-    asMock(Category.findById).mockResolvedValue({ _id: VALID_ID_2 });
+    asMock(Tag.find).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([{ _id: VALID_ID_2 }]),
+    });
     asMock(Expense.findByIdAndUpdate).mockReturnValue(mockPopulatedUpdate());
 
     const res = await PUT(putRequest(), makeIdContext());
@@ -169,7 +186,9 @@ describe("PUT /api/expenses/[id]", () => {
     mockSafeParse.mockReturnValue(makeParsedSuccess(validData));
     asMock(Expense.findById).mockResolvedValue(makeExpense({ paidBy: "jane" }));
     mockAssertMonthsOpen.mockResolvedValue(null);
-    asMock(Category.findById).mockResolvedValue({ _id: VALID_ID_2 });
+    asMock(Tag.find).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([{ _id: VALID_ID_2 }]),
+    });
     asMock(Expense.findByIdAndUpdate).mockReturnValue(mockPopulatedUpdate());
 
     const res = await PUT(putRequest(), makeIdContext());

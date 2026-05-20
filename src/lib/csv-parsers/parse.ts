@@ -54,10 +54,10 @@ export function parseCsv(
     return { transactions, skipped, errors };
   }
 
-  const categoryMap = new Map(
-    (format.categoryMappings || []).map((m) => [
+  const tagMap = new Map(
+    (format.tagMappings || []).map((m) => [
       m.sourceValue.toLowerCase(),
-      m.categoryId,
+      m.tagIds,
     ])
   );
 
@@ -135,14 +135,14 @@ export function parseCsv(
       continue;
     }
 
-    // Category mapping
-    let sourceCategory: string | undefined;
-    let mappedCategoryId: string | undefined;
+    // Tag mapping
+    let sourceTag: string | undefined;
+    let mappedTagIds: string[] | undefined;
 
-    if (format.categoryColumn) {
-      sourceCategory = row[format.categoryColumn]?.trim();
-      if (sourceCategory) {
-        mappedCategoryId = categoryMap.get(sourceCategory.toLowerCase());
+    if (format.tagColumn) {
+      sourceTag = row[format.tagColumn]?.trim();
+      if (sourceTag) {
+        mappedTagIds = tagMap.get(sourceTag.toLowerCase());
       }
     }
 
@@ -162,8 +162,8 @@ export function parseCsv(
       description,
       amountCents,
       originalRow: rowNum,
-      sourceCategory,
-      mappedCategoryId,
+      sourceTag,
+      mappedTagIds,
       notes,
     });
   }

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { validationError } from "@/lib/api-utils";
 import { connectToDatabase } from "@/lib/db";
 import { Person } from "@/lib/models/person";
-import { Category } from "@/lib/models/category";
+import { Tag } from "@/lib/models/tag";
 import { AppSettings } from "@/lib/models/app-settings";
 import { getAvailableOAuthProviders } from "@/lib/auth-providers";
+import { ensureAncestors } from "@/lib/tag-utils";
 
 const personSchema = z.object({
   key: z
@@ -56,24 +58,11 @@ const setupSchema = z
     { message: "Email addresses must be different" }
   );
 
-const DEFAULT_CATEGORIES = [
-  { name: "Mortgage", settlementType: "immediate" as const, sortOrder: 0 },
-  { name: "Groceries", settlementType: "deferred" as const, sortOrder: 1 },
-  { name: "Bills", settlementType: "deferred" as const, sortOrder: 2 },
-  { name: "Miscellaneous", settlementType: "deferred" as const, sortOrder: 3 },
-  { name: "Insurance", settlementType: "deferred" as const, sortOrder: 4 },
-];
-
 export async function POST(req: Request) {
   const body = await req.json();
   const parsed = setupSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
   await connectToDatabase();
 
@@ -110,9 +99,22 @@ export async function POST(req: Request) {
     { upsert: true }
   );
 
-  const existingCategories = await Category.countDocuments();
-  if (existingCategories === 0) {
-    await Category.insertMany(DEFAULT_CATEGORIES);
+  // Create optional starter tags from the setup wizard
+  const tags = body.tags as string[] | undefined;
+  if (tags && Array.isArray(tags) && tags.length > 0) {
+    let sortOrder = 1;
+    for (const path of tags) {
+      if (typeof path === "string" && path.trim()) {
+        await ensureAncestors(path.trim());
+        const existing = await Tag.findOne({ path: path.trim() }).collation({
+          locale: "en",
+          strength: 2,
+        });
+        if (!existing) {
+          await Tag.create({ path: path.trim(), sortOrder: sortOrder++ });
+        }
+      }
+    }
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });

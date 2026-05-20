@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Search, X, Tags, ChevronDown, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,22 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { MonthNav } from "@/components/month-nav";
 import { usePersons } from "@/components/persons-context";
-import type { SerializedCategory } from "@/lib/models/category";
+import { cn } from "@/lib/utils";
+import type { SerializedTag } from "@/lib/models/tag";
 
 interface ExpenseFiltersProps {
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   filters: {
     q: string;
-    category: string;
+    tag: string;
     paidBy: string;
     month: number | null;
     year: number;
   };
 }
 
-export function ExpenseFilters({ categories, filters }: ExpenseFiltersProps) {
+export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { persons, personMap } = usePersons();
@@ -62,7 +64,7 @@ export function ExpenseFilters({ categories, filters }: ExpenseFiltersProps) {
   }
 
   const hasFilters =
-    filters.q || filters.category || filters.paidBy || filters.month === null;
+    filters.q || filters.tag || filters.paidBy || filters.month === null;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -86,27 +88,12 @@ export function ExpenseFilters({ categories, filters }: ExpenseFiltersProps) {
         )}
       </div>
 
-      {/* Category filter */}
-      <Select
-        value={filters.category || "__all__"}
-        onValueChange={(val) =>
-          pushParams({ category: val === "__all__" ? null : val })
-        }
-      >
-        <SelectTrigger className="w-[150px] h-8">
-          <SelectValue>
-            {filters.category || "All categories"}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="__all__">All categories</SelectItem>
-          {categories.map((c) => (
-            <SelectItem key={c._id} value={c.name}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {/* Tag filter */}
+      <TagFilterCombobox
+        tags={tags}
+        value={filters.tag}
+        onChange={(val) => pushParams({ tag: val || null })}
+      />
 
       {/* Paid by filter */}
       <Select
@@ -185,5 +172,165 @@ export function ExpenseFilters({ categories, filters }: ExpenseFiltersProps) {
         </Button>
       )}
     </div>
+  );
+}
+
+function TagFilterCombobox({
+  tags,
+  value,
+  onChange,
+}: {
+  tags: SerializedTag[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const filtered = search.trim()
+    ? tags.filter((t) =>
+        t.path.toLowerCase().includes(search.toLowerCase())
+      )
+    : tags;
+
+  const sorted = [...filtered].sort((a, b) =>
+    a.path.localeCompare(b.path, undefined, { sensitivity: "base" })
+  );
+
+  function select(tagPath: string) {
+    onChange(value === tagPath ? "" : tagPath);
+    setOpen(false);
+    setSearch("");
+    setHighlightIndex(-1);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((i) => {
+        const next = Math.min(i + 1, sorted.length - 1);
+        scrollToIndex(next);
+        return next;
+      });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((i) => {
+        const next = Math.max(i - 1, 0);
+        scrollToIndex(next);
+        return next;
+      });
+    } else if (e.key === "Enter" && highlightIndex >= 0 && highlightIndex < sorted.length) {
+      e.preventDefault();
+      select(sorted[highlightIndex].path);
+    } else if (e.key === "Escape") {
+      setOpen(false);
+      setSearch("");
+      setHighlightIndex(-1);
+    }
+  }
+
+  function scrollToIndex(index: number) {
+    const list = listRef.current;
+    if (!list) return;
+    const item = list.children[index] as HTMLElement | undefined;
+    item?.scrollIntoView({ block: "nearest" });
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setSearch("");
+          setHighlightIndex(-1);
+        }
+      }}
+    >
+      <div className="relative flex items-center">
+        <PopoverTrigger
+          className={cn(
+            "flex h-8 w-[150px] items-center justify-between rounded-md border border-input bg-transparent px-2.5 text-sm transition-colors",
+            "hover:bg-accent hover:text-accent-foreground",
+            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            value && "pr-7",
+            !value && "text-muted-foreground"
+          )}
+        >
+          <span className="flex items-center gap-1.5 truncate">
+            <Tags className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{value || "All tags"}</span>
+          </span>
+          {!value && (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+          )}
+        </PopoverTrigger>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute right-1.5 shrink-0 rounded-full hover:bg-foreground/10 p-0.5"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      <PopoverContent className="w-[240px] p-0" align="start">
+        <div className="p-2 border-b">
+          <Input
+            ref={inputRef}
+            placeholder="Search tags..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setHighlightIndex(0);
+            }}
+            onKeyDown={handleKeyDown}
+            className="h-8"
+          />
+        </div>
+        <div ref={listRef} className="max-h-[240px] overflow-y-auto p-1">
+          {sorted.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No matching tags
+            </p>
+          )}
+          {sorted.map((tag, index) => {
+            const isSelected = value === tag.path;
+            const isHighlighted = index === highlightIndex;
+            return (
+              <button
+                key={tag._id}
+                type="button"
+                onClick={() => select(tag.path)}
+                onMouseEnter={() => setHighlightIndex(index)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  isHighlighted && "bg-accent text-accent-foreground",
+                  isSelected && !isHighlighted && "bg-accent/50"
+                )}
+              >
+                <span
+                  className="flex-1 truncate"
+                  style={{ paddingLeft: `${(tag.depth - 1) * 12}px` }}
+                >
+                  {tag.depth > 1 && (
+                    <span className="text-muted-foreground">
+                      {tag.parent}/
+                    </span>
+                  )}
+                  {tag.name}
+                </span>
+                {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

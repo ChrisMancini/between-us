@@ -12,7 +12,17 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/expense", () => ({
   Expense: { find: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({ Category: {} }));
+jest.mock("@/lib/models/tag", () => ({ Tag: {} }));
+jest.mock("@/lib/tag-utils", () => ({
+  serializeTag: (t: { _id: unknown; path: string; sortOrder: number }) => ({
+    _id: String(t._id),
+    path: t.path,
+    sortOrder: t.sortOrder,
+    name: t.path.split("/").pop(),
+    parent: "",
+    depth: 1,
+  }),
+}));
 jest.mock("@/lib/validations/expense", () => ({ expenseApiSchema: {} }));
 jest.mock("@/lib/settlement-guard", () => ({ assertMonthsOpen: jest.fn() }));
 
@@ -42,15 +52,15 @@ describe("GET /api/expenses", () => {
     expect(body.expenses[0].where).toBe("Publix");
   });
 
-  it("filters out expenses with null category", async () => {
+  it("returns expenses with empty tags", async () => {
     mockAuth.mockResolvedValue(makeSession());
     const good = makeExpense();
-    const bad = makeExpense({ category: null as unknown as undefined });
-    asMock(Expense.find).mockReturnValue(mockChain([good, bad]));
+    const noTags = makeExpense({ tags: [] });
+    asMock(Expense.find).mockReturnValue(mockChain([good, noTags]));
 
     const res = await GET(makeGetRequest("/api/expenses"));
     const body = await expectStatus(res, 200);
-    expect(body.expenses).toHaveLength(1);
+    expect(body.expenses).toHaveLength(2);
   });
 
   it("returns 200 with empty array when no expenses", async () => {

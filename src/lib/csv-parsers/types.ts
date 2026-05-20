@@ -3,8 +3,8 @@ export interface ParsedTransaction {
   description: string;
   amountCents: number;
   originalRow: number;
-  sourceCategory?: string;
-  mappedCategoryId?: string;
+  sourceTag?: string;
+  mappedTagIds?: string[];
   notes?: string;
 }
 

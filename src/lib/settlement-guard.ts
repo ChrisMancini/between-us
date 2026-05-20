@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
 import { Settlement } from "@/lib/models/settlement";
-
-function formatMonthLabel(month: number, year: number): string {
-  return new Date(year, month - 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-}
+import { formatMonthYear } from "@/lib/utils";
 
 export async function assertMonthsOpen(
   dates: (Date | string)[]
@@ -36,7 +30,7 @@ export async function assertMonthsOpen(
   if (closedSettlements.length === 0) return null;
 
   const labels = closedSettlements.map((s) =>
-    formatMonthLabel(s.month, s.year)
+    formatMonthYear(s.month, s.year)
   );
 
   const error =

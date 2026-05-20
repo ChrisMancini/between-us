@@ -2,11 +2,12 @@ import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IRecurringTemplateItem {
   paidBy: string;
-  categoryId: mongoose.Types.ObjectId;
+  tagIds: mongoose.Types.ObjectId[];
   amount: number; // cents
   where: string;
   notes?: string;
   splitType: "split" | "full";
+  settlementType: "immediate" | "deferred";
 }
 
 export interface IRecurringTemplate extends Document {
@@ -19,11 +20,12 @@ export interface IRecurringTemplate extends Document {
 
 export interface SerializedRecurringTemplateItem {
   paidBy: string;
-  categoryId: string;
+  tagIds: string[];
   amount: number;
   where: string;
   notes?: string;
   splitType: "split" | "full";
+  settlementType: "immediate" | "deferred";
 }
 
 export interface SerializedRecurringTemplate {
@@ -37,15 +39,23 @@ export interface SerializedRecurringTemplate {
 const RecurringTemplateItemSchema = new Schema<IRecurringTemplateItem>(
   {
     paidBy: { type: String, required: true },
-    categoryId: {
-      type: Schema.Types.ObjectId,
-      ref: "Category",
+    tagIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
       required: true,
+      validate: {
+        validator: (v: mongoose.Types.ObjectId[]) => v.length >= 1,
+        message: "At least one tag is required",
+      },
     },
     amount: { type: Number, required: true, min: 1 },
     where: { type: String, required: true, maxlength: 100 },
     notes: { type: String, maxlength: 500 },
     splitType: { type: String, enum: ["split", "full"], required: true },
+    settlementType: {
+      type: String,
+      enum: ["immediate", "deferred"],
+      required: true,
+    },
   },
   { _id: false }
 );

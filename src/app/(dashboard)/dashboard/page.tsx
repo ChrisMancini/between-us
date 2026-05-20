@@ -3,13 +3,13 @@ import mongoose from "mongoose";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
-import { Category } from "@/lib/models/category";
 import { Settlement } from "@/lib/models/settlement";
 import { getPersons } from "@/lib/persons";
 import {
   calculateSettlement,
   type SettlementExpenseRow,
 } from "@/lib/settlement-calc";
+import { serializeTag } from "@/lib/tag-utils";
 import { Activity, type IActivity } from "@/lib/models/activity";
 import { SpendingSummaryCard } from "../reports/_components/spending-summary-card";
 import { SettlementStatusCard } from "./_components/settlement-status-card";
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
   const persons = (await getPersons())!;
 
   const [
-    categoryPersonAgg,
+    spendingAgg,
     settlementRecord,
     recentRaw,
     expenseMonths,
@@ -49,32 +49,19 @@ export default async function DashboardPage() {
     currentMonthExpensesRaw,
     recentActivitiesRaw,
   ] = await Promise.all([
-    // 1. Current month spending by category × person
+    // 1. Current month spending by settlement type × person
     Expense.aggregate<{
       _id: {
-        categoryName: string;
         settlementType: "immediate" | "deferred";
-        sortOrder: number;
         paidBy: string;
       };
       total: number;
     }>([
       { $match: { date: { $gte: start, $lt: end } } },
       {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "cat",
-        },
-      },
-      { $unwind: "$cat" },
-      {
         $group: {
           _id: {
-            categoryName: "$cat.name",
-            settlementType: "$cat.settlementType",
-            sortOrder: "$cat.sortOrder",
+            settlementType: "$settlementType",
             paidBy: "$paidBy",
           },
           total: { $sum: "$amount" },
@@ -89,7 +76,7 @@ export default async function DashboardPage() {
     Expense.find()
       .sort({ date: -1, createdAt: -1 })
       .limit(10)
-      .populate("category")
+      .populate("tags")
       .lean(),
 
     // 4. Distinct expense months before current month (for unsettled check)
@@ -118,7 +105,7 @@ export default async function DashboardPage() {
     // 6. Current month expenses for settlement calculation
     Expense.find({ date: { $gte: start, $lt: end } })
       .sort({ date: 1, createdAt: 1 })
-      .populate("category")
+      .populate("tags")
       .lean(),
 
     // 7. Recent partner activity for widget
@@ -129,56 +116,25 @@ export default async function DashboardPage() {
   ]);
 
   // ── Spending summary totals ───────────────────────────────────────────
-  const allCategories = await Category.find().sort({ sortOrder: 1 }).lean();
+  let deferredTotal = 0;
+  let immediateTotal = 0;
+  let person1Total = 0;
+  let person2Total = 0;
 
-  const categoryMap = new Map<
-    string,
-    {
-      settlementType: "immediate" | "deferred";
-      person1Paid: number;
-      person2Paid: number;
-      total: number;
-    }
-  >();
-
-  for (const cat of allCategories) {
-    categoryMap.set(cat.name, {
-      settlementType: cat.settlementType,
-      person1Paid: 0,
-      person2Paid: 0,
-      total: 0,
-    });
-  }
-
-  for (const row of categoryPersonAgg) {
-    let entry = categoryMap.get(row._id.categoryName);
-    if (!entry) {
-      entry = {
-        settlementType: row._id.settlementType,
-        person1Paid: 0,
-        person2Paid: 0,
-        total: 0,
-      };
-      categoryMap.set(row._id.categoryName, entry);
+  for (const row of spendingAgg) {
+    if (row._id.settlementType === "deferred") {
+      deferredTotal += row.total;
+    } else {
+      immediateTotal += row.total;
     }
     if (row._id.paidBy === persons[0].key) {
-      entry.person1Paid += row.total;
+      person1Total += row.total;
     } else {
-      entry.person2Paid += row.total;
+      person2Total += row.total;
     }
-    entry.total += row.total;
   }
 
-  const categories = [...categoryMap.values()];
-  const deferredTotal = categories
-    .filter((c) => c.settlementType === "deferred")
-    .reduce((s, c) => s + c.total, 0);
-  const immediateTotal = categories
-    .filter((c) => c.settlementType === "immediate")
-    .reduce((s, c) => s + c.total, 0);
   const totalSpending = deferredTotal + immediateTotal;
-  const person1Total = categories.reduce((s, c) => s + c.person1Paid, 0);
-  const person2Total = categories.reduce((s, c) => s + c.person2Paid, 0);
 
   // ── Settlement status ─────────────────────────────────────────────────
   const isClosed =
@@ -186,25 +142,21 @@ export default async function DashboardPage() {
 
   const expenses: SettlementExpenseRow[] = (
     currentMonthExpensesRaw as unknown as Record<string, unknown>[]
-  )
-    .filter((e) => e.category != null)
-    .map((e) => {
-      const cat = e.category as Record<string, unknown>;
-      return {
-        _id: (e._id as mongoose.Types.ObjectId).toString(),
-        paidBy: e.paidBy as string,
-        amount: e.amount as number,
-        splitType: e.splitType as "split" | "full",
-        where: e.where as string,
-        date: (e.date as Date).toISOString(),
-        category: {
-          _id: (cat._id as mongoose.Types.ObjectId).toString(),
-          name: cat.name as string,
-          settlementType: cat.settlementType as "immediate" | "deferred",
-          sortOrder: cat.sortOrder as number,
-        },
-      };
-    });
+  ).map((e) => {
+    const rawTags = (e.tags as Record<string, unknown>[] | undefined) ?? [];
+    return {
+      _id: (e._id as mongoose.Types.ObjectId).toString(),
+      paidBy: e.paidBy as string,
+      amount: e.amount as number,
+      splitType: e.splitType as "split" | "full",
+      settlementType: e.settlementType as "immediate" | "deferred",
+      where: e.where as string,
+      date: (e.date as Date).toISOString(),
+      tags: rawTags.map((t) =>
+        serializeTag(t as { _id: unknown; path: string; sortOrder: number })
+      ),
+    };
+  });
 
   const [p1, p2] = persons;
   const breakdown = calculateSettlement(expenses, p1.key, p2.key);
@@ -230,18 +182,19 @@ export default async function DashboardPage() {
   // ── Recent expenses ───────────────────────────────────────────────────
   const recentExpenses = (
     recentRaw as unknown as Record<string, unknown>[]
-  )
-    .filter((e) => e.category != null)
-    .map((e) => {
-      const cat = e.category as Record<string, unknown>;
-      return {
-        date: (e.date as Date).toISOString(),
-        where: e.where as string,
-        categoryName: cat.name as string,
-        paidBy: e.paidBy as string,
-        amount: e.amount as number,
-      };
-    });
+  ).map((e) => {
+    const rawTags = (e.tags as Record<string, unknown>[] | undefined) ?? [];
+    const tagNames = rawTags
+      .map((t) => (t as { path: string }).path)
+      .join(", ");
+    return {
+      date: (e.date as Date).toISOString(),
+      where: e.where as string,
+      tagNames: tagNames || "Untagged",
+      paidBy: e.paidBy as string,
+      amount: e.amount as number,
+    };
+  });
 
   // ── Recent partner activity ────────────────────────────────────────────
   const recentActivities = recentActivitiesRaw.map((a) => ({

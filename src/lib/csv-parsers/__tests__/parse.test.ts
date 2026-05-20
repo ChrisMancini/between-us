@@ -13,7 +13,7 @@ function makeFormat(
     amountType: "separate",
     debitColumn: "Debit",
     creditColumn: "Credit",
-    categoryMappings: [],
+    tagMappings: [],
     ...overrides,
   };
 }
@@ -185,37 +185,37 @@ describe("parseCsv", () => {
     });
   });
 
-  describe("category mapping", () => {
-    it("maps matching source category to categoryId", () => {
+  describe("tag mapping", () => {
+    it("maps matching source tag to tagIds", () => {
       const format = makeFormat({
-        categoryColumn: "Category",
-        categoryMappings: [{ sourceValue: "groceries", categoryId: "cat-123" }],
+        tagColumn: "Category",
+        tagMappings: [{ sourceValue: "groceries", tagIds: ["tag-123"] }],
       });
       const rows = [{ Date: "01/01/2025", Description: "Store", Debit: "10.00", Credit: "", Category: "groceries" }];
       const result = parseCsv(rows, format);
-      expect(result.transactions[0].mappedCategoryId).toBe("cat-123");
-      expect(result.transactions[0].sourceCategory).toBe("groceries");
+      expect(result.transactions[0].mappedTagIds).toEqual(["tag-123"]);
+      expect(result.transactions[0].sourceTag).toBe("groceries");
     });
 
     it("maps case-insensitively", () => {
       const format = makeFormat({
-        categoryColumn: "Category",
-        categoryMappings: [{ sourceValue: "groceries", categoryId: "cat-123" }],
+        tagColumn: "Category",
+        tagMappings: [{ sourceValue: "groceries", tagIds: ["tag-123"] }],
       });
       const rows = [{ Date: "01/01/2025", Description: "Store", Debit: "10.00", Credit: "", Category: "GROCERIES" }];
       const result = parseCsv(rows, format);
-      expect(result.transactions[0].mappedCategoryId).toBe("cat-123");
+      expect(result.transactions[0].mappedTagIds).toEqual(["tag-123"]);
     });
 
-    it("leaves mappedCategoryId undefined when no mapping matches", () => {
+    it("leaves mappedTagIds undefined when no mapping matches", () => {
       const format = makeFormat({
-        categoryColumn: "Category",
-        categoryMappings: [{ sourceValue: "groceries", categoryId: "cat-123" }],
+        tagColumn: "Category",
+        tagMappings: [{ sourceValue: "groceries", tagIds: ["tag-123"] }],
       });
       const rows = [{ Date: "01/01/2025", Description: "Store", Debit: "10.00", Credit: "", Category: "dining" }];
       const result = parseCsv(rows, format);
-      expect(result.transactions[0].mappedCategoryId).toBeUndefined();
-      expect(result.transactions[0].sourceCategory).toBe("dining");
+      expect(result.transactions[0].mappedTagIds).toBeUndefined();
+      expect(result.transactions[0].sourceTag).toBe("dining");
     });
   });
 

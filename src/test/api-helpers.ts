@@ -101,7 +101,8 @@ export function makeExpense(overrides?: Partial<{
   where: string;
   notes: string;
   splitType: string;
-  category: unknown;
+  settlementType: string;
+  tags: unknown[];
   createdAt: Date;
   updatedAt: Date;
 }>) {
@@ -114,12 +115,14 @@ export function makeExpense(overrides?: Partial<{
     where: "Publix",
     notes: "Groceries",
     splitType: "split",
-    category: {
-      _id: VALID_ID_2,
-      name: "Groceries",
-      settlementType: "deferred",
-      sortOrder: 2,
-    },
+    settlementType: "deferred",
+    tags: [
+      {
+        _id: VALID_ID_2,
+        path: "Groceries",
+        sortOrder: 2,
+      },
+    ],
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -183,11 +186,12 @@ export function makeTemplate(overrides?: Partial<{
     items: [
       {
         paidBy: "john",
-        categoryId: VALID_ID_2,
+        tagIds: [VALID_ID_2],
         amount: 10000,
         where: "FPL",
         notes: "Electric",
         splitType: "split",
+        settlementType: "deferred",
       },
     ],
     createdAt: now,
@@ -209,7 +213,7 @@ export function makeCsvFormat(overrides?: Partial<{
     amountType: "single",
     amountColumn: "Amount",
     purchaseSign: "positive",
-    categoryMappings: [],
+    tagMappings: [],
     ...overrides,
   };
 }

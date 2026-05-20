@@ -16,7 +16,6 @@ jest.mock("@/lib/models/recurring-template", () => ({
     findOneAndDelete: jest.fn(),
   },
 }));
-jest.mock("@/lib/models/category", () => ({ Category: {} }));
 jest.mock("@/lib/validations/recurring-template", () => ({
   recurringTemplateApiSchema: {},
 }));

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { SerializedCategory } from "@/lib/models/category";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { CsvParseResult } from "@/lib/csv-parsers/types";
 import type { SkippedRow } from "@/lib/csv-parsers/types";
 import type { SerializedCsvFormat } from "@/lib/models/csv-format";
@@ -14,7 +14,7 @@ import { ImportResult } from "./import-result";
 type Step = "upload" | "preview" | "result";
 
 interface CsvImportFormProps {
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
   formats: SerializedCsvFormat[];
   paidBy: string;
   closedMonths: string[];
@@ -27,7 +27,7 @@ interface ResultData {
 }
 
 export function CsvImportForm({
-  categories,
+  tags: initialTags,
   formats,
   paidBy,
 }: CsvImportFormProps) {
@@ -37,11 +37,12 @@ export function CsvImportForm({
   const [skippedRows, setSkippedRows] = useState<SkippedRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ResultData | null>(null);
+  const [tags, setTags] = useState(initialTags);
 
-  const miscCategory = categories.find(
-    (c) => c.name.toLowerCase() === "miscellaneous"
+  const miscTag = tags.find(
+    (t) => t.name.toLowerCase() === "miscellaneous"
   );
-  const defaultCategoryId = miscCategory?._id ?? categories[0]?._id ?? "";
+  const defaultTagIds = miscTag ? [miscTag._id] : tags[0] ? [tags[0]._id] : [];
 
   async function handleParsed(parseResult: CsvParseResult) {
     const { transactions, skipped } = parseResult;
@@ -85,9 +86,10 @@ export function CsvImportForm({
         notes: t.notes ?? "",
         amountCents: t.amountCents,
         originalRow: t.originalRow,
-        categoryId: t.mappedCategoryId ?? defaultCategoryId,
-        sourceCategory: t.sourceCategory,
+        tagIds: t.mappedTagIds ?? defaultTagIds,
+        sourceTag: t.sourceTag,
         splitType: "split" as const,
+        settlementType: "deferred" as const,
         selected: !isDuplicate,
         isDuplicate,
         duplicateWhere: dupWhere,
@@ -109,11 +111,12 @@ export function CsvImportForm({
       const expenses = selectedRows.map((r) => ({
         paidBy,
         date: `${r.date}T00:00:00.000Z`,
-        categoryId: r.categoryId,
+        tagIds: r.tagIds,
         amount: r.amountCents,
         where: r.where.trim() || r.originalDescription,
         notes: r.notes.trim() || undefined,
         splitType: r.splitType,
+        settlementType: r.settlementType,
       }));
 
       const res = await fetch("/api/expenses/import", {
@@ -181,7 +184,8 @@ export function CsvImportForm({
       <PreviewTable
         rows={rows}
         skippedRows={skippedRows}
-        categories={categories}
+        tags={tags}
+        onTagCreated={(tag) => setTags((prev) => [...prev, tag])}
         importing={importing}
         onRowsChange={setRows}
         onImport={handleImport}

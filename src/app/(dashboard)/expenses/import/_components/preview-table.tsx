@@ -16,7 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SerializedCategory } from "@/lib/models/category";
+import { TagPicker } from "@/components/tag-picker";
+import { SettlementTypeSelect } from "@/components/settlement-type-select";
+import type { SerializedTag } from "@/lib/models/tag";
 import type { SkippedRow } from "@/lib/csv-parsers/types";
 
 export interface ImportRow {
@@ -27,9 +29,10 @@ export interface ImportRow {
   notes: string;
   amountCents: number;
   originalRow: number;
-  categoryId: string;
-  sourceCategory?: string;
+  tagIds: string[];
+  sourceTag?: string;
   splitType: "split" | "full";
+  settlementType: "immediate" | "deferred";
   selected: boolean;
   isDuplicate: boolean;
   duplicateWhere?: string;
@@ -38,7 +41,8 @@ export interface ImportRow {
 interface PreviewTableProps {
   rows: ImportRow[];
   skippedRows: SkippedRow[];
-  categories: SerializedCategory[];
+  tags: SerializedTag[];
+  onTagCreated?: (tag: SerializedTag) => void;
   importing: boolean;
   onRowsChange: (rows: ImportRow[]) => void;
   onImport: () => void;
@@ -48,14 +52,14 @@ interface PreviewTableProps {
 export function PreviewTable({
   rows,
   skippedRows,
-  categories,
+  tags,
+  onTagCreated,
   importing,
   onRowsChange,
   onImport,
   onBack,
 }: PreviewTableProps) {
   const [skippedOpen, setSkippedOpen] = useState(false);
-  const [bulkCategoryId, setBulkCategoryId] = useState("");
   const [bulkSplitType, setBulkSplitType] = useState("");
 
   const selectedRows = rows.filter((r) => r.selected);
@@ -97,12 +101,6 @@ export function PreviewTable({
     onRowsChange(rows.map((r) => ({ ...r, selected: false })));
   }
 
-  function handleBulkCategory(categoryId: string) {
-    onRowsChange(
-      rows.map((r) => (r.selected ? { ...r, categoryId } : r))
-    );
-  }
-
   function handleBulkSplit(splitType: "split" | "full") {
     onRowsChange(
       rows.map((r) => (r.selected ? { ...r, splitType } : r))
@@ -110,10 +108,10 @@ export function PreviewTable({
   }
 
   function handleImportClick() {
-    const invalid = rows.filter((r) => r.selected && !r.categoryId);
+    const invalid = rows.filter((r) => r.selected && r.tagIds.length === 0);
     if (invalid.length > 0) {
       toast.error(
-        `${invalid.length} selected row${invalid.length !== 1 ? "s" : ""} missing a category`
+        `${invalid.length} selected row${invalid.length !== 1 ? "s" : ""} missing tags`
       );
       return;
     }
@@ -215,28 +213,6 @@ export function PreviewTable({
         </Button>
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground whitespace-nowrap">
-            Set Category:
-          </Label>
-          <Select
-            value={bulkCategoryId}
-            onValueChange={(v: string | null) => { if (v) { handleBulkCategory(v); setBulkCategoryId(v); } }}
-          >
-            <SelectTrigger className="h-8 w-36 text-xs">
-              <SelectValue placeholder="Apply to selected">
-                {categories.find((c) => c._id === bulkCategoryId)?.name}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat._id} value={cat._id}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground whitespace-nowrap">
             Set Split:
           </Label>
           <Select
@@ -276,8 +252,11 @@ export function PreviewTable({
                 <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 w-32">
                   Notes
                 </th>
-                <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 w-36">
-                  Category
+                <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 w-44">
+                  Tags
+                </th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 w-32">
+                  Settlement
                 </th>
                 <th className="text-center px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 w-16">
                   50/50
@@ -346,31 +325,29 @@ export function PreviewTable({
                   </td>
                   <td className="px-3 py-2">
                     <div className="space-y-0.5">
-                      <Select
-                        value={row.categoryId}
-                        onValueChange={(v: string | null) =>
-                          updateRow(row.id, { categoryId: v ?? "" })
+                      <TagPicker
+                        tags={tags}
+                        selectedTagIds={row.tagIds}
+                        onSelectedChange={(ids) =>
+                          updateRow(row.id, { tagIds: ids })
                         }
-                      >
-                        <SelectTrigger className="h-7 text-xs">
-                          <SelectValue placeholder="Select...">
-                            {categories.find((c) => c._id === row.categoryId)?.name}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat._id} value={cat._id}>
-                              {cat.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {row.sourceCategory && (
+                        onTagCreated={onTagCreated}
+                        error={row.tagIds.length === 0}
+                      />
+                      {row.sourceTag && (
                         <p className="text-[10px] text-muted-foreground px-2 truncate">
-                          CSV: {row.sourceCategory}
+                          CSV: {row.sourceTag}
                         </p>
                       )}
                     </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <SettlementTypeSelect
+                      value={row.settlementType}
+                      onChange={(v) =>
+                        updateRow(row.id, { settlementType: v })
+                      }
+                    />
                   </td>
                   <td className="px-3 py-2 text-center">
                     <Checkbox

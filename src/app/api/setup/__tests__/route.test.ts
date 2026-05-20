@@ -9,8 +9,14 @@ jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/person", () => ({
   Person: { countDocuments: jest.fn(), create: jest.fn() },
 }));
-jest.mock("@/lib/models/category", () => ({
-  Category: { countDocuments: jest.fn(), insertMany: jest.fn() },
+jest.mock("@/lib/models/tag", () => ({
+  Tag: {
+    findOne: jest.fn().mockReturnValue({ collation: jest.fn().mockResolvedValue(null), sort: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }) }),
+    create: jest.fn(),
+  },
+}));
+jest.mock("@/lib/tag-utils", () => ({
+  ensureAncestors: jest.fn(),
 }));
 jest.mock("@/lib/models/app-settings", () => ({
   AppSettings: { findOneAndUpdate: jest.fn() },
@@ -20,7 +26,6 @@ jest.mock("@/lib/auth-providers", () => ({
 }));
 
 import { Person } from "@/lib/models/person";
-import { Category } from "@/lib/models/category";
 import { AppSettings } from "@/lib/models/app-settings";
 import { getAvailableOAuthProviders } from "@/lib/auth-providers";
 import { POST } from "../route";
@@ -78,8 +83,6 @@ describe("POST /api/setup", () => {
     asMock(Person.countDocuments).mockResolvedValue(0);
     asMock(Person.create).mockResolvedValue([]);
     asMock(AppSettings.findOneAndUpdate).mockResolvedValue({});
-    asMock(Category.countDocuments).mockResolvedValue(0);
-    asMock(Category.insertMany).mockResolvedValue([]);
 
     const res = await POST(makeJsonRequest("/api/setup", validBasicSetup));
     const body = await expectStatus(res, 201);
@@ -91,7 +94,6 @@ describe("POST /api/setup", () => {
     asMock(getAvailableOAuthProviders).mockReturnValue([{ key: "google" }]);
     asMock(Person.create).mockResolvedValue([]);
     asMock(AppSettings.findOneAndUpdate).mockResolvedValue({});
-    asMock(Category.countDocuments).mockResolvedValue(5);
 
     const res = await POST(
       makeJsonRequest("/api/setup", {
@@ -115,6 +117,5 @@ describe("POST /api/setup", () => {
     );
     const body = await expectStatus(res, 201);
     expect(body.ok).toBe(true);
-    expect(asMock(Category.insertMany)).not.toHaveBeenCalled();
   });
 });

@@ -2,15 +2,16 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { Receipt, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AuthMethodStep } from "./auth-method-step";
 import { PeopleStep, type PersonInput } from "./people-step";
-import { CategoriesStep } from "./categories-step";
+import { TagsStep } from "./tags-step";
 import type { AvailableProvider } from "@/lib/auth-providers";
 
-const STEPS = ["Auth", "People", "Categories"] as const;
+const STEPS = ["Auth", "People", "Tags"] as const;
 
 interface SetupWizardProps {
   availableProviders: AvailableProvider[];
@@ -30,6 +31,7 @@ export function SetupWizard({ availableProviders }: SetupWizardProps) {
     { displayName: "", key: "", role: "user", emails: {} },
   ]);
 
+  const [tags, setTags] = useState<string[]>([]);
   const emailTouched = useRef(false);
 
   function getEmailErrors(
@@ -118,6 +120,7 @@ export function SetupWizard({ availableProviders }: SetupWizardProps) {
               ? { emails: { [oauthProvider]: (p.emails[oauthProvider] ?? "").trim().toLowerCase() } }
               : {}),
           })),
+          tags,
         }),
       });
 
@@ -129,6 +132,7 @@ export function SetupWizard({ availableProviders }: SetupWizardProps) {
       }
 
       toast.success("Setup complete!");
+      await signOut({ redirect: false });
       router.push("/login");
     } catch {
       toast.error("Something went wrong");
@@ -217,7 +221,7 @@ export function SetupWizard({ availableProviders }: SetupWizardProps) {
               availableProviders={availableProviders}
             />
           )}
-          {step === 2 && <CategoriesStep />}
+          {step === 2 && <TagsStep tags={tags} onTagsChange={setTags} />}
 
           {/* Navigation */}
           <div className="flex items-center justify-between">

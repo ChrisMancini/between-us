@@ -5,6 +5,7 @@ import { AppSettings } from "@/lib/models/app-settings";
 import { Person } from "@/lib/models/person";
 import { getAvailableOAuthProviders } from "@/lib/auth-providers";
 import { withAdmin } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
 
 const updateSchema = z
   .object({
@@ -31,12 +32,7 @@ export const PUT = withAdmin(async (req) => {
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
   const { authMethod, oauthProvider, persons } = parsed.data;
 

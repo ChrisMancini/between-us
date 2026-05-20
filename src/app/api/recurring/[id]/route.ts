@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
-import { RecurringTemplate, type IRecurringTemplateItem } from "@/lib/models/recurring-template";
-import { Category } from "@/lib/models/category";
+import { RecurringTemplate } from "@/lib/models/recurring-template";
+import { Tag } from "@/lib/models/tag";
 import { recurringTemplateApiSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
+import { validationError } from "@/lib/api-utils";
+import { serializeTemplate } from "@/lib/recurring-template-utils";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -19,65 +21,49 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const body = await req.json();
   const parsed = recurringTemplateApiSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.issues },
-      { status: 400 }
-    );
-  }
+  if (!parsed.success) return validationError(parsed);
 
   const { name, items } = parsed.data;
 
   for (const item of items) {
-    if (!mongoose.isValidObjectId(item.categoryId)) {
-      return NextResponse.json(
-        { error: `Invalid category ID: ${item.categoryId}` },
-        { status: 400 }
-      );
+    for (const tagId of item.tagIds) {
+      if (!mongoose.isValidObjectId(tagId)) {
+        return NextResponse.json(
+          { error: `Invalid tag ID: ${tagId}` },
+          { status: 400 },
+        );
+      }
     }
   }
 
   await connectToDatabase();
 
-  const categoryIds = [...new Set(items.map((i) => i.categoryId))];
-  const existingCategories = await Category.find({
-    _id: { $in: categoryIds },
+  const allTagIds = [...new Set(items.flatMap((i) => i.tagIds))];
+  const existingTags = await Tag.find({
+    _id: { $in: allTagIds },
   }).lean();
-  if (existingCategories.length !== categoryIds.length) {
+  if (existingTags.length !== allTagIds.length) {
     return NextResponse.json(
-      { error: "One or more categories not found" },
-      { status: 422 }
+      { error: "One or more tags not found" },
+      { status: 422 },
     );
   }
 
   const updated = await RecurringTemplate.findOneAndUpdate(
     { _id: id, createdBy: session.user.id },
     { name, items },
-    { new: true }
+    { new: true },
   ).lean();
 
   if (!updated) {
     return NextResponse.json(
       { error: "Template not found" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
   return NextResponse.json({
-    template: {
-      _id: updated._id.toString(),
-      name: updated.name,
-      items: updated.items.map((item: IRecurringTemplateItem) => ({
-        paidBy: item.paidBy,
-        categoryId: item.categoryId.toString(),
-        amount: item.amount,
-        where: item.where,
-        notes: item.notes,
-        splitType: item.splitType,
-      })),
-      createdAt: (updated.createdAt as Date).toISOString(),
-      updatedAt: (updated.updatedAt as Date).toISOString(),
-    },
+    template: serializeTemplate(updated),
   });
 });
 
@@ -97,7 +83,7 @@ export const DELETE = withAuth<RouteContext>(async (_req, session, context) => {
   if (!deleted) {
     return NextResponse.json(
       { error: "Template not found" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 

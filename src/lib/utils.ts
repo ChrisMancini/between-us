@@ -12,6 +12,13 @@ export function formatCurrency(cents: number) {
   });
 }
 
+export function formatMonthYear(month: number, year: number): string {
+  return new Date(year, month - 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export function isDuplicateKeyError(err: unknown): boolean {
   return (
     typeof err === "object" &&

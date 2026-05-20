@@ -13,36 +13,38 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface DeleteCsvFormatDialogProps {
-  formatId: string;
-  formatName: string;
+interface DeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  endpoint: string;
+  itemType: string;
+  itemLabel: string;
+  description?: string;
 }
 
-export function DeleteCsvFormatDialog({
-  formatId,
-  formatName,
+export function DeleteDialog({
   open,
   onOpenChange,
-}: DeleteCsvFormatDialogProps) {
+  endpoint,
+  itemType,
+  itemLabel,
+  description,
+}: DeleteDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/csv-formats/${formatId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(endpoint, { method: "DELETE" });
 
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error ?? "Failed to delete format");
+        toast.error(data.error ?? `Failed to delete ${itemType}`);
         return;
       }
 
-      toast.success("Format deleted");
+      toast.success(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted`);
       onOpenChange(false);
       router.refresh();
     } catch {
@@ -56,10 +58,14 @@ export function DeleteCsvFormatDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Delete format?</DialogTitle>
+          <DialogTitle>Delete {itemType}?</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete <strong>{formatName}</strong>? This
-            action cannot be undone.
+            {description ?? (
+              <>
+                Are you sure you want to delete{" "}
+                <strong>{itemLabel}</strong>? This action cannot be undone.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
