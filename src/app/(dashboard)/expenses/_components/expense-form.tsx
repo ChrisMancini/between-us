@@ -73,7 +73,6 @@ export function ExpenseForm({ tags: initialTags, paidBy, closedMonths }: Expense
     control,
     handleSubmit,
     reset,
-    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -130,10 +129,14 @@ export function ExpenseForm({ tags: initialTags, paidBy, closedMonths }: Expense
     toast.success("Expense added");
 
     reset({
-      ...getValues(),
+      paidBy,
+      date: today(),
+      tagIds: [],
       amount: "",
       where:  "",
       notes:  "",
+      splitType: "split",
+      settlementType: "deferred",
     });
 
     router.refresh();
