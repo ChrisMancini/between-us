@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import { getPersons } from "@/lib/persons";
+import { formatMonthYear, getMonthDateRange } from "@/lib/utils";
 import {
   calculateSettlement,
   type SettlementExpenseRow,
@@ -21,13 +22,6 @@ import { DashboardWidgetColumn } from "./_components/dashboard-widget-column";
 
 export const dynamic = "force-dynamic";
 
-function monthLabel(month: number, year: number) {
-  return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-}
-
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect("/login");
@@ -35,8 +29,7 @@ export default async function DashboardPage() {
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
+  const { start, end } = getMonthDateRange(month, year);
 
   await connectToDatabase();
 
@@ -248,7 +241,7 @@ export default async function DashboardPage() {
   const widgetPreferences = mergeWidgetPreferences(userPref?.dashboard?.widgets);
 
   const hasExpenses = totalSpending > 0;
-  const label = monthLabel(month, year);
+  const label = formatMonthYear(month, year);
 
   return (
     <div className="space-y-6">

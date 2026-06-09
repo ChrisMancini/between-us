@@ -15,13 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { usePersons } from "@/components/persons-context";
-
-function fmt(cents: number) {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
+import { formatCurrency } from "@/lib/utils";
 
 interface PreviousSettlement {
   totalOwed: number;
@@ -78,7 +72,7 @@ export function CloseMonthDialog({
       const receiverLabel = otherDisplayName(payer);
       return {
         amount: Math.abs(delta),
-        direction: `${payerLabel} pays ${receiverLabel} an additional ${fmt(Math.abs(delta))}`,
+        direction: `${payerLabel} pays ${receiverLabel} an additional ${formatCurrency(Math.abs(delta))}`,
       };
     } else {
       // Direction flipped — previous payment needs to be refunded + new amount
@@ -87,7 +81,7 @@ export function CloseMonthDialog({
       const newPayerLabel = displayName(newPayer);
       return {
         amount: total,
-        direction: `${prevReceiverLabel} gets back ${fmt(previous.totalOwed)} and ${newPayerLabel} pays ${fmt(newTotalOwed)}`,
+        direction: `${prevReceiverLabel} gets back ${formatCurrency(previous.totalOwed)} and ${newPayerLabel} pays ${formatCurrency(newTotalOwed)}`,
       };
     }
   }
@@ -152,7 +146,7 @@ export function CloseMonthDialog({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Previously settled</span>
                 <span className="font-medium line-through text-muted-foreground">
-                  {fmt(previous.totalOwed)}{" "}
+                  {formatCurrency(previous.totalOwed)}{" "}
                   <span className="text-xs">
                     ({displayName(previous.owedBy)} owed)
                   </span>

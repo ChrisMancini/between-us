@@ -129,21 +129,6 @@ export function makeExpense(overrides?: Partial<{
   };
 }
 
-export function makeCategory(overrides?: Partial<{
-  _id: string;
-  name: string;
-  settlementType: string;
-  sortOrder: number;
-}>) {
-  return {
-    _id: VALID_ID,
-    name: "Groceries",
-    settlementType: "deferred",
-    sortOrder: 1,
-    ...overrides,
-  };
-}
-
 export function makeSettlement(overrides?: Partial<{
   _id: string;
   month: number;

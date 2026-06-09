@@ -4,18 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
 import { Settlement } from "@/lib/models/settlement";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatMonthYear } from "@/lib/utils";
 import { PersonBadge } from "@/components/person-badge";
 import { getPersons, buildPersonMap, badgeProps } from "@/lib/persons";
 
 export const dynamic = "force-dynamic";
-
-function monthLabel(month: number, year: number) {
-  return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-}
 
 export default async function SettlementHistoryPage() {
   const session = await auth();
@@ -98,7 +91,7 @@ export default async function SettlementHistoryPage() {
                       href={`/settlement?month=${s.month}&year=${s.year}`}
                       className="text-primary hover:underline underline-offset-2"
                     >
-                      {monthLabel(s.month, s.year)}
+                      {formatMonthYear(s.month, s.year)}
                     </Link>
                   </td>
                   <td className="px-4 py-2.5">

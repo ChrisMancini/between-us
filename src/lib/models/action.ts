@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document, type Types } from "mongoose";
 
-export const ACTION_STATUSES = [
+const ACTION_STATUSES = [
   "pending",
   "paid",
   "confirmed",
@@ -9,7 +9,7 @@ export const ACTION_STATUSES = [
 
 export type ActionStatus = (typeof ACTION_STATUSES)[number];
 
-export const ACTION_SOURCE_TYPES = ["expense", "settlement"] as const;
+const ACTION_SOURCE_TYPES = ["expense", "settlement"] as const;
 
 export type ActionSourceType = (typeof ACTION_SOURCE_TYPES)[number];
 

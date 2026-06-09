@@ -99,43 +99,40 @@ export function TagPicker({
   );
 
   return (
-    <div className="space-y-1.5">
-      {/* Selected tags as badges */}
-      {selectedTags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {selectedTags.map((tag) => (
-            <Badge key={tag._id} variant="secondary" className="gap-1 pr-1">
-              {tag.path}
-              <button
-                type="button"
-                onClick={() => removeTag(tag._id)}
-                className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-
+    <div>
       {/* Popover trigger */}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           className={cn(
-            "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors",
+            "flex min-h-9 w-full items-center gap-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
             "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             error && "border-destructive",
             selectedTags.length === 0 && "text-muted-foreground"
           )}
         >
-          <span className="flex items-center gap-2">
-            <Tags className="h-4 w-4" />
-            {selectedTags.length === 0
-              ? "Select tags..."
-              : `${selectedTags.length} tag${selectedTags.length > 1 ? "s" : ""} selected`}
-          </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <Tags className="h-4 w-4 shrink-0" />
+          {selectedTags.length === 0 ? (
+            <span className="flex-1 text-left">Select tags...</span>
+          ) : (
+            <span className="flex flex-1 flex-wrap gap-1">
+              {selectedTags.map((tag) => (
+                <Badge
+                  key={tag._id}
+                  variant="secondary"
+                  className="gap-1 pr-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeTag(tag._id);
+                  }}
+                >
+                  {tag.path}
+                  <X className="h-3 w-3" />
+                </Badge>
+              ))}
+            </span>
+          )}
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </PopoverTrigger>
         <PopoverContent className="w-[320px] p-0" align="start">
           <div className="p-2 border-b">

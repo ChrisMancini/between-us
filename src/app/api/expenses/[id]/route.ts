@@ -6,7 +6,7 @@ import { Tag } from "@/lib/models/tag";
 import { expenseUpdateApiSchema } from "@/lib/validations/expense";
 import { serializeTag } from "@/lib/tag-utils";
 import { withAuth, canModifyExpense } from "@/lib/auth-guard";
-import { validationError } from "@/lib/api-utils";
+import { validationError, invalidId } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { Settlement } from "@/lib/models/settlement";
 import { logActivity } from "@/lib/activity-logger";
@@ -20,9 +20,8 @@ interface RouteContext {
 
 export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const { id } = await context.params;
-  if (!mongoose.isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
 
   const body = await req.json();
   const parsed = expenseUpdateApiSchema.safeParse(body);
@@ -122,9 +121,8 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
 
 export const DELETE = withAuth<RouteContext>(async (_req, session, context) => {
   const { id } = await context.params;
-  if (!mongoose.isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
 
   await connectToDatabase();
 

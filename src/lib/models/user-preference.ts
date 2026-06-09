@@ -1,11 +1,11 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-export interface IWidgetPreference {
+interface IWidgetPreference {
   widgetId: string;
   collapsed: boolean;
 }
 
-export interface IUserPreference extends Document {
+interface IUserPreference extends Document {
   userId: string;
   dashboard: {
     widgets: IWidgetPreference[];

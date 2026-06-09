@@ -4,7 +4,7 @@ import { isDuplicateKeyError } from "@/lib/utils";
 import { CsvFormat } from "@/lib/models/csv-format";
 import { csvFormatApiSchema } from "@/lib/validations/csv-format";
 import { withAdmin, withAuth } from "@/lib/auth-guard";
-import { validationError } from "@/lib/api-utils";
+import { validationError, duplicateKeyResponse } from "@/lib/api-utils";
 import { serializeCsvFormat } from "@/lib/csv-format-utils";
 
 export const GET = withAuth(async () => {
@@ -35,10 +35,7 @@ export const POST = withAdmin(async (req) => {
     );
   } catch (err: unknown) {
     if (isDuplicateKeyError(err)) {
-      return NextResponse.json(
-        { error: "A format with this name already exists" },
-        { status: 409 },
-      );
+      return duplicateKeyResponse("A format with this name already exists");
     }
     throw err;
   }

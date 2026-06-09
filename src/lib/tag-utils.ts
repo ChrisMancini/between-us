@@ -40,6 +40,13 @@ export async function ensureAncestors(path: string): Promise<void> {
   }
 }
 
+export async function createTagWithSortOrder(path: string) {
+  await ensureAncestors(path);
+  const last = await Tag.findOne().sort({ sortOrder: -1 }).lean();
+  const sortOrder = last ? last.sortOrder + 1 : 1;
+  return Tag.create({ path, sortOrder });
+}
+
 export function serializeTag(
   doc: ITag | (Record<string, unknown> & { _id: unknown; path: string; sortOrder: number })
 ): SerializedTag {

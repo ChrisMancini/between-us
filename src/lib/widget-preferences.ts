@@ -12,10 +12,6 @@ export interface WidgetPreference {
   collapsed: boolean;
 }
 
-export const DEFAULT_WIDGET_ORDER: WidgetPreference[] = WIDGET_IDS.map(
-  (id) => ({ widgetId: id, collapsed: false })
-);
-
 export function mergeWidgetPreferences(
   saved: Array<{ widgetId: string; collapsed: boolean }> | undefined | null,
   knownIds: readonly string[] = WIDGET_IDS

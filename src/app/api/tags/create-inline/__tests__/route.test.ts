@@ -12,7 +12,7 @@ import {
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/tag", () => ({
-  Tag: { findOne: jest.fn(), create: jest.fn() },
+  Tag: { findOne: jest.fn() },
 }));
 jest.mock("@/lib/utils", () => ({ isDuplicateKeyError: jest.fn() }));
 jest.mock("@/lib/validations/tag", () => ({
@@ -27,17 +27,19 @@ jest.mock("@/lib/tag-utils", () => ({
     parent: "",
     depth: 1,
   })),
-  ensureAncestors: jest.fn(),
+  createTagWithSortOrder: jest.fn(),
 }));
 
 import { auth } from "@/auth";
 import { Tag } from "@/lib/models/tag";
 import { tagApiSchema } from "@/lib/validations/tag";
 import { isDuplicateKeyError } from "@/lib/utils";
+import { createTagWithSortOrder } from "@/lib/tag-utils";
 import { POST } from "../route";
 
 const mockAuth = asMock(auth);
 const mockSafeParse = asMock(tagApiSchema.safeParse);
+const mockCreateTag = asMock(createTagWithSortOrder);
 
 describe("POST /api/tags/create-inline", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -71,40 +73,29 @@ describe("POST /api/tags/create-inline", () => {
   it("returns 201 on success when tag is new", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ path: "Groceries" }));
-    // First findOne (collation check) returns null
+    // Collation check returns null (tag doesn't exist)
     asMock(Tag.findOne).mockReturnValueOnce({
       collation: jest.fn().mockResolvedValue(null),
     });
-    // Second findOne (sortOrder lookup) returns last tag
-    asMock(Tag.findOne).mockReturnValueOnce({
-      sort: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ sortOrder: 5 }),
-      }),
-    });
     const created = { _id: VALID_ID, path: "Groceries", sortOrder: 6 };
-    asMock(Tag.create).mockResolvedValue(created);
+    mockCreateTag.mockResolvedValue(created);
 
     const res = await POST(makeJsonRequest("/api/tags/create-inline", {}));
     const body = await expectStatus(res, 201);
     expect(body.tag.path).toBe("Groceries");
+    expect(mockCreateTag).toHaveBeenCalledWith("Groceries");
   });
 
   it("returns 200 on race condition duplicate", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ path: "Groceries" }));
-    // First findOne (collation check) returns null
+    // Collation check returns null (tag doesn't exist yet)
     asMock(Tag.findOne).mockReturnValueOnce({
       collation: jest.fn().mockResolvedValue(null),
     });
-    // Second findOne (sortOrder lookup)
-    asMock(Tag.findOne).mockReturnValueOnce({
-      sort: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ sortOrder: 5 }),
-      }),
-    });
-    asMock(Tag.create).mockRejectedValue(new Error("duplicate"));
+    mockCreateTag.mockRejectedValue(new Error("duplicate"));
     asMock(isDuplicateKeyError).mockReturnValue(true);
-    // Third findOne (race condition recovery)
+    // Race condition recovery findOne
     const found = { _id: VALID_ID, path: "Groceries", sortOrder: 6 };
     asMock(Tag.findOne).mockReturnValueOnce({
       collation: jest.fn().mockResolvedValue(found),
@@ -118,20 +109,14 @@ describe("POST /api/tags/create-inline", () => {
   it("re-throws when isDuplicateKeyError true but findOne returns null", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ path: "Groceries" }));
-    // First findOne (collation check) returns null
+    // Collation check returns null
     asMock(Tag.findOne).mockReturnValueOnce({
       collation: jest.fn().mockResolvedValue(null),
     });
-    // Second findOne (sortOrder lookup)
-    asMock(Tag.findOne).mockReturnValueOnce({
-      sort: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue(null),
-      }),
-    });
     const error = new Error("duplicate");
-    asMock(Tag.create).mockRejectedValue(error);
+    mockCreateTag.mockRejectedValue(error);
     asMock(isDuplicateKeyError).mockReturnValue(true);
-    // Third findOne (race condition recovery) returns null
+    // Race condition recovery returns null
     asMock(Tag.findOne).mockReturnValueOnce({
       collation: jest.fn().mockResolvedValue(null),
     });

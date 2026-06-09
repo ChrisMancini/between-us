@@ -14,5 +14,3 @@ const csvImportExpenseSchema = z.object({
 export const csvImportApiSchema = z.object({
   expenses: z.array(csvImportExpenseSchema).min(1).max(500),
 });
-
-export type CsvImportApiInput = z.infer<typeof csvImportApiSchema>;

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
@@ -23,13 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedRecurringTemplate } from "@/lib/models/recurring-template";
-
-function fmt(cents: number) {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
 
 function today() {
   return new Date().toISOString().split("T")[0];
@@ -247,7 +240,7 @@ export function ApplyTemplateDialog({
                     Default Total
                   </td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums">
-                    {fmt(template.items.reduce((s, i) => s + i.amount, 0))}
+                    {formatCurrency(template.items.reduce((s, i) => s + i.amount, 0))}
                   </td>
                 </tr>
               </tfoot>

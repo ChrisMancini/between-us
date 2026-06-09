@@ -15,5 +15,3 @@ export const tagApiSchema = z.object({
       "Path contains an empty segment"
     ),
 });
-
-export type TagApiInput = z.infer<typeof tagApiSchema>;

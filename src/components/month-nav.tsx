@@ -3,18 +3,12 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatMonthYear } from "@/lib/utils";
 
 interface MonthNavProps {
   month: number;
   year: number;
   basePath: string;
-}
-
-function monthLabel(month: number, year: number) {
-  return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
 }
 
 export function MonthNav({ month, year, basePath }: MonthNavProps) {
@@ -51,7 +45,7 @@ export function MonthNav({ month, year, basePath }: MonthNavProps) {
       </Button>
 
       <span className="min-w-[160px] text-center text-sm font-semibold text-foreground">
-        {monthLabel(month, year)}
+        {formatMonthYear(month, year)}
       </span>
 
       <Button

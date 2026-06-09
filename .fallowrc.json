@@ -1,0 +1,28 @@
+{
+  "$schema": "https://fallow.tools/schema.json",
+  "entry": [
+    "build.mjs",
+    "scripts/**/*.ts"
+  ],
+  "ignorePatterns": [
+    "src/components/ui/**"
+  ],
+  "health": {
+    "maxCrap": 300
+  },
+  "ignoreDependencies": [
+    "@base-ui/react",
+    "class-variance-authority",
+    "react-day-picker"
+  ],
+  "rules": {
+    "unused-files": "error",
+    "unused-exports": "warn",
+    "unused-types": "warn",
+    "unused-dependencies": "error",
+    "unused-dev-dependencies": "warn",
+    "circular-dependencies": "warn",
+    "unresolved-imports": "error",
+    "unlisted-dependencies": "error"
+  }
+}

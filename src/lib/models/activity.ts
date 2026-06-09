@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-export const ACTIVITY_ACTIONS = [
+const ACTIVITY_ACTIONS = [
   "expense_create",
   "expense_edit",
   "expense_delete",

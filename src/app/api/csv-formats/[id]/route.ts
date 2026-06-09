@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { isDuplicateKeyError } from "@/lib/utils";
 import { CsvFormat } from "@/lib/models/csv-format";
 import { csvFormatApiSchema } from "@/lib/validations/csv-format";
 import { withAdmin } from "@/lib/auth-guard";
-import { validationError } from "@/lib/api-utils";
+import { validationError, invalidId, duplicateKeyResponse } from "@/lib/api-utils";
 import { serializeCsvFormat } from "@/lib/csv-format-utils";
 
 interface RouteContext {
@@ -14,9 +13,8 @@ interface RouteContext {
 
 export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
   const { id } = await context.params;
-  if (!mongoose.isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
 
   const body = await req.json();
   const parsed = csvFormatApiSchema.safeParse(body);
@@ -40,10 +38,7 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
     return NextResponse.json({ format: serializeCsvFormat(updated) });
   } catch (err: unknown) {
     if (isDuplicateKeyError(err)) {
-      return NextResponse.json(
-        { error: "A format with this name already exists" },
-        { status: 409 },
-      );
+      return duplicateKeyResponse("A format with this name already exists");
     }
     throw err;
   }
@@ -51,9 +46,8 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
 
 export const DELETE = withAdmin<RouteContext>(async (_req, _session, context) => {
   const { id } = await context.params;
-  if (!mongoose.isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
 
   await connectToDatabase();
 

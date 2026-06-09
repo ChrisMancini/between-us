@@ -5,5 +5,3 @@ export const activityQuerySchema = z.object({
   cursor: z.string().datetime().optional(),
   filter: z.enum(["partner", "all"]).default("partner"),
 });
-
-export type ActivityQueryInput = z.infer<typeof activityQuerySchema>;

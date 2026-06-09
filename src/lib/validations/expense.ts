@@ -15,4 +15,3 @@ export const expenseApiSchema = z.object({
 export type ExpenseApiInput = z.infer<typeof expenseApiSchema>;
 
 export const expenseUpdateApiSchema = expenseApiSchema.omit({ paidBy: true });
-export type ExpenseUpdateApiInput = z.infer<typeof expenseUpdateApiSchema>;

@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,6 +29,10 @@ jobs:
 
       - name: Run tests
         run: npm run test:ci
+
+      - name: Fallow audit
+        if: github.event_name == 'pull_request'
+        run: npx fallow audit --base origin/${{ github.event.pull_request.base.ref }}
 
   docker:
     name: Docker Build
