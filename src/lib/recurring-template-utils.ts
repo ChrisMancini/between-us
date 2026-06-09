@@ -1,10 +1,13 @@
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+import { Tag } from "./models/tag";
 import type {
   IRecurringTemplateItem,
   SerializedRecurringTemplateItem,
   SerializedRecurringTemplate,
 } from "./models/recurring-template";
 
-export function serializeTemplateItem(
+function serializeTemplateItem(
   item: IRecurringTemplateItem
 ): SerializedRecurringTemplateItem {
   return {
@@ -16,6 +19,32 @@ export function serializeTemplateItem(
     splitType: item.splitType,
     settlementType: item.settlementType,
   };
+}
+
+export async function validateTemplateTagIds(
+  items: Array<{ tagIds: string[] }>
+): Promise<NextResponse | null> {
+  for (const item of items) {
+    for (const tagId of item.tagIds) {
+      if (!mongoose.isValidObjectId(tagId)) {
+        return NextResponse.json(
+          { error: `Invalid tag ID: ${tagId}` },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
+  const allTagIds = [...new Set(items.flatMap((i) => i.tagIds))];
+  const existingTags = await Tag.find({ _id: { $in: allTagIds } }).lean();
+  if (existingTags.length !== allTagIds.length) {
+    return NextResponse.json(
+      { error: "One or more tags not found" },
+      { status: 422 }
+    );
+  }
+
+  return null;
 }
 
 export function serializeTemplate(

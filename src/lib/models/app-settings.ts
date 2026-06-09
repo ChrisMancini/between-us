@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-export interface IAppSettings extends Document {
+interface IAppSettings extends Document {
   authMethod: "basic" | "oauth";
   oauthProvider: string | null;
   createdAt: Date;

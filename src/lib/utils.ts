@@ -19,6 +19,21 @@ export function formatMonthYear(month: number, year: number): string {
   });
 }
 
+export function parseMonthYearParams(params: { month?: string; year?: string }) {
+  const now = new Date();
+  return {
+    month: parseInt(params.month ?? "") || now.getMonth() + 1,
+    year: parseInt(params.year ?? "") || now.getFullYear(),
+  };
+}
+
+export function getMonthDateRange(month: number, year: number) {
+  return {
+    start: new Date(Date.UTC(year, month - 1, 1)),
+    end: new Date(Date.UTC(year, month, 1)),
+  };
+}
+
 export function isDuplicateKeyError(err: unknown): boolean {
   return (
     typeof err === "object" &&

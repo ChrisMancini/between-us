@@ -6,16 +6,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { PERSON_COLORS, badgeProps } from "@/lib/person-utils";
-import type { ExpenseDetail } from "../page";
-
-interface TagTotal {
-  tagPath: string;
-  tagName: string;
-  settlementType: "immediate" | "deferred";
-  person1Paid: number;
-  person2Paid: number;
-  total: number;
-}
+import type { ExpenseDetail, TagTotal } from "../_lib/report-transforms";
 
 interface PersonTagMatrixProps {
   tags: TagTotal[];

@@ -16,6 +16,7 @@ import {
 import { serializeTag } from "@/lib/tag-utils";
 import { getPersons, buildPersonMap, badgeProps } from "@/lib/persons";
 import type { SerializedPerson } from "@/lib/models/person";
+import { formatCurrency, formatMonthYear, parseMonthYearParams, getMonthDateRange } from "@/lib/utils";
 import { MonthNav } from "@/components/month-nav";
 import { CloseMonthDialog } from "./_components/close-month-dialog";
 import { ReopenMonthDialog } from "./_components/reopen-month-dialog";
@@ -25,20 +26,6 @@ import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
 
-function fmt(cents: number) {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
-
-function monthLabel(month: number, year: number) {
-  return new Date(year, month - 1, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-}
-
 interface PageProps {
   searchParams: Promise<{ month?: string; year?: string }>;
 }
@@ -47,10 +34,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const params = await searchParams;
-  const now = new Date();
-  const month = parseInt(params.month ?? "") || now.getMonth() + 1;
-  const year = parseInt(params.year ?? "") || now.getFullYear();
+  const { month, year } = parseMonthYearParams(await searchParams);
 
   await connectToDatabase();
 
@@ -59,6 +43,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
   const personMap = buildPersonMap(persons);
 
   // Check if already closed + find reopened months + find unsettled past months
+  const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
@@ -109,8 +94,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
     )
     .sort((a, b) => a.year - b.year || a.month - b.month);
 
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
+  const { start, end } = getMonthDateRange(month, year);
 
   // Always load expenses for the breakdown table
   const rawExpenses = await Expense.find({
@@ -175,7 +159,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
     const payer = personMap.get(owedBy)?.displayName ?? owedBy;
     const receiver =
       [...personMap.values()].find((p) => p.key !== owedBy)?.displayName ?? "";
-    return `${payer} owes ${receiver} ${fmt(amount)}`;
+    return `${payer} owes ${receiver} ${formatCurrency(amount)}`;
   }
 
   const summaryText = isClosed
@@ -208,7 +192,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
             <ReopenMonthDialog
               month={month}
               year={year}
-              monthLabel={monthLabel(month, year)}
+              monthLabel={formatMonthYear(month, year)}
             />
           ) : (
             breakdown.deferredExpenses.length > 0 && (
@@ -245,14 +229,14 @@ export default async function SettlementPage({ searchParams }: PageProps) {
                   {i > 0 && ", "}
                   {isCurrentView ? (
                     <span className="font-medium text-amber-800 dark:text-amber-300">
-                      {monthLabel(s.month, s.year)}
+                      {formatMonthYear(s.month, s.year)}
                     </span>
                   ) : (
                     <Link
                       href={`/settlement?month=${s.month}&year=${s.year}`}
                       className="font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200"
                     >
-                      {monthLabel(s.month, s.year)}
+                      {formatMonthYear(s.month, s.year)}
                     </Link>
                   )}
                 </span>
@@ -286,14 +270,14 @@ export default async function SettlementPage({ searchParams }: PageProps) {
                   {i > 0 && ", "}
                   {isCurrentView ? (
                     <span className="font-medium text-orange-800 dark:text-orange-300">
-                      {monthLabel(m.month, m.year)}
+                      {formatMonthYear(m.month, m.year)}
                     </span>
                   ) : (
                     <Link
                       href={`/settlement?month=${m.month}&year=${m.year}`}
                       className="font-medium text-orange-800 dark:text-orange-300 underline underline-offset-2 hover:text-orange-900 dark:hover:text-orange-200"
                     >
-                      {monthLabel(m.month, m.year)}
+                      {formatMonthYear(m.month, m.year)}
                     </Link>
                   )}
                 </span>
@@ -360,7 +344,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
         person1={p1}
         person2={p2}
         personMap={personMap}
-        label={monthLabel(month, year)}
+        label={formatMonthYear(month, year)}
       />
 
       {/* Deferred expense breakdown */}
@@ -374,7 +358,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
       ) : (
         <div className="rounded-xl border border-dashed border-primary/20 bg-card py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            No deferred expenses for {monthLabel(month, year)}.
+            No deferred expenses for {formatMonthYear(month, year)}.
           </p>
         </div>
       )}
@@ -440,7 +424,7 @@ function NetResultCard({
             </div>
           ) : (
             <div className="space-y-0.5">
-              <p className="text-3xl font-bold text-foreground">{fmt(amount)}</p>
+              <p className="text-3xl font-bold text-foreground">{formatCurrency(amount)}</p>
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">{payer}</span>{" "}
                 owes{" "}
@@ -459,7 +443,7 @@ function NetResultCard({
                 {person2.displayName} → {person1.displayName}
               </span>
             </div>
-            <p className="text-lg font-bold tabular-nums">{fmt(person2OwesPerson1)}</p>
+            <p className="text-lg font-bold tabular-nums">{formatCurrency(person2OwesPerson1)}</p>
           </div>
           <div className="w-px bg-primary/10 self-stretch" />
           <div className="text-center">
@@ -469,7 +453,7 @@ function NetResultCard({
                 {person1.displayName} → {person2.displayName}
               </span>
             </div>
-            <p className="text-lg font-bold tabular-nums">{fmt(person1OwesPerson2)}</p>
+            <p className="text-lg font-bold tabular-nums">{formatCurrency(person1OwesPerson2)}</p>
           </div>
         </div>
       </div>
@@ -502,7 +486,7 @@ function ExpenseTable({
           <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
         </div>
         <p className="text-sm font-semibold tabular-nums text-foreground">
-          {fmt(total)}
+          {formatCurrency(total)}
         </p>
       </div>
 
@@ -536,7 +520,7 @@ function ExpenseTable({
                 {e.splitType === "split" ? "50 / 50" : "Full"}
               </td>
               <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
-                {fmt(e.amount)}
+                {formatCurrency(e.amount)}
               </td>
             </tr>
           ))}

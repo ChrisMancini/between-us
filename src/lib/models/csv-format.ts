@@ -1,11 +1,11 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-export interface ITagMapping {
+interface ITagMapping {
   sourceValue: string;
   tagIds: mongoose.Types.ObjectId[];
 }
 
-export interface ICsvFormat extends Document {
+interface ICsvFormat extends Document {
   name: string;
   dateColumn: string;
   dateFormat: "MM/DD/YYYY" | "YYYY-MM-DD" | "MM-DD-YYYY" | "DD/MM/YYYY";

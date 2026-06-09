@@ -15,10 +15,6 @@ export const recurringTemplateApiSchema = z.object({
   items: z.array(recurringTemplateItemSchema).min(1),
 });
 
-export type RecurringTemplateApiInput = z.infer<
-  typeof recurringTemplateApiSchema
->;
-
 export const applyTemplateSchema = z.object({
   date: z.string().min(1),
   items: z
@@ -29,5 +25,3 @@ export const applyTemplateSchema = z.object({
     )
     .min(1),
 });
-
-export type ApplyTemplateInput = z.infer<typeof applyTemplateSchema>;

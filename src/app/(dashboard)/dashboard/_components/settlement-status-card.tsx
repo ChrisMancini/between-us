@@ -19,7 +19,6 @@ interface SettlementStatusCardProps {
 }
 
 export function SettlementStatusCard({
-  monthLabel,
   isClosed,
   netOwedBy,
   netAmount,

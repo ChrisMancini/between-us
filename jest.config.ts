@@ -18,6 +18,7 @@ const config: Config = {
     "!src/lib/persons.ts",
     "!src/lib/app-settings.ts",
     "!src/lib/auth-providers.ts",
+    "!src/lib/auth-callbacks.ts",
     "!src/lib/category-seed.ts",
   ],
   coverageThreshold: {

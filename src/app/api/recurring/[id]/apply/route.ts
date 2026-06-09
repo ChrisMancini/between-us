@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { RecurringTemplate, type IRecurringTemplateItem } from "@/lib/models/recurring-template";
 import { Tag } from "@/lib/models/tag";
 import { Expense, type IExpense } from "@/lib/models/expense";
 import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
-import { validationError } from "@/lib/api-utils";
+import { validationError, invalidId } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
@@ -18,9 +17,8 @@ interface RouteContext {
 
 export const POST = withAuth<RouteContext>(async (req, session, context) => {
   const { id } = await context.params;
-  if (!mongoose.isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
 
   const body = await req.json();
   const parsed = applyTemplateSchema.safeParse(body);

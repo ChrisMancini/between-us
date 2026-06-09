@@ -6,6 +6,7 @@ import { Tag } from "@/lib/models/tag";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import { serializeTag } from "@/lib/tag-utils";
+import { getMonthDateRange } from "@/lib/utils";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedExpense } from "@/lib/models/expense";
 import { ExpenseForm } from "./_components/expense-form";
@@ -47,8 +48,7 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
   const query: Record<string, unknown> = {};
 
   if (month !== null) {
-    const start = new Date(Date.UTC(year, month - 1, 1));
-    const end = new Date(Date.UTC(year, month, 1));
+    const { start, end } = getMonthDateRange(month, year);
     query.date = { $gte: start, $lt: end };
   }
 

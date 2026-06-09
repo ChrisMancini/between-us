@@ -10,7 +10,7 @@ export interface IRecurringTemplateItem {
   settlementType: "immediate" | "deferred";
 }
 
-export interface IRecurringTemplate extends Document {
+interface IRecurringTemplate extends Document {
   name: string;
   createdBy: mongoose.Types.ObjectId;
   items: IRecurringTemplateItem[];

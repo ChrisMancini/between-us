@@ -12,7 +12,7 @@ import {
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/tag", () => ({
-  Tag: { findById: jest.fn(), findByIdAndDelete: jest.fn(), find: jest.fn(), bulkWrite: jest.fn() },
+  Tag: { findById: jest.fn(), deleteMany: jest.fn(), find: jest.fn(), bulkWrite: jest.fn() },
 }));
 jest.mock("@/lib/models/expense", () => ({
   Expense: { countDocuments: jest.fn() },
@@ -84,6 +84,9 @@ describe("DELETE /api/tags/[id]", () => {
     asMock(Tag.findById).mockReturnValue({
       lean: jest.fn().mockResolvedValue({ _id: VALID_ID, path: "Groceries", sortOrder: 1 }),
     });
+    asMock(Tag.find).mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValue([]),
+    });
     asMock(Expense.countDocuments).mockResolvedValue(3);
     asMock(RecurringTemplate.countDocuments).mockResolvedValue(0);
 
@@ -96,6 +99,9 @@ describe("DELETE /api/tags/[id]", () => {
     asMock(Tag.findById).mockReturnValue({
       lean: jest.fn().mockResolvedValue({ _id: VALID_ID, path: "Groceries", sortOrder: 1 }),
     });
+    asMock(Tag.find).mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValue([]),
+    });
     asMock(Expense.countDocuments).mockResolvedValue(0);
     asMock(RecurringTemplate.countDocuments).mockResolvedValue(2);
 
@@ -103,26 +109,46 @@ describe("DELETE /api/tags/[id]", () => {
     await expectError(res, 409, "2 template(s)");
   });
 
-  it("returns 200 on success", async () => {
+  it("returns 409 when descendant tag is used by expenses", async () => {
+    mockAuth.mockResolvedValue(makeAdminSession());
+    const childId = "507f1f77bcf86cd799439099";
+    asMock(Tag.findById).mockReturnValue({
+      lean: jest.fn().mockResolvedValue({ _id: VALID_ID, path: "Pets", sortOrder: 1 }),
+    });
+    asMock(Tag.find).mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValue([{ _id: childId, path: "Pets/Barley", sortOrder: 2 }]),
+    });
+    asMock(Expense.countDocuments).mockResolvedValue(1);
+    asMock(RecurringTemplate.countDocuments).mockResolvedValue(0);
+
+    const res = await DELETE(deleteRequest(), makeIdContext());
+    await expectError(res, 409, "1 expense(s)");
+  });
+
+  it("returns 200 and deletes parent and descendants on success", async () => {
     mockAuth.mockResolvedValue(makeAdminSession());
     asMock(Tag.findById).mockReturnValue({
       lean: jest.fn().mockResolvedValue({ _id: VALID_ID, path: "Groceries", sortOrder: 1 }),
     });
+    asMock(Tag.find)
+      .mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValue([]),
+      })
+      .mockReturnValueOnce({
+        sort: jest.fn().mockResolvedValue([
+          { _id: "a1", sortOrder: 1 },
+          { _id: "a2", sortOrder: 3 },
+        ]),
+      });
     asMock(Expense.countDocuments).mockResolvedValue(0);
     asMock(RecurringTemplate.countDocuments).mockResolvedValue(0);
-    asMock(Tag.findByIdAndDelete).mockResolvedValue({ _id: VALID_ID });
-    const remaining = [
-      { _id: "a1", sortOrder: 1 },
-      { _id: "a2", sortOrder: 3 },
-    ];
-    asMock(Tag.find).mockReturnValue({
-      sort: jest.fn().mockResolvedValue(remaining),
-    });
+    asMock(Tag.deleteMany).mockResolvedValue({});
     asMock(Tag.bulkWrite).mockResolvedValue({});
 
     const res = await DELETE(deleteRequest(), makeIdContext());
     const body = await expectStatus(res, 200);
     expect(body.ok).toBe(true);
+    expect(Tag.deleteMany).toHaveBeenCalled();
     expect(Tag.bulkWrite).toHaveBeenCalled();
   });
 });

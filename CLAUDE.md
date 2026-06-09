@@ -133,6 +133,15 @@ Expenses with `settlementType: "immediate"` are shown separately in reports but 
 - Use ShadCN's toast/sonner for success/error feedback
 - Use ShadCN's dialog for confirmations (e.g., closing a month)
 
+## Fallow (Codebase Intelligence)
+
+Fallow is installed as a dev dependency with an MCP server at `./node_modules/.bin/fallow-mcp`. Use fallow's MCP tools during feature work:
+
+- **Before implementing:** query fallow for the health and complexity of files you're about to touch. Flag if a file is already a complexity hotspot or has high churn — suggest extracting before adding more logic.
+- **After implementing:** run `fallow audit` against the working changes to catch dead code, unused exports, new circular dependencies, or complexity regressions before the PR is opened.
+
+Config is in `.fallowrc.json`. `src/components/ui/**` is excluded (generated ShadCN code).
+
 ## Commands
 
 ```bash
@@ -140,6 +149,8 @@ npm run dev          # Start development server
 npm run build        # Production build
 npm run lint         # Run ESLint
 npm run type-check   # Run TypeScript compiler check
+npm run fallow       # Run all fallow analyses (dead-code, dupes, health)
+npm run fallow:audit # Audit working changes against base branch
 ```
 
 ## Docker

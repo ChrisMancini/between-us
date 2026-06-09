@@ -36,7 +36,8 @@ yarn-error.log*
 .env.production
 
 # claude code local settings
-.claude/
+.claude/*
+!.claude/settings.json
 
 # vercel
 .vercel
@@ -46,3 +47,4 @@ yarn-error.log*
 next-env.d.ts
 
 between-us.tar
+.fallow/

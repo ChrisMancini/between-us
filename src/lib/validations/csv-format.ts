@@ -54,5 +54,3 @@ export const csvFormatApiSchema = z
       }
     }
   });
-
-export type CsvFormatApiInput = z.infer<typeof csvFormatApiSchema>;

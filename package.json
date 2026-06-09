@@ -1,6 +1,6 @@
 {
   "name": "between-us",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,7 +9,13 @@
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "test": "jest",
-    "test:ci": "jest --ci --coverage"
+    "test:ci": "jest --ci --coverage",
+    "fallow": "fallow dead-code && fallow dupes && fallow health",
+    "fallow:dead-code": "fallow dead-code",
+    "fallow:dupes": "fallow dupes",
+    "fallow:health": "fallow health",
+    "fallow:fix": "fallow fix --dry-run",
+    "fallow:audit": "fallow audit"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
@@ -46,8 +52,10 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "^16.2.6",
+    "fallow": "^2.90.0",
     "jest": "^30.3.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.9",

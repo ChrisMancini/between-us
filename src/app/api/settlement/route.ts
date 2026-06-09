@@ -29,6 +29,27 @@ function serializeExpenseRow(e: Record<string, unknown>): SettlementExpenseRow |
   };
 }
 
+async function fetchMonthBreakdown(month: number, year: number) {
+  const persons = await getPersons();
+  const [p1, p2] = persons!;
+
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 1));
+
+  const expenses = await Expense.find({
+    date: { $gte: start, $lt: end },
+  })
+    .populate("tags")
+    .lean();
+
+  const rows = (expenses as unknown as Record<string, unknown>[])
+    .map(serializeExpenseRow)
+    .filter((r): r is SettlementExpenseRow => r !== null);
+  const breakdown = calculateSettlement(rows, p1.key, p2.key);
+
+  return { breakdown, p1, p2 };
+}
+
 export const GET = withAuth(async (req) => {
   const { searchParams } = new URL(req.url);
   const month = parseInt(searchParams.get("month") ?? "");
@@ -61,22 +82,7 @@ export const GET = withAuth(async (req) => {
     });
   }
 
-  const persons = await getPersons();
-  const [p1, p2] = persons!;
-
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
-
-  const expenses = await Expense.find({
-    date: { $gte: start, $lt: end },
-  })
-    .populate("tags")
-    .lean();
-
-  const rows = (expenses as unknown as Record<string, unknown>[])
-    .map(serializeExpenseRow)
-    .filter((r): r is SettlementExpenseRow => r !== null);
-  const breakdown = calculateSettlement(rows, p1.key, p2.key);
+  const { breakdown } = await fetchMonthBreakdown(month, year);
 
   return NextResponse.json({
     status: "open",
@@ -110,22 +116,7 @@ export const POST = withAuth(async (req, session) => {
     );
   }
 
-  const persons = await getPersons();
-  const [p1, p2] = persons!;
-
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
-
-  const expenses = await Expense.find({
-    date: { $gte: start, $lt: end },
-  })
-    .populate("tags")
-    .lean();
-
-  const rows = (expenses as unknown as Record<string, unknown>[])
-    .map(serializeExpenseRow)
-    .filter((r): r is SettlementExpenseRow => r !== null);
-  const breakdown = calculateSettlement(rows, p1.key, p2.key);
+  const { breakdown, p1, p2 } = await fetchMonthBreakdown(month, year);
 
   const owedBy =
     breakdown.netOwedBy === "even" ? p1.key : breakdown.netOwedBy;

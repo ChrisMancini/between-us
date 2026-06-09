@@ -18,7 +18,3 @@ export const dashboardWidgetPreferencesSchema = z.object({
       { message: "Duplicate widget IDs are not allowed" }
     ),
 });
-
-export type DashboardWidgetPreferencesInput = z.infer<
-  typeof dashboardWidgetPreferencesSchema
->;

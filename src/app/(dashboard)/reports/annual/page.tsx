@@ -7,6 +7,14 @@ import { Expense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
 import { Settlement } from "@/lib/models/settlement";
 import { getPersons } from "@/lib/persons";
+import { tagPersonPipeline, trendPipeline } from "../_lib/report-queries";
+import {
+  buildTrendSeries,
+  generateMonthEntries,
+  buildSimpleTagTotals,
+  computePersonSummaryFromAgg,
+  computeHighlights,
+} from "../_lib/report-transforms";
 import { SpendingSummaryCard } from "../_components/spending-summary-card";
 import { TagBreakdown } from "../_components/tag-breakdown";
 import { MonthlyTrend } from "../_components/monthly-trend";
@@ -17,11 +25,6 @@ import {
   AnnualSettlementSummary,
   type SettlementRow,
 } from "./_components/annual-settlement-summary";
-import type {
-  BiggestExpense,
-  TopMerchant,
-  BusiestMonth,
-} from "./_components/annual-highlights";
 
 export const dynamic = "force-dynamic";
 
@@ -51,71 +54,23 @@ export default async function AnnualReportPage({ searchParams }: PageProps) {
     topMerchantAgg,
     closedSettlements,
   ] = await Promise.all([
-    // 1. Tag × Person breakdown for the year (unwound by tag)
     Expense.aggregate<{
-      _id: {
-        tagPath: string;
-        tagSortOrder: number;
-        paidBy: string;
-      };
+      _id: { tagPath: string; tagSortOrder: number; paidBy: string };
       total: number;
-    }>([
-      { $match: { date: { $gte: start, $lt: end } } },
-      {
-        $lookup: {
-          from: "tags",
-          localField: "tags",
-          foreignField: "_id",
-          as: "tagDocs",
-        },
-      },
-      { $unwind: "$tagDocs" },
-      {
-        $group: {
-          _id: {
-            tagPath: "$tagDocs.path",
-            tagSortOrder: "$tagDocs.sortOrder",
-            paidBy: "$paidBy",
-          },
-          total: { $sum: "$amount" },
-        },
-      },
-      { $sort: { "_id.tagSortOrder": 1, "_id.paidBy": 1 } },
-    ]),
+    }>(tagPersonPipeline({ start, end })),
 
-    // 2. Monthly trend (all 12 months) - uses expense settlementType
     Expense.aggregate<{
-      _id: {
-        year: number;
-        month: number;
-        settlementType: "immediate" | "deferred";
-      };
+      _id: { year: number; month: number; settlementType: string };
       total: number;
-    }>([
-      { $match: { date: { $gte: start, $lt: end } } },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$date" },
-            month: { $month: "$date" },
-            settlementType: "$settlementType",
-          },
-          total: { $sum: "$amount" },
-        },
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } },
-    ]),
+    }>(trendPipeline({ start, end })),
 
-    // 3. All tags for zero-fill
     Tag.find().sort({ sortOrder: 1 }).lean(),
 
-    // 4. Biggest single expense
     Expense.findOne({ date: { $gte: start, $lt: end } })
       .sort({ amount: -1 })
       .populate("tags")
       .lean(),
 
-    // 5. Most frequent merchant
     Expense.aggregate<{
       _id: string;
       count: number;
@@ -133,58 +88,12 @@ export default async function AnnualReportPage({ searchParams }: PageProps) {
       { $limit: 1 },
     ]),
 
-    // 6. Closed settlements for this year
     Settlement.find({ year, status: "closed" }).sort({ month: 1 }).lean(),
   ]);
 
-  // ── Shape tag totals (from unwound aggregation) ──────────────────────
-  const tagMap = new Map<
-    string,
-    {
-      tagName: string;
-      total: number;
-    }
-  >();
-
-  for (const tag of allTags) {
-    tagMap.set(tag.path, {
-      tagName: tag.path,
-      total: 0,
-    });
-  }
-
-  for (const row of tagPersonAgg) {
-    const key = row._id.tagPath;
-    let entry = tagMap.get(key);
-    if (!entry) {
-      entry = {
-        tagName: key,
-        total: 0,
-      };
-      tagMap.set(key, entry);
-    }
-    entry.total += row.total;
-  }
-
-  const tagTotals = [...tagMap.values()].sort((a, b) => {
-    const ai = allTags.findIndex((t) => t.path === a.tagName);
-    const bi = allTags.findIndex((t) => t.path === b.tagName);
-    return ai - bi;
-  });
-
+  const tagTotals = buildSimpleTagTotals(tagPersonAgg, allTags);
   const tagsWithSpending = tagTotals.filter((t) => t.total > 0);
 
-  // ── Summary totals from raw aggregation (per settlement type, not per tag) ──
-  // We need a separate aggregation to get accurate totals by person and settlement type
-  // without double-counting from multi-tag expenses. Use the tagPersonAgg paidBy data
-  // but compute deferred/immediate from the trend aggregation for this year.
-  let deferredTotal = 0;
-  let immediateTotal = 0;
-  let person1Total = 0;
-  let person2Total = 0;
-
-  // Person totals from tag aggregation may double-count multi-tag expenses.
-  // Use a separate simple aggregation instead.
   const personSummaryAgg = await Expense.aggregate<{
     _id: { settlementType: string; paidBy: string };
     total: number;
@@ -198,88 +107,19 @@ export default async function AnnualReportPage({ searchParams }: PageProps) {
     },
   ]);
 
-  for (const row of personSummaryAgg) {
-    if (row._id.settlementType === "deferred") {
-      deferredTotal += row.total;
-    } else {
-      immediateTotal += row.total;
-    }
-    if (row._id.paidBy === persons[0].key) {
-      person1Total += row.total;
-    } else {
-      person2Total += row.total;
-    }
-  }
+  const { deferredTotal, immediateTotal, person1Total, person2Total, totalSpending } =
+    computePersonSummaryFromAgg(personSummaryAgg, persons[0].key);
 
-  const totalSpending = deferredTotal + immediateTotal;
+  const monthlyTotals = buildTrendSeries(
+    trendAgg,
+    generateMonthEntries(year, 1, 12)
+  );
 
-  // ── Shape monthly trend (all 12 months) ────────────────────────────────
-  const trendMap = new Map<
-    string,
-    {
-      month: number;
-      year: number;
-      deferredTotal: number;
-      immediateTotal: number;
-      total: number;
-    }
-  >();
-
-  for (let m = 1; m <= 12; m++) {
-    trendMap.set(`${year}-${m}`, {
-      month: m,
-      year,
-      deferredTotal: 0,
-      immediateTotal: 0,
-      total: 0,
-    });
-  }
-
-  for (const row of trendAgg) {
-    const key = `${row._id.year}-${row._id.month}`;
-    const entry = trendMap.get(key);
-    if (!entry) continue;
-    if (row._id.settlementType === "deferred") {
-      entry.deferredTotal += row.total;
-    } else {
-      entry.immediateTotal += row.total;
-    }
-    entry.total += row.total;
-  }
-
-  const monthlyTotals = [...trendMap.values()];
-
-  // ── Biggest expense ────────────────────────────────────────────────────
-  let biggestExpense: BiggestExpense | null = null;
-  if (biggestExpenseResult) {
-    const expTags = (biggestExpenseResult.tags ?? []) as unknown as { path: string }[];
-    const tagNames = expTags.map((t) => t.path).join(", ");
-    biggestExpense = {
-      amount: biggestExpenseResult.amount,
-      where: biggestExpenseResult.where,
-      date: (biggestExpenseResult.date as Date).toISOString(),
-      tagNames: tagNames || "Untagged",
-      paidBy: biggestExpenseResult.paidBy as string,
-    };
-  }
-
-  // ── Top merchant ───────────────────────────────────────────────────────
-  let topMerchant: TopMerchant | null = null;
-  if (topMerchantAgg.length > 0) {
-    topMerchant = {
-      where: topMerchantAgg[0]._id,
-      count: topMerchantAgg[0].count,
-      total: topMerchantAgg[0].total,
-    };
-  }
-
-  // ── Busiest month ─────────────────────────────────────────────────────
-  let busiestMonth: BusiestMonth | null = null;
-  for (const m of monthlyTotals) {
-    if (m.total > 0 && (!busiestMonth || m.total > busiestMonth.total)) {
-      busiestMonth = { month: m.month, year: m.year, total: m.total };
-    }
-  }
+  const { biggestExpense, topMerchant, busiestMonth } = computeHighlights(
+    biggestExpenseResult as Parameters<typeof computeHighlights>[0],
+    topMerchantAgg,
+    monthlyTotals
+  );
 
   // ── Settlements ────────────────────────────────────────────────────────
   const settlementRows: SettlementRow[] = closedSettlements.map((s) => ({

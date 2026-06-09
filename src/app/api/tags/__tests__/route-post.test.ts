@@ -27,18 +27,18 @@ jest.mock("@/lib/tag-utils", () => ({
     parent: "",
     depth: 1,
   })),
-  ensureAncestors: jest.fn(),
+  createTagWithSortOrder: jest.fn(),
 }));
 
 import { auth } from "@/auth";
-import { Tag } from "@/lib/models/tag";
 import { tagApiSchema } from "@/lib/validations/tag";
 import { isDuplicateKeyError } from "@/lib/utils";
-import { ensureAncestors } from "@/lib/tag-utils";
+import { createTagWithSortOrder } from "@/lib/tag-utils";
 import { POST } from "../route";
 
 const mockAuth = asMock(auth);
 const mockSafeParse = asMock(tagApiSchema.safeParse);
+const mockCreateTag = asMock(createTagWithSortOrder);
 
 describe("POST /api/tags", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -59,12 +59,7 @@ describe("POST /api/tags", () => {
   it("returns 409 on duplicate key", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ path: "Groceries" }));
-    asMock(Tag.findOne).mockReturnValue({
-      sort: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ sortOrder: 3 }),
-      }),
-    });
-    asMock(Tag.create).mockRejectedValue(new Error("duplicate"));
+    mockCreateTag.mockRejectedValue(new Error("duplicate"));
     asMock(isDuplicateKeyError).mockReturnValue(true);
 
     const res = await POST(makeJsonRequest("/api/tags", {}));
@@ -74,30 +69,20 @@ describe("POST /api/tags", () => {
   it("returns 201 on success", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ path: "Groceries" }));
-    asMock(Tag.findOne).mockReturnValue({
-      sort: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ sortOrder: 3 }),
-      }),
-    });
     const created = { _id: VALID_ID, path: "Groceries", sortOrder: 4 };
-    asMock(Tag.create).mockResolvedValue(created);
+    mockCreateTag.mockResolvedValue(created);
 
     const res = await POST(makeJsonRequest("/api/tags", {}));
     const body = await expectStatus(res, 201);
     expect(body.tag.path).toBe("Groceries");
-    expect(ensureAncestors).toHaveBeenCalledWith("Groceries");
+    expect(mockCreateTag).toHaveBeenCalledWith("Groceries");
   });
 
   it("re-throws non-duplicate errors", async () => {
     mockAuth.mockResolvedValue(makeSession());
     mockSafeParse.mockReturnValue(makeParsedSuccess({ path: "Groceries" }));
-    asMock(Tag.findOne).mockReturnValue({
-      sort: jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue(null),
-      }),
-    });
     const error = new Error("something else");
-    asMock(Tag.create).mockRejectedValue(error);
+    mockCreateTag.mockRejectedValue(error);
     asMock(isDuplicateKeyError).mockReturnValue(false);
 
     await expect(POST(makeJsonRequest("/api/tags", {}))).rejects.toThrow("something else");

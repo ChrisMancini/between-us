@@ -9,7 +9,6 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragStartEvent,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
@@ -74,7 +73,7 @@ export function DashboardWidgetColumn({
     });
   }, []);
 
-  function handleDragStart(_event: DragStartEvent) {
+  function handleDragStart() {
     setIsDragActive(true);
   }
 

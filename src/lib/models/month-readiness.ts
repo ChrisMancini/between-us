@@ -1,13 +1,6 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-export interface IMonthReadiness extends Document {
-  month: number;
-  year: number;
-  doneBy: string[];
-}
-
-export interface SerializedMonthReadiness {
-  _id: string;
+interface IMonthReadiness extends Document {
   month: number;
   year: number;
   doneBy: string[];

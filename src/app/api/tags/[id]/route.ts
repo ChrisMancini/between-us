@@ -8,7 +8,7 @@ import { RecurringTemplate } from "@/lib/models/recurring-template";
 import { tagApiSchema } from "@/lib/validations/tag";
 import { serializeTag, ensureAncestors } from "@/lib/tag-utils";
 import { withAdmin } from "@/lib/auth-guard";
-import { validationError } from "@/lib/api-utils";
+import { validationError, invalidId, duplicateKeyResponse } from "@/lib/api-utils";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -16,9 +16,8 @@ interface RouteContext {
 
 export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
   const { id } = await context.params;
-  if (!mongoose.isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
 
   const body = await req.json();
   const parsed = tagApiSchema.safeParse(body);
@@ -49,7 +48,6 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
 
-    // Cascade rename to descendants: any tag starting with "oldPath/"
     const descendants = await Tag.find({
       path: { $regex: `^${oldPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/`, $options: "i" },
     });
@@ -63,10 +61,7 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
     return NextResponse.json({ tag: serializeTag(updated) });
   } catch (err: unknown) {
     if (isDuplicateKeyError(err)) {
-      return NextResponse.json(
-        { error: "A tag with this path already exists" },
-        { status: 409 }
-      );
+      return duplicateKeyResponse("A tag with this path already exists");
     }
     throw err;
   }
@@ -75,9 +70,8 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
 export const DELETE = withAdmin<RouteContext>(
   async (_req, _session, context) => {
     const { id } = await context.params;
-    if (!mongoose.isValidObjectId(id)) {
-      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-    }
+    const idErr = invalidId(id);
+    if (idErr) return idErr;
 
     await connectToDatabase();
 
@@ -86,11 +80,18 @@ export const DELETE = withAdmin<RouteContext>(
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
 
-    // Check if tag is referenced by any expenses or recurring templates
-    const oid = new mongoose.Types.ObjectId(id);
+    const descendants = await Tag.find({
+      path: { $regex: `^${tag.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/`, $options: "i" },
+    }).lean();
+
+    const allIds = [
+      new mongoose.Types.ObjectId(id),
+      ...descendants.map((d) => d._id as mongoose.Types.ObjectId),
+    ];
+
     const [expenseCount, templateCount] = await Promise.all([
-      Expense.countDocuments({ tags: oid }),
-      RecurringTemplate.countDocuments({ "items.tagIds": oid }),
+      Expense.countDocuments({ tags: { $in: allIds } }),
+      RecurringTemplate.countDocuments({ "items.tagIds": { $in: allIds } }),
     ]);
 
     if (expenseCount > 0 || templateCount > 0) {
@@ -103,9 +104,8 @@ export const DELETE = withAdmin<RouteContext>(
       );
     }
 
-    await Tag.findByIdAndDelete(id);
+    await Tag.deleteMany({ _id: { $in: allIds } });
 
-    // Re-normalize sortOrder
     const remaining = await Tag.find().sort({ sortOrder: 1 });
     if (remaining.length > 0) {
       await Tag.bulkWrite(

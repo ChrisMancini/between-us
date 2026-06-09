@@ -11,13 +11,7 @@ import type { SerializedRecurringTemplate } from "@/lib/models/recurring-templat
 import { TemplateFormDialog } from "./template-form-dialog";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { ApplyTemplateDialog } from "./apply-template-dialog";
-
-function fmt(cents: number) {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
+import { formatCurrency } from "@/lib/utils";
 
 interface TemplateListProps {
   templates: SerializedRecurringTemplate[];
@@ -90,7 +84,7 @@ function TemplateCard({
           </p>
           <p className="text-xs text-muted-foreground">
             {template.items.length} item{template.items.length !== 1 && "s"}{" "}
-            &middot; {fmt(total)}
+            &middot; {formatCurrency(total)}
           </p>
         </div>
 
@@ -107,7 +101,7 @@ function TemplateCard({
               </div>
               <PersonBadge {...badgeProps(item.paidBy, personMap)} className="shrink-0" />
               <span className="shrink-0 text-sm font-semibold tabular-nums w-20 text-right">
-                {fmt(item.amount)}
+                {formatCurrency(item.amount)}
               </span>
             </div>
           ))}

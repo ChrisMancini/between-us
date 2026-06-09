@@ -2,7 +2,7 @@ import mongoose, { Schema, type Document } from "mongoose";
 
 export type { SerializedPerson } from "@/types/person";
 
-export interface IPerson extends Document {
+interface IPerson extends Document {
   key: string;
   displayName: string;
   role: "admin" | "user";
