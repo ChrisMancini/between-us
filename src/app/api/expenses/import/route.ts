@@ -8,6 +8,7 @@ import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
+import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
 
 export const POST = withAuth(async (req, session) => {
   const body = await req.json();
@@ -49,6 +50,12 @@ export const POST = withAuth(async (req, session) => {
   const result = await Expense.insertMany(docs);
 
   await resetReadinessForMonths(session.user.paidByKey, expenses.map((e) => e.date));
+
+  const immediateExpenses = result.filter((e) => e.settlementType === "immediate");
+  for (const expense of immediateExpenses) {
+    const otherPersonKey = await getOtherPersonKey(expense.paidBy);
+    await createActionForExpense(expense, otherPersonKey, session.user.paidByKey);
+  }
 
   await logActivity(session.user.paidByKey, "csv_import", `imported ${result.length} expenses from CSV`, {
     count: result.length,

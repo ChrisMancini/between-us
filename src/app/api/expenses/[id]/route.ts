@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
-import { Expense } from "@/lib/models/expense";
+import { Expense, type IExpense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
 import { expenseUpdateApiSchema } from "@/lib/validations/expense";
 import { serializeTag } from "@/lib/tag-utils";
@@ -12,6 +12,7 @@ import { Settlement } from "@/lib/models/settlement";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency, formatMonthYear } from "@/lib/utils";
+import { handleExpenseChange, handleExpenseDelete, getOtherPersonKey } from "@/lib/action-lifecycle";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -96,6 +97,14 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
     changedFields: changes,
   });
 
+  const otherPersonKey = await getOtherPersonKey(existing.paidBy);
+  await handleExpenseChange(
+    existing,
+    { amount, splitType, settlementType, where },
+    otherPersonKey,
+    session.user.paidByKey
+  );
+
   return NextResponse.json({
     expense: {
       _id: updated._id.toString(),
@@ -144,6 +153,8 @@ export const DELETE = withAuth<RouteContext>(async (_req, session, context) => {
   const tagNames = tags.map((t) => t.path).join(", ");
 
   await Expense.findByIdAndDelete(id);
+
+  await handleExpenseDelete(existing as unknown as IExpense, session.user.paidByKey);
 
   await resetReadinessForMonths(session.user.paidByKey, [existing.date]);
 

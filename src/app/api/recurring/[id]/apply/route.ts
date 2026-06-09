@@ -3,13 +3,14 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { RecurringTemplate, type IRecurringTemplateItem } from "@/lib/models/recurring-template";
 import { Tag } from "@/lib/models/tag";
-import { Expense } from "@/lib/models/expense";
+import { Expense, type IExpense } from "@/lib/models/expense";
 import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
+import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -80,6 +81,12 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
   );
 
   await resetReadinessForMonths(session.user.paidByKey, [date]);
+
+  const immediateExpenses = expenses.filter((e) => e.settlementType === "immediate");
+  for (const expense of immediateExpenses) {
+    const otherPersonKey = await getOtherPersonKey(expense.paidBy);
+    await createActionForExpense(expense as IExpense, otherPersonKey, session.user.paidByKey);
+  }
 
   await logActivity(session.user.paidByKey, "recurring_apply", `applied "${template.name}" (${expenses.length} expenses)`, {
     templateName: template.name,

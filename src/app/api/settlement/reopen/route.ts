@@ -4,6 +4,7 @@ import { Settlement } from "@/lib/models/settlement";
 import { MonthReadiness } from "@/lib/models/month-readiness";
 import { withAuth } from "@/lib/auth-guard";
 import { logActivity } from "@/lib/activity-logger";
+import { handleSettlementReopen } from "@/lib/action-lifecycle";
 
 export const POST = withAuth(async (req, session) => {
   const body = await req.json();
@@ -44,6 +45,8 @@ export const POST = withAuth(async (req, session) => {
   );
 
   await MonthReadiness.deleteOne({ month, year });
+
+  await handleSettlementReopen(existing._id, session.user.paidByKey);
 
   const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   await logActivity(session.user.paidByKey, "settlement_reopen", `reopened ${monthName} settlement`, {

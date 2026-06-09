@@ -11,6 +11,7 @@ import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
+import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
 
 export const GET = withAuth(async () => {
   await connectToDatabase();
@@ -92,6 +93,11 @@ export const POST = withAuth(async (req, session) => {
     paidBy,
     splitType,
   });
+
+  if (expense.settlementType === "immediate") {
+    const otherPersonKey = await getOtherPersonKey(expense.paidBy);
+    await createActionForExpense(expense, otherPersonKey, session.user.paidByKey);
+  }
 
   const populated = await expense.populate("tags");
 

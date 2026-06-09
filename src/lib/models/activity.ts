@@ -10,6 +10,10 @@ export const ACTIVITY_ACTIONS = [
   "csv_import",
   "expenses_done",
   "expenses_undone",
+  "action_created",
+  "action_paid",
+  "action_confirmed",
+  "action_cancelled",
 ] as const;
 
 export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];

@@ -7,6 +7,10 @@ import {
   expectStatus,
 } from "@/test/api-helpers";
 
+jest.mock("@/lib/action-lifecycle", () => ({
+  createActionForExpense: jest.fn().mockResolvedValue(null),
+  getOtherPersonKey: jest.fn().mockResolvedValue("jane"),
+}));
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/expense", () => ({

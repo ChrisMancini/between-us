@@ -10,6 +10,7 @@ import { getPersons } from "@/lib/persons";
 import { withAuth } from "@/lib/auth-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { formatCurrency } from "@/lib/utils";
+import { createActionForSettlement } from "@/lib/action-lifecycle";
 
 function serializeExpenseRow(e: Record<string, unknown>): SettlementExpenseRow | null {
   const tags = e.tags as Array<Record<string, unknown>> | null;
@@ -176,6 +177,10 @@ export const POST = withAuth(async (req, session) => {
     owedBy,
     owedTo,
   });
+
+  if (breakdown.netAmount > 0) {
+    await createActionForSettlement(settlement!, session.user.paidByKey);
+  }
 
   return NextResponse.json(
     {

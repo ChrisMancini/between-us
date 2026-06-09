@@ -13,6 +13,10 @@ import {
   FileUp,
   ArrowRight,
   Loader2,
+  CircleDollarSign,
+  Send,
+  CheckCheck,
+  XCircle,
 } from "lucide-react";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
@@ -30,6 +34,10 @@ const ACTION_ICONS: Record<string, typeof Plus> = {
   csv_import: FileUp,
   expenses_done: CheckCircle2,
   expenses_undone: Circle,
+  action_created: CircleDollarSign,
+  action_paid: Send,
+  action_confirmed: CheckCheck,
+  action_cancelled: XCircle,
 };
 
 const ACTION_COLORS: Record<string, string> = {
@@ -42,6 +50,10 @@ const ACTION_COLORS: Record<string, string> = {
   csv_import: "text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/40",
   expenses_done: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
   expenses_undone: "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40",
+  action_created: "text-teal-600 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40",
+  action_paid: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
+  action_confirmed: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
+  action_cancelled: "text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40",
 };
 
 interface ActivityFeedProps {

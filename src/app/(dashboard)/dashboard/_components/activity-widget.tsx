@@ -11,6 +11,10 @@ import {
   RotateCcw,
   Repeat,
   FileUp,
+  CircleDollarSign,
+  Send,
+  CheckCheck,
+  XCircle,
 } from "lucide-react";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
@@ -25,6 +29,10 @@ const ACTION_ICONS: Record<string, typeof Plus> = {
   settlement_reopen: RotateCcw,
   recurring_apply: Repeat,
   csv_import: FileUp,
+  action_created: CircleDollarSign,
+  action_paid: Send,
+  action_confirmed: CheckCheck,
+  action_cancelled: XCircle,
 };
 
 const ACTION_COLORS: Record<string, string> = {
@@ -35,6 +43,10 @@ const ACTION_COLORS: Record<string, string> = {
   settlement_reopen: "text-orange-600 dark:text-orange-400",
   recurring_apply: "text-indigo-600 dark:text-indigo-400",
   csv_import: "text-violet-600 dark:text-violet-400",
+  action_created: "text-teal-600 dark:text-teal-400",
+  action_paid: "text-blue-600 dark:text-blue-400",
+  action_confirmed: "text-emerald-600 dark:text-emerald-400",
+  action_cancelled: "text-slate-500 dark:text-slate-400",
 };
 
 interface ActivityWidgetProps {

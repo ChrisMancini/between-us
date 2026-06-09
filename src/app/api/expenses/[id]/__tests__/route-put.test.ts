@@ -14,6 +14,11 @@ import {
   expectError,
 } from "@/test/api-helpers";
 
+jest.mock("@/lib/action-lifecycle", () => ({
+  handleExpenseChange: jest.fn().mockResolvedValue(undefined),
+  handleExpenseDelete: jest.fn().mockResolvedValue(undefined),
+  getOtherPersonKey: jest.fn().mockResolvedValue("jane"),
+}));
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/expense", () => ({
