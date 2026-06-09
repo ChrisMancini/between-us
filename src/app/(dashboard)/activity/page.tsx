@@ -27,7 +27,7 @@ export default async function ActivityPage() {
     action: a.action,
     actorKey: a.actorKey,
     summary: a.summary,
-    metadata: a.metadata ?? {},
+    metadata: JSON.parse(JSON.stringify(a.metadata ?? {})) as Record<string, unknown>,
     createdAt: (a.createdAt as Date).toISOString(),
   }));
 

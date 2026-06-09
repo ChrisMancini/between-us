@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useActionCount } from "@/hooks/use-action-count";
 
 const baseNavItems = [
   { href: "/dashboard",  label: "Dashboard"  },
@@ -15,6 +16,7 @@ const baseNavItems = [
 
 export function NavLinks({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
+  const { count: actionCount } = useActionCount();
   const items = isAdmin
     ? [...baseNavItems, { href: "/admin", label: "Admin" }]
     : baseNavItems;
@@ -35,6 +37,11 @@ export function NavLinks({ isAdmin }: { isAdmin: boolean }) {
             )}
           >
             {item.label}
+            {item.href === "/dashboard" && actionCount > 0 && (
+              <span className="absolute -top-1 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {actionCount}
+              </span>
+            )}
             {isActive && (
               <span className="absolute inset-x-2 -bottom-[calc(0.875rem+1px)] h-0.5 rounded-full bg-primary" />
             )}

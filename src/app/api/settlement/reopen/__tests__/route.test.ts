@@ -12,6 +12,9 @@ jest.mock("@/lib/models/settlement", () => ({
   Settlement: { findOne: jest.fn(), findByIdAndUpdate: jest.fn() },
 }));
 jest.mock("@/lib/activity-logger", () => ({ logActivity: jest.fn() }));
+jest.mock("@/lib/action-lifecycle", () => ({
+  handleSettlementReopen: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("@/lib/models/month-readiness", () => ({
   MonthReadiness: { deleteOne: jest.fn().mockResolvedValue({}) },
 }));

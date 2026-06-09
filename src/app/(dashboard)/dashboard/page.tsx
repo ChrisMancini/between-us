@@ -11,11 +11,14 @@ import {
 } from "@/lib/settlement-calc";
 import { serializeTag } from "@/lib/tag-utils";
 import { Activity, type IActivity } from "@/lib/models/activity";
+import { Action } from "@/lib/models/action";
+import type { SerializedAction } from "@/lib/models/action";
 import { SpendingSummaryCard } from "../reports/_components/spending-summary-card";
 import { SettlementStatusCard } from "./_components/settlement-status-card";
 import { RecentExpenses } from "./_components/recent-expenses";
 import { QuickActions } from "./_components/quick-actions";
 import { ActivityWidget } from "./_components/activity-widget";
+import { ActionsWidget } from "./_components/actions-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +51,7 @@ export default async function DashboardPage() {
     closedSettlements,
     currentMonthExpensesRaw,
     recentActivitiesRaw,
+    activeActionsRaw,
   ] = await Promise.all([
     // 1. Current month spending by settlement type × person
     Expense.aggregate<{
@@ -113,6 +117,18 @@ export default async function DashboardPage() {
       .sort({ createdAt: -1 })
       .limit(5)
       .lean<IActivity[]>(),
+
+    // 8. Active actions for current user
+    Action.find({
+      $or: [
+        { debtorKey: session.user.paidByKey },
+        { creditorKey: session.user.paidByKey },
+      ],
+      status: { $in: ["pending", "paid"] },
+    })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean(),
   ]);
 
   // ── Spending summary totals ───────────────────────────────────────────
@@ -202,8 +218,26 @@ export default async function DashboardPage() {
     action: a.action,
     actorKey: a.actorKey,
     summary: a.summary,
-    metadata: a.metadata ?? {},
+    metadata: JSON.parse(JSON.stringify(a.metadata ?? {})) as Record<string, unknown>,
     createdAt: (a.createdAt as Date).toISOString(),
+  }));
+
+  // ── Active actions ─────────────────────────────────────────────────────
+  const activeActions: SerializedAction[] = (activeActionsRaw as unknown as Array<Record<string, unknown>>).map((a) => ({
+    _id: String(a._id),
+    sourceType: a.sourceType as SerializedAction["sourceType"],
+    sourceId: String(a.sourceId),
+    debtorKey: a.debtorKey as string,
+    creditorKey: a.creditorKey as string,
+    amount: a.amount as number,
+    status: a.status as SerializedAction["status"],
+    cancelReason: a.cancelReason as string | undefined,
+    description: a.description as string,
+    paidAt: (a.paidAt as Date | undefined)?.toISOString(),
+    confirmedAt: (a.confirmedAt as Date | undefined)?.toISOString(),
+    cancelledAt: (a.cancelledAt as Date | undefined)?.toISOString(),
+    createdAt: (a.createdAt as Date).toISOString(),
+    updatedAt: (a.updatedAt as Date).toISOString(),
   }));
 
   const hasExpenses = totalSpending > 0;
@@ -244,8 +278,13 @@ export default async function DashboardPage() {
           <RecentExpenses expenses={recentExpenses} />
         </div>
 
-        {/* Right column — settlement + quick actions */}
+        {/* Right column — actions + settlement + quick actions */}
         <div className="space-y-6">
+          <ActionsWidget
+            actions={activeActions}
+            currentUserKey={session.user.paidByKey}
+          />
+
           <SettlementStatusCard
             monthLabel={label}
             isClosed={isClosed}

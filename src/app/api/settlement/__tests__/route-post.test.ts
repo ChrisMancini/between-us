@@ -7,6 +7,9 @@ import {
   expectError,
 } from "@/test/api-helpers";
 
+jest.mock("@/lib/action-lifecycle", () => ({
+  createActionForSettlement: jest.fn().mockResolvedValue(null),
+}));
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/expense", () => ({
