@@ -50,13 +50,7 @@ export function ActionsWidget({ actions, currentUserKey }: ActionsWidgetProps) {
   }
 
   return (
-    <div className="rounded-xl border border-primary/10 bg-card shadow-sm overflow-hidden">
-      <div className="border-b border-primary/10 bg-primary/5 px-5 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
-          Actions
-        </p>
-      </div>
-
+    <div>
       {actions.length === 0 ? (
         <div className="py-8 text-center">
           <p className="text-sm text-muted-foreground">No pending actions.</p>

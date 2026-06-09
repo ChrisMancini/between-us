@@ -33,15 +33,8 @@ export function SettlementStatusCard({
     : [...personMap.values()].find((p) => p.key !== netOwedBy)?.displayName ?? "";
 
   return (
-    <div className="rounded-xl border border-primary/10 bg-card shadow-sm overflow-hidden">
-      <div className="border-b border-primary/10 bg-primary/5 px-5 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
-          Settlement — {monthLabel}
-        </p>
-      </div>
-
-      <div className="px-5 py-5 space-y-4">
-        {isClosed ? (
+    <div className="px-5 py-5 space-y-4">
+      {isClosed ? (
           /* ── Closed ── */
           <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/50 px-4 py-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-500 shrink-0" />
@@ -96,7 +89,6 @@ export function SettlementStatusCard({
           {isClosed ? "View details" : "Go to Settlement"}
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
-      </div>
     </div>
   );
 }
