@@ -13,12 +13,11 @@ import { serializeTag } from "@/lib/tag-utils";
 import { Activity, type IActivity } from "@/lib/models/activity";
 import { Action } from "@/lib/models/action";
 import type { SerializedAction } from "@/lib/models/action";
+import { UserPreference } from "@/lib/models/user-preference";
+import { mergeWidgetPreferences } from "@/lib/widget-preferences";
 import { SpendingSummaryCard } from "../reports/_components/spending-summary-card";
-import { SettlementStatusCard } from "./_components/settlement-status-card";
 import { RecentExpenses } from "./_components/recent-expenses";
-import { QuickActions } from "./_components/quick-actions";
-import { ActivityWidget } from "./_components/activity-widget";
-import { ActionsWidget } from "./_components/actions-widget";
+import { DashboardWidgetColumn } from "./_components/dashboard-widget-column";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +51,7 @@ export default async function DashboardPage() {
     currentMonthExpensesRaw,
     recentActivitiesRaw,
     activeActionsRaw,
+    userPreferenceDoc,
   ] = await Promise.all([
     // 1. Current month spending by settlement type × person
     Expense.aggregate<{
@@ -129,6 +129,9 @@ export default async function DashboardPage() {
       .sort({ createdAt: -1 })
       .limit(10)
       .lean(),
+
+    // 9. User widget preferences
+    UserPreference.findOne({ userId: session.user.id }).lean(),
   ]);
 
   // ── Spending summary totals ───────────────────────────────────────────
@@ -240,6 +243,10 @@ export default async function DashboardPage() {
     updatedAt: (a.updatedAt as Date).toISOString(),
   }));
 
+  // ── Widget preferences ──────────────────────────────────────────────
+  const userPref = userPreferenceDoc as { dashboard?: { widgets?: Array<{ widgetId: string; collapsed: boolean }> } } | null;
+  const widgetPreferences = mergeWidgetPreferences(userPref?.dashboard?.widgets);
+
   const hasExpenses = totalSpending > 0;
   const label = monthLabel(month, year);
 
@@ -278,25 +285,20 @@ export default async function DashboardPage() {
           <RecentExpenses expenses={recentExpenses} />
         </div>
 
-        {/* Right column — actions + settlement + quick actions */}
-        <div className="space-y-6">
-          <ActionsWidget
-            actions={activeActions}
-            currentUserKey={session.user.paidByKey}
-          />
-
-          <SettlementStatusCard
-            monthLabel={label}
-            isClosed={isClosed}
-            netOwedBy={netOwedBy}
-            netAmount={netAmount}
-            unsettledMonthCount={unsettledMonthCount}
-          />
-
-          <ActivityWidget activities={recentActivities} />
-
-          <QuickActions />
-        </div>
+        {/* Right column — draggable widgets */}
+        <DashboardWidgetColumn
+          widgetPreferences={widgetPreferences}
+          settlementProps={{
+            monthLabel: label,
+            isClosed,
+            netOwedBy,
+            netAmount,
+            unsettledMonthCount,
+          }}
+          activities={recentActivities}
+          actions={activeActions}
+          currentUserKey={session.user.paidByKey}
+        />
       </div>
     </div>
   );
