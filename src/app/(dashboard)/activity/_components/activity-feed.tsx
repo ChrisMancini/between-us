@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { formatDistanceToNow } from "date-fns";
+import { formatActivityDate } from "@/lib/utils";
 import {
   Plus,
   Pencil,
@@ -173,14 +173,7 @@ function ActivityItem({
 }) {
   const Icon = ACTION_ICONS[item.action] ?? Plus;
   const colorClass = ACTION_COLORS[item.action] ?? "";
-  const timeAgo = formatDistanceToNow(new Date(item.createdAt), { addSuffix: true });
-  const fullDate = new Date(item.createdAt).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const { timeAgo, fullDate } = formatActivityDate(item.createdAt, true);
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60 transition-colors">

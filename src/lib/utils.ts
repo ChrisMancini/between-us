@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatDistanceToNow } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -31,6 +32,20 @@ export function getMonthDateRange(month: number, year: number) {
   return {
     start: new Date(Date.UTC(year, month - 1, 1)),
     end: new Date(Date.UTC(year, month, 1)),
+  };
+}
+
+export function formatActivityDate(date: string | Date, includeYear = false) {
+  const d = new Date(date);
+  return {
+    timeAgo: formatDistanceToNow(d, { addSuffix: true }),
+    fullDate: d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      ...(includeYear ? { year: "numeric" } : {}),
+      hour: "numeric",
+      minute: "2-digit",
+    }),
   };
 }
 
