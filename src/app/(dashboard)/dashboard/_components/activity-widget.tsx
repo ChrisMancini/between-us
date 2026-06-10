@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
 import {
   ArrowRight,
   Plus,
@@ -19,7 +19,25 @@ import {
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatActivityDate } from "@/lib/utils";
 import type { SerializedActivity } from "@/lib/models/activity";
+
+function useIsTruncated(ref: React.RefObject<HTMLElement | null>) {
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setIsTruncated(el.scrollWidth > el.clientWidth);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return isTruncated;
+}
 
 const ACTION_ICONS: Record<string, typeof Plus> = {
   expense_create: Plus,
@@ -49,6 +67,50 @@ const ACTION_COLORS: Record<string, string> = {
   action_cancelled: "text-slate-500 dark:text-slate-400",
 };
 
+interface ActivityRowProps {
+  item: SerializedActivity;
+  personMap: ReturnType<typeof usePersons>["personMap"];
+}
+
+function ActivityRow({ item, personMap }: ActivityRowProps) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const isTruncated = useIsTruncated(ref);
+  const Icon = ACTION_ICONS[item.action] ?? Plus;
+  const colorClass = ACTION_COLORS[item.action] ?? "";
+  const { timeAgo, fullDate } = formatActivityDate(item.createdAt);
+
+  return (
+    <div className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted/60 transition-colors">
+      <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${colorClass}`} />
+      <div className="flex-1 min-w-0">
+        <Tooltip>
+          <TooltipTrigger
+            disabled={!isTruncated}
+            render={
+              <p
+                ref={ref}
+                className="text-xs truncate"
+                tabIndex={isTruncated ? 0 : undefined}
+              />
+            }
+          >
+            <PersonBadge {...badgeProps(item.actorKey, personMap)} className="mr-1" />
+            <span className="text-foreground">{item.summary}</span>
+          </TooltipTrigger>
+          <TooltipContent>{item.summary}</TooltipContent>
+        </Tooltip>
+      </div>
+      <time
+        dateTime={item.createdAt}
+        title={fullDate}
+        className="flex-shrink-0 text-[11px] text-muted-foreground"
+      >
+        {timeAgo}
+      </time>
+    </div>
+  );
+}
+
 interface ActivityWidgetProps {
   activities: SerializedActivity[];
 }
@@ -64,41 +126,9 @@ export function ActivityWidget({ activities }: ActivityWidgetProps) {
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {activities.map((item) => {
-            const Icon = ACTION_ICONS[item.action] ?? Plus;
-            const colorClass = ACTION_COLORS[item.action] ?? "";
-            const timeAgo = formatDistanceToNow(new Date(item.createdAt), {
-              addSuffix: true,
-            });
-            const fullDate = new Date(item.createdAt).toLocaleString("en-US", {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            });
-
-            return (
-              <div
-                key={item._id}
-                className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted/60 transition-colors"
-              >
-                <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${colorClass}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs truncate">
-                    <PersonBadge {...badgeProps(item.actorKey, personMap)} className="mr-1" />
-                    <span className="text-foreground">{item.summary}</span>
-                  </p>
-                </div>
-                <time
-                  dateTime={item.createdAt}
-                  title={fullDate}
-                  className="flex-shrink-0 text-[11px] text-muted-foreground"
-                >
-                  {timeAgo}
-                </time>
-              </div>
-            );
-          })}
+          {activities.map((item) => (
+            <ActivityRow key={item._id} item={item} personMap={personMap} />
+          ))}
         </div>
       )}
 

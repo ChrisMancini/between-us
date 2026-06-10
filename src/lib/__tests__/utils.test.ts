@@ -3,6 +3,7 @@ import {
   formatMonthYear,
   parseMonthYearParams,
   getMonthDateRange,
+  formatActivityDate,
 } from "@/lib/utils";
 
 describe("formatCurrency", () => {
@@ -72,6 +73,37 @@ describe("parseMonthYearParams", () => {
     const result = parseMonthYearParams({ year: "2024" });
     expect(result.month).toBe(now.getMonth() + 1);
     expect(result.year).toBe(2024);
+  });
+});
+
+describe("formatActivityDate", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-06-10T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("returns a relative timeAgo string", () => {
+    const { timeAgo } = formatActivityDate(new Date("2026-06-10T10:00:00.000Z"));
+    expect(timeAgo).toBe("about 2 hours ago");
+  });
+
+  it("accepts a date string", () => {
+    const { timeAgo } = formatActivityDate("2026-06-10T10:00:00.000Z");
+    expect(timeAgo).toBe("about 2 hours ago");
+  });
+
+  it("excludes year from fullDate by default", () => {
+    const { fullDate } = formatActivityDate(new Date("2026-06-10T14:30:00.000Z"));
+    expect(fullDate).not.toMatch(/2026/);
+  });
+
+  it("includes year in fullDate when includeYear is true", () => {
+    const { fullDate } = formatActivityDate(new Date("2026-06-10T14:30:00.000Z"), true);
+    expect(fullDate).toMatch(/2026/);
   });
 });
 
