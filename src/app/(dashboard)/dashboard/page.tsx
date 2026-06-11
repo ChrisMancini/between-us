@@ -205,6 +205,9 @@ export default async function DashboardPage() {
       tagNames: tagNames || "Untagged",
       paidBy: e.paidBy as string,
       amount: e.amount as number,
+      notes: e.notes as string | undefined,
+      splitType: e.splitType as "split" | "full",
+      settlementType: e.settlementType as "immediate" | "deferred",
     };
   });
 

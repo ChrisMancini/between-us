@@ -18,6 +18,7 @@ import { getPersons, buildPersonMap, badgeProps } from "@/lib/persons";
 import type { SerializedPerson } from "@/lib/models/person";
 import { formatCurrency, formatMonthYear, parseMonthYearParams, getMonthDateRange } from "@/lib/utils";
 import { MonthNav } from "@/components/month-nav";
+import { ExpenseDetailPopover } from "@/components/expense-detail-popover";
 import { CloseMonthDialog } from "./_components/close-month-dialog";
 import { ReopenMonthDialog } from "./_components/reopen-month-dialog";
 import { ReadinessStatus } from "./_components/readiness-status";
@@ -119,6 +120,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
       tags: rawTags.map((t) =>
         serializeTag(t as { _id: unknown; path: string; sortOrder: number })
       ),
+      notes: e.notes as string | undefined,
     };
   });
 
@@ -499,6 +501,7 @@ function ExpenseTable({
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Amount</th>
+            <th className="w-8" />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -521,6 +524,18 @@ function ExpenseTable({
               </td>
               <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
                 {formatCurrency(e.amount)}
+              </td>
+              <td className="px-2 py-2.5">
+                <ExpenseDetailPopover
+                  date={e.date}
+                  where={e.where}
+                  paidBy={e.paidBy}
+                  amount={e.amount}
+                  tags={e.tags.map((t) => t.path).join(", ")}
+                  splitType={e.splitType}
+                  settlementType={e.settlementType}
+                  notes={e.notes}
+                />
               </td>
             </tr>
           ))}

@@ -9,6 +9,7 @@ export interface SettlementExpenseRow {
   where: string;
   date: string;
   tags: SerializedTag[];
+  notes?: string;
 }
 
 export interface SettlementBreakdown {

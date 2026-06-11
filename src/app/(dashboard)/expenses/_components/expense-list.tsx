@@ -11,6 +11,7 @@ import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
 import { EditExpenseDialog } from "./edit-expense-dialog";
 import { DeleteDialog } from "@/components/delete-dialog";
+import { ExpenseDetailPopover } from "@/components/expense-detail-popover";
 
 function formatAmount(cents: number) {
   return (cents / 100).toLocaleString("en-US", {
@@ -79,7 +80,7 @@ export function ExpenseList({
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Amount</th>
-            {currentUserKey && <th className="w-20" />}
+            <th className="w-20" />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -118,10 +119,20 @@ export function ExpenseList({
               <td className="px-4 py-3 text-right font-semibold tabular-nums text-foreground">
                 {formatAmount(e.amount)}
               </td>
-              {currentUserKey && (
-                <td className="px-2 py-3">
-                  {!isSettled && e.paidBy === currentUserKey && (
-                    <div className="flex items-center gap-0.5">
+              <td className="px-2 py-3">
+                <div className="flex items-center gap-0.5">
+                  <ExpenseDetailPopover
+                    date={e.date}
+                    where={e.where}
+                    paidBy={e.paidBy}
+                    amount={e.amount}
+                    tags={e.tags.map((t) => t.path).join(", ")}
+                    splitType={e.splitType}
+                    settlementType={e.settlementType}
+                    notes={e.notes}
+                  />
+                  {!isSettled && currentUserKey && e.paidBy === currentUserKey && (
+                    <>
                       <EditExpenseDialog
                         expense={e}
                         tags={tags!}
@@ -144,10 +155,10 @@ export function ExpenseList({
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    </div>
+                    </>
                   )}
-                </td>
-              )}
+                </div>
+              </td>
             </tr>
             );
           })}
