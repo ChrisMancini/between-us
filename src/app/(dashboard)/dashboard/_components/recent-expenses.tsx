@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
+import { ExpenseDetailPopover } from "@/components/expense-detail-popover";
 
 interface RecentExpense {
   date: string;
@@ -13,6 +14,9 @@ interface RecentExpense {
   tagNames: string;
   paidBy: string;
   amount: number;
+  notes?: string;
+  splitType: "split" | "full";
+  settlementType: "immediate" | "deferred";
 }
 
 interface RecentExpensesProps {
@@ -53,6 +57,7 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
               <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
                 Amount
               </th>
+              <th className="w-8" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -76,6 +81,18 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
                 </td>
                 <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
                   {formatCurrency(e.amount)}
+                </td>
+                <td className="px-2 py-2.5">
+                  <ExpenseDetailPopover
+                    date={e.date}
+                    where={e.where}
+                    paidBy={e.paidBy}
+                    amount={e.amount}
+                    tags={e.tagNames}
+                    splitType={e.splitType}
+                    settlementType={e.settlementType}
+                    notes={e.notes}
+                  />
                 </td>
               </tr>
             ))}

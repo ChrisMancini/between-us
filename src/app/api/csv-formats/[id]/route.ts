@@ -25,7 +25,7 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
 
   try {
     const updated = await CsvFormat.findByIdAndUpdate(id, parsed.data, {
-      new: true,
+      returnDocument: "after",
     }).lean();
 
     if (!updated) {

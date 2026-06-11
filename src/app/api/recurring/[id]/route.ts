@@ -30,7 +30,7 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const updated = await RecurringTemplate.findOneAndUpdate(
     { _id: id, createdBy: session.user.id },
     { name, items },
-    { new: true },
+    { returnDocument: "after" },
   ).lean();
 
   if (!updated) {

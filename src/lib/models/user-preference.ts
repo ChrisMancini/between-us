@@ -7,6 +7,7 @@ interface IWidgetPreference {
 
 interface IUserPreference extends Document {
   userId: string;
+  theme?: "light" | "dark" | "system";
   dashboard: {
     widgets: IWidgetPreference[];
   };
@@ -25,6 +26,10 @@ const WidgetPreferenceSchema = new Schema<IWidgetPreference>(
 const UserPreferenceSchema = new Schema<IUserPreference>(
   {
     userId: { type: String, required: true },
+    theme: {
+      type: String,
+      enum: ["light", "dark", "system"],
+    },
     dashboard: {
       widgets: { type: [WidgetPreferenceSchema], default: [] },
     },

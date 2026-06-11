@@ -51,13 +51,13 @@ export const POST = withAuth(async (req, session) => {
     updated = await MonthReadiness.findOneAndUpdate(
       { month, year },
       { $pull: { doneBy: personKey } },
-      { new: true }
+      { returnDocument: "after" }
     );
   } else {
     updated = await MonthReadiness.findOneAndUpdate(
       { month, year },
       { $addToSet: { doneBy: personKey } },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
   }
 

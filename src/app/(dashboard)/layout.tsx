@@ -6,8 +6,11 @@ import { NavLinks } from "@/components/nav-links";
 import { ActivityPoller } from "@/components/activity-poller";
 import { PersonsProvider } from "@/components/persons-context";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeSync } from "@/components/theme-sync";
 import { Button } from "@/components/ui/button";
 import { getPersons } from "@/lib/persons";
+import { connectToDatabase } from "@/lib/db";
+import { UserPreference } from "@/lib/models/user-preference";
 
 export default async function DashboardLayout({
   children,
@@ -20,6 +23,13 @@ export default async function DashboardLayout({
   const isAdmin = session.user.role === "admin";
   const persons = await getPersons();
   if (!persons) redirect("/setup");
+
+  await connectToDatabase();
+  const prefs = await UserPreference.findOne(
+    { userId: session.user.id },
+    { theme: 1 }
+  ).lean();
+  const savedTheme = prefs?.theme as string | undefined;
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/50">
@@ -57,6 +67,7 @@ export default async function DashboardLayout({
 
       <main className="flex-1 px-6 py-8 max-w-screen-xl mx-auto w-full">
         <PersonsProvider persons={persons}>
+          <ThemeSync savedTheme={savedTheme} />
           <ActivityPoller />
           {children}
         </PersonsProvider>

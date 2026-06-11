@@ -136,7 +136,7 @@ describe("POST /api/settlement/ready", () => {
     expect(MonthReadiness.findOneAndUpdate).toHaveBeenCalledWith(
       { month: 4, year: 2026 },
       { $addToSet: { doneBy: "john" } },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
     expect(logActivity).toHaveBeenCalledWith(
       "john",
@@ -165,7 +165,7 @@ describe("POST /api/settlement/ready", () => {
     expect(MonthReadiness.findOneAndUpdate).toHaveBeenCalledWith(
       { month: 4, year: 2026 },
       { $pull: { doneBy: "john" } },
-      { new: true }
+      { returnDocument: "after" }
     );
     expect(logActivity).toHaveBeenCalledWith(
       "john",
