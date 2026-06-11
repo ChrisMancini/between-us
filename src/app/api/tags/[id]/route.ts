@@ -41,7 +41,7 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
     const updated = await Tag.findByIdAndUpdate(
       id,
       { path: newPath },
-      { new: true }
+      { returnDocument: "after" }
     ).lean();
 
     if (!updated) {

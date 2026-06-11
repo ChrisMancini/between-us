@@ -14,27 +14,22 @@ jest.mock("@/lib/models/user-preference", () => ({
   UserPreference: { findOneAndUpdate: jest.fn() },
 }));
 jest.mock("@/lib/validations/user-preference", () => ({
-  dashboardWidgetPreferencesSchema: { safeParse: jest.fn() },
+  themePreferenceSchema: { safeParse: jest.fn() },
 }));
 
 import { auth } from "@/auth";
 import { UserPreference } from "@/lib/models/user-preference";
-import { dashboardWidgetPreferencesSchema } from "@/lib/validations/user-preference";
+import { themePreferenceSchema } from "@/lib/validations/user-preference";
 import { PUT } from "../route";
 
 const mockAuth = asMock(auth);
-const mockSafeParse = asMock(dashboardWidgetPreferencesSchema.safeParse);
+const mockSafeParse = asMock(themePreferenceSchema.safeParse);
 
-const WIDGETS = [
-  { widgetId: "settlement-status", collapsed: false },
-  { widgetId: "activity", collapsed: true },
-];
-
-function putRequest() {
-  return makeJsonRequest("/api/user-preferences/dashboard", { widgets: WIDGETS }, "PUT");
+function putRequest(theme = "dark") {
+  return makeJsonRequest("/api/user-preferences/theme", { theme }, "PUT");
 }
 
-describe("PUT /api/user-preferences/dashboard", () => {
+describe("PUT /api/user-preferences/theme", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("returns 401 when not authenticated", async () => {
@@ -50,30 +45,30 @@ describe("PUT /api/user-preferences/dashboard", () => {
     await expectError(res, 400, "Validation failed");
   });
 
-  it("returns 200 on success with upsert", async () => {
+  it("returns 200 on success with upserted theme", async () => {
     mockAuth.mockResolvedValue(makeSession("user", "john", "user-1"));
-    mockSafeParse.mockReturnValue(makeParsedSuccess({ widgets: WIDGETS }));
+    mockSafeParse.mockReturnValue(makeParsedSuccess({ theme: "dark" }));
     asMock(UserPreference.findOneAndUpdate).mockReturnValue({
-      lean: jest.fn().mockResolvedValue({ dashboard: { widgets: WIDGETS } }),
+      lean: jest.fn().mockResolvedValue({ theme: "dark" }),
     });
 
-    const res = await PUT(putRequest());
+    const res = await PUT(putRequest("dark"));
     const body = await expectStatus(res, 200);
-    expect(body.widgets).toEqual(WIDGETS);
+    expect(body.theme).toBe("dark");
   });
 
   it("filters by the authenticated user's ID", async () => {
     mockAuth.mockResolvedValue(makeSession("user", "john", "user-42"));
-    mockSafeParse.mockReturnValue(makeParsedSuccess({ widgets: WIDGETS }));
+    mockSafeParse.mockReturnValue(makeParsedSuccess({ theme: "light" }));
     asMock(UserPreference.findOneAndUpdate).mockReturnValue({
-      lean: jest.fn().mockResolvedValue({ dashboard: { widgets: WIDGETS } }),
+      lean: jest.fn().mockResolvedValue({ theme: "light" }),
     });
 
-    await PUT(putRequest());
+    await PUT(putRequest("light"));
 
     expect(UserPreference.findOneAndUpdate).toHaveBeenCalledWith(
       { userId: "user-42" },
-      { $set: { "dashboard.widgets": WIDGETS } },
+      { $set: { theme: "light" } },
       { upsert: true, returnDocument: "after" }
     );
   });

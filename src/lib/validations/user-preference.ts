@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { WIDGET_IDS } from "@/lib/widget-preferences";
 
+export const themePreferenceSchema = z.object({
+  theme: z.enum(["light", "dark", "system"]),
+});
+
 export const dashboardWidgetPreferencesSchema = z.object({
   widgets: z
     .array(

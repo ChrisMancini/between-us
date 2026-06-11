@@ -58,7 +58,7 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const updated = await Expense.findByIdAndUpdate(
     id,
     { date: new Date(date), tags: tagIds, amount, where, notes, splitType, settlementType },
-    { new: true },
+    { returnDocument: "after" },
   ).populate("tags");
 
   if (!updated) {
