@@ -177,8 +177,7 @@ AUTH_SECRET=<generated-secret>
 ### Docker
 
 ```bash
-node build.mjs                                # builds and tags with version from package.json
-docker run -p 3000:3000 --env-file .env between-us:latest
+docker run -p 3000:3000 --env-file .env ghcr.io/chrismancini/between-us:latest
 ```
 
 ## Releasing a New Version
@@ -207,40 +206,64 @@ This project uses git tags and GitHub Releases to track versions. The version nu
 
    Go to the repository's **Releases** page → **Draft a new release** → select the tag → write release notes → **Publish release**.
 
-4. **Deploy:** Build and deploy the Docker image to your NAS (see [Updating the Application](#updating-the-application) below).
+4. **Deploy:** Run `node deploy.mjs` to pull the latest image and restart the container on your NAS.
 
 ## Deploying to Synology NAS
 
 These steps assume you have **Container Manager** installed on your Synology NAS and MongoDB already running (either as a container or standalone).
 
-### 1. Build and export the image
+### 0. Set up SSH access (one-time)
 
-On your development machine:
+`deploy.mjs` connects to your NAS over SSH. Add a `nas` host alias to `~/.ssh/config`:
 
-```bash
-node build.mjs
-docker save between-us:latest -o between-us.tar
+```
+Host nas
+  HostName <your-nas-ip>         # e.g. 192.168.1.100
+  User <your-dsm-username>       # your Synology DSM login — may differ from your Windows username
 ```
 
-### 2. Transfer the image to your NAS
-
-Copy `between-us.tar` to your NAS via a network share (e.g., `\\NAS\docker\`) or SCP:
+Optionally set up passwordless login so you aren't prompted for a password on each deploy:
 
 ```bash
-scp between-us.tar your-user@nas-ip:/tmp/
+# Generate a key pair if you don't have one
+ssh-keygen -t ed25519
 ```
 
-### 3. Import the image
+**macOS / Linux:**
+```bash
+ssh-copy-id nas
+```
 
-1. Open **Container Manager** in DSM
-2. Go to **Image** in the left sidebar
-3. Click **Import** > **Add from file**
-4. Select the `between-us.tar` file and wait for the import to finish
+**Windows (PowerShell):**
+```powershell
+Get-Content "$env:USERPROFILE\.ssh\id_ed25519.pub" | ssh nas "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && chmod 700 ~/.ssh"
+```
 
-### 4. Create the container
+Make sure SSH is enabled on the NAS: **DSM → Control Panel → Terminal & SNMP → Enable SSH service**.
+
+> **Synology gotcha:** If key auth is set up correctly but SSH still prompts for a password, the home directory is likely world-writable (Synology's default). SSH rejects `authorized_keys` in this case. Fix it by SSHing in with your password and running `chmod 755 ~`. Note that DSM updates may reset this — if key auth stops working after an update, rerun the same command.
+
+#### Allow passwordless sudo for Docker (one-time)
+
+The Docker socket on Synology is root-only. `deploy.mjs` uses `sudo` to run Docker commands, but `sudo` must be configured to not require a password for non-interactive SSH sessions. SSH into the NAS interactively and run:
+
+```bash
+printf 'administrator ALL=(root) NOPASSWD: /volume1/@appstore/ContainerManager/usr/bin/docker\n' | sudo tee /etc/sudoers.d/docker-nopwd
+sudo chmod 440 /etc/sudoers.d/docker-nopwd
+```
+
+### 1. Pull the image (first-time only)
+
+Container Manager's GUI does not support third-party registries like ghcr.io — pull via SSH instead:
+
+```bash
+ssh nas "sudo /volume1/@appstore/ContainerManager/usr/bin/docker pull ghcr.io/chrismancini/between-us:latest"
+```
+
+### 2. Create the container (first-time only)
 
 1. Go to **Container** in the left sidebar
-2. Click **Create** and select the `between-us:latest` image
+2. Click **Create** and select the `ghcr.io/chrismancini/between-us:latest` image
 3. Configure the following:
    - **Container name:** `between-us`
    - **Port:** Map local port `3000` to container port `3000`
@@ -251,7 +274,7 @@ scp between-us.tar your-user@nas-ip:/tmp/
    - **Restart policy:** `always` (survives NAS restarts)
 4. Click **Apply** / **Done**
 
-### 5. Verify
+### 3. Verify
 
 Open `http://<nas-ip>:3000` in a browser. You should see the login page.
 
@@ -268,30 +291,8 @@ Open `http://<nas-ip>:3000` in a browser. You should see the login page.
 
 ### Updating the Application
 
-When you have new changes to deploy:
-
-**1. Build and export the new image** (on your development machine):
-
 ```bash
-node build.mjs
-docker save between-us:latest -o between-us.tar
+node deploy.mjs
 ```
 
-**2. Transfer** `between-us.tar` to your NAS (same as initial setup — network share or SCP).
-
-**3. Import the updated image:**
-
-1. Open **Container Manager** > **Image**
-2. Click **Import** > **Add from file** and select the new `between-us.tar`
-3. When prompted that the image already exists, confirm to overwrite it
-
-**4. Replace the running container:**
-
-1. Go to **Container** in the left sidebar
-2. Select the `between-us` container and click **Stop**
-3. With the container still selected, click **Action** > **Reset** — this recreates the container from the updated image while preserving your settings (port mappings, environment variables, restart policy)
-4. Click **Start**
-
-**5. Verify** by refreshing `http://<nas-ip>:3000` in a browser.
-
-> **Note:** Reset preserves container settings but clears any data stored inside the container filesystem. This app stores all data in MongoDB (external), so nothing is lost.
+This pulls the latest image from `ghcr.io` directly on the NAS and restarts the container — no tar files, no GUI required.
