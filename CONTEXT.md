@@ -30,5 +30,9 @@ The person who is owed money in an Action. Always the person who paid the expens
 _Avoid_: Payee, receiver
 
 **Shortcuts**:
-Navigation links on the Dashboard for common tasks (log expense, view reports, settlement). Formerly "Quick Actions" — renamed to avoid collision with Action.
+Navigation links on the Dashboard for common tasks (log expense, view reports, settlement). Formerly "Quick Actions" — renamed to avoid collision with Action. Distinct from Hotkeys.
 _Avoid_: Quick Actions
+
+**Hotkeys**:
+Global keyboard shortcuts that let users navigate the app and trigger actions without a mouse. Displayed in a help popup when the user presses `?`. Implemented as a client-side hook mounted in the dashboard layout.
+_Avoid_: Keyboard shortcuts (in code), shortcuts (already taken)
