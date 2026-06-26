@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Between Us is a web application for two partners (Chris and Lauren) who share household expenses but maintain separate bank accounts. The app tracks who paid for what, handles 50/50 splits and full reimbursements, and calculates a monthly settlement so one person can pay the other a single amount.
+Between Us is a web application for two partners who share household expenses but maintain separate bank accounts. The app tracks who paid for what, handles 50/50 splits and full reimbursements, and calculates a monthly settlement so one person can pay the other a single amount.
 
 The product optimizes for:
 
@@ -58,7 +58,7 @@ src/
 
 **Expense:**
 
-- `paidBy` — which user paid (Chris or Lauren)
+- `paidBy` — which user paid (Partner A or Partner B)
 - `date` — date of the expense
 - `tags` — one or more tags (refs to Tag), at least one required
 - `amount` — dollar amount (stored as cents)
@@ -105,8 +105,8 @@ When "Close the Month" is triggered:
 2. For each expense, calculate the amount the non-payer owes:
    - Split: half the amount
    - Full reimburse: the full amount
-3. Sum what Lauren owes Chris and what Chris owes Lauren
-4. Net the two amounts: "Chris owes Lauren $X" or "Lauren owes Chris $X"
+3. Sum what Partner A owes Partner B and what Partner B owes Partner A
+4. Net the two amounts: "Partner A owes Partner B $X" or "Partner B owes Partner A $X"
 
 Expenses with `settlementType: "immediate"` are shown separately in reports but excluded from the monthly settlement calculation.
 
@@ -127,9 +127,9 @@ Expenses with `settlementType: "immediate"` are shown separately in reports but 
 - Follow ShadCN/ui default theme and patterns
 - Use consistent spacing: Tailwind's spacing scale (p-4, gap-6, etc.)
 - Desktop-primary layout with responsive support for mobile and tablet
-- Tested browsers: Chrome and Edge on Windows (Chris), Chrome and Safari on macOS (Lauren)
-- All forms must be fully operable by keyboard alone (tab order, Enter to submit, Escape to cancel) — Chris uses keyboard-driven input
-- All forms must also work intuitively with mouse/trackpad — Lauren uses mouse-driven input
+- Tested browsers: Chrome and Edge on Windows, Chrome and Safari on macOS
+- All forms must be fully operable by keyboard alone (tab order, Enter to submit, Escape to cancel) — one user prefers keyboard-driven input
+- All forms must also work intuitively with mouse/trackpad — the other user prefers mouse-driven input
 - Use ShadCN's toast/sonner for success/error feedback
 - Use ShadCN's dialog for confirmations (e.g., closing a month)
 
@@ -169,6 +169,3 @@ MONGODB_URI=mongodb://<nas-ip>:27017/between-us
 AUTH_SECRET=<generated-secret>
 ```
 
-## Data Migration
-
-There is an existing Retool application with expense history in a SQL database. A migration script will be needed to export that data and import it into MongoDB, preserving the complete history.
