@@ -186,7 +186,7 @@ This project uses git tags and GitHub Releases to track versions. The version nu
 
 ### Creating a Release
 
-1. **Bump the version:**
+1. **Bump the version** in your feature or bug branch:
 
    ```bash
    npm version patch   # 0.1.0 → 0.1.1 (bug fixes)
@@ -194,19 +194,17 @@ This project uses git tags and GitHub Releases to track versions. The version nu
    npm version major   # 0.1.0 → 1.0.0 (breaking changes)
    ```
 
-   This updates `package.json`, creates a git commit, and tags it (e.g., `v0.1.1`).
+   This updates `package.json` and creates a local commit. Don't push the git tag it creates — the publish workflow creates the official tag on merge.
 
-2. **Push the commit and tag:**
+2. **Merge to master** — the PR version check enforces that the version is bumped before merging.
+
+3. **GitHub Actions handles the rest** — on merge, the publish workflow automatically creates the git tag, publishes a GitHub Release, and builds and pushes the Docker image to `ghcr.io`.
+
+4. **Deploy to NAS:**
 
    ```bash
-   git push && git push --tags
+   node deploy.mjs
    ```
-
-3. **Create a GitHub Release:**
-
-   Go to the repository's **Releases** page → **Draft a new release** → select the tag → write release notes → **Publish release**.
-
-4. **Deploy:** Run `node deploy.mjs` to pull the latest image and restart the container on your NAS.
 
 ## Deploying to Synology NAS
 
