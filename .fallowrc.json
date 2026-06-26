@@ -1,7 +1,7 @@
 {
   "$schema": "https://fallow.tools/schema.json",
   "entry": [
-    "build.mjs",
+    "deploy.mjs",
     "scripts/**/*.ts"
   ],
   "ignorePatterns": [
