@@ -4,6 +4,7 @@ import { auth, signOut } from "@/auth";
 import { AppFooter } from "@/components/app-footer";
 import { NavLinks } from "@/components/nav-links";
 import { ActivityPoller } from "@/components/activity-poller";
+import { HotkeyHandler } from "@/components/hotkey-handler";
 import { PersonsProvider } from "@/components/persons-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeSync } from "@/components/theme-sync";
@@ -69,6 +70,7 @@ export default async function DashboardLayout({
         <PersonsProvider persons={persons}>
           <ThemeSync savedTheme={savedTheme} />
           <ActivityPoller />
+          <HotkeyHandler />
           {children}
         </PersonsProvider>
       </main>

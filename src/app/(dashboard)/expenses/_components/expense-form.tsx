@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { ExpenseApiInput } from "@/lib/validations/expense";
+import { FOCUS_EXPENSE_FORM_EVENT } from "@/hooks/use-hotkeys";
 import { expenseFieldSchema, type ExpenseFieldValues } from "./expense-field-schema";
 import { ExpenseFormFields, isDateInSettledMonth } from "./expense-form-fields";
 
@@ -40,6 +41,16 @@ export function ExpenseForm({ tags: initialTags, paidBy, closedMonths }: Expense
       dateTriggerRef.current?.focus();
     }
   }, [focusTrigger]);
+
+  const handleFocusEvent = useCallback(() => {
+    dateTriggerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(FOCUS_EXPENSE_FORM_EVENT, handleFocusEvent);
+    return () =>
+      window.removeEventListener(FOCUS_EXPENSE_FORM_EVENT, handleFocusEvent);
+  }, [handleFocusEvent]);
 
   const {
     register,
