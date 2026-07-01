@@ -7,6 +7,7 @@ import type { SerializedTag } from "@/lib/models/tag";
 import type { CsvParseResult } from "@/lib/csv-parsers/types";
 import type { SkippedRow } from "@/lib/csv-parsers/types";
 import type { SerializedCsvFormat } from "@/lib/models/csv-format";
+import { buildDuplicateMap } from "@/lib/duplicate-check";
 import { FileUploadStep } from "./file-upload-step";
 import { PreviewTable, type ImportRow } from "./preview-table";
 import { ImportResult } from "./import-result";
@@ -66,12 +67,7 @@ export function CsvImportForm({
       // Duplicate detection is best-effort
     }
 
-    const existingSet = new Map<string, string>();
-    for (const e of existingExpenses) {
-      const dateKey = e.date.split("T")[0];
-      const key = `${dateKey}|${e.amount}`;
-      existingSet.set(key, e.where);
-    }
+    const existingSet = buildDuplicateMap(existingExpenses);
 
     const importRows: ImportRow[] = transactions.map((t, i) => {
       const key = `${t.date}|${t.amountCents}`;
