@@ -155,6 +155,7 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
         closedMonths={closedMonths}
         isFiltered={isFiltered}
         currentUserKey={paidBy}
+        isAdmin={session?.user?.role === "admin"}
         tags={tags}
         closedMonthsList={[...closedMonths]}
       />

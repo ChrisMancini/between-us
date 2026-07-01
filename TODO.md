@@ -16,7 +16,7 @@
 ## Expense Entry & Management
 
 - [x] Duplicate detection on manual expense form (warn before saving if same date + amount exists)
-- [ ] Bulk edit — select multiple expenses and change tag, split type, or settlement type at once
+- [x] Bulk edit — select multiple expenses and change tag, split type, or settlement type at once
 - [ ] Bulk delete with confirmation
 - [ ] Expand "where" search to also match notes field
 - [ ] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
@@ -45,6 +45,11 @@
 - [ ] Expense table card layout on mobile — swap `<table>` for stacked cards below `sm` breakpoint
 - [ ] Inline expense editing — click a row to edit in-place instead of navigating away or opening a dialog
 - [ ] Pagination or infinite scroll on expense list (currently loads all expenses for the month)
+
+## Code Health
+
+- [ ] Reduce cyclomatic complexity in BulkEditConfirmDialog and BulkDeleteConfirmDialog (extract shared two-phase confirmation pattern)
+- [ ] Reduce cyclomatic complexity in bulk expense PATCH handler
 
 ## Reliability
 

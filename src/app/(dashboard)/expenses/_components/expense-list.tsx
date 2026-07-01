@@ -1,39 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedTag } from "@/lib/models/tag";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PersonBadge } from "@/components/person-badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePersons } from "@/components/persons-context";
-import { badgeProps } from "@/lib/person-utils";
-import { EditExpenseDialog } from "./edit-expense-dialog";
 import { DeleteDialog } from "@/components/delete-dialog";
-import { ExpenseDetailPopover } from "@/components/expense-detail-popover";
-
-function formatAmount(cents: number) {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
+import { BulkEditBar } from "./bulk-edit-bar";
+import { BulkEditConfirmDialog } from "./bulk-edit-confirm-dialog";
+import { ExpenseRow } from "./expense-row";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
 
 interface ExpenseListProps {
   expenses: SerializedExpense[];
   closedMonths: Set<string>;
   isFiltered?: boolean;
   currentUserKey?: string;
+  isAdmin?: boolean;
   tags?: SerializedTag[];
   closedMonthsList?: string[];
 }
@@ -43,11 +27,26 @@ export function ExpenseList({
   closedMonths,
   isFiltered = false,
   currentUserKey,
+  isAdmin = false,
   tags,
   closedMonthsList,
 }: ExpenseListProps) {
   const { personMap } = usePersons();
   const [deleteTarget, setDeleteTarget] = useState<SerializedExpense | null>(null);
+
+  const {
+    bulkEditMode,
+    setBulkEditMode,
+    selectedIds,
+    confirmValues,
+    setConfirmValues,
+    exitBulkEdit,
+    toggleSelection,
+    toggleSelectAll,
+    selectedExpenses,
+    allSelected,
+    someSelected,
+  } = useBulkSelection(expenses);
 
   if (expenses.length === 0) {
     return (
@@ -64,23 +63,71 @@ export function ExpenseList({
   return (
     <div className="rounded-xl border border-primary/10 bg-card overflow-hidden shadow-sm">
       <div className="border-b border-primary/10 bg-primary/5 px-4 py-2.5 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
-          Expenses
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {expenses.length} {expenses.length === 1 ? "expense" : "expenses"}
-        </p>
+        {bulkEditMode ? (
+          <>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
+              {selectedIds.size} selected
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs"
+              onClick={exitBulkEdit}
+            >
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
+              Expenses
+            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">
+                {expenses.length} {expenses.length === 1 ? "expense" : "expenses"}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => setBulkEditMode(true)}
+              >
+                Bulk Edit
+              </Button>
+            </div>
+          </>
+        )}
       </div>
+
+      {bulkEditMode && selectedIds.size > 0 && tags && (
+        <BulkEditBar
+          selectedCount={selectedIds.size}
+          tags={tags}
+          onApply={(values) => setConfirmValues(values)}
+          onCancel={exitBulkEdit}
+        />
+      )}
+
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border">
+            {bulkEditMode && (
+              <th className="w-10 px-4 py-2.5">
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={someSelected}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all expenses"
+                />
+              </th>
+            )}
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Date</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Where</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Tags</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 font-semibold text-xs uppercase tracking-wide text-muted-foreground/60">Amount</th>
-            <th className="w-20" />
+            {!bulkEditMode && <th className="w-20" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -90,76 +137,19 @@ export function ExpenseList({
               `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`
             );
             return (
-            <tr key={e._id} className="hover:bg-primary/5 transition-colors">
-              <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                {formatDate(e.date)}
-              </td>
-              <td className="px-4 py-3 font-medium text-foreground">
-                <span className="flex items-center gap-2">
-                  {e.where}
-                  {isSettled && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1.5 py-0 border-emerald-300 text-emerald-600 dark:border-emerald-700 dark:text-emerald-400 font-medium leading-4"
-                    >
-                      Settled
-                    </Badge>
-                  )}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {e.tags.map((t) => t.path).join(", ")}
-              </td>
-              <td className="px-4 py-3">
-                <PersonBadge {...badgeProps(e.paidBy, personMap)} />
-              </td>
-              <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                {e.splitType === "split" ? "50 / 50" : "Full"}
-              </td>
-              <td className="px-4 py-3 text-right font-semibold tabular-nums text-foreground">
-                {formatAmount(e.amount)}
-              </td>
-              <td className="px-2 py-3">
-                <div className="flex items-center gap-0.5">
-                  <ExpenseDetailPopover
-                    date={e.date}
-                    where={e.where}
-                    paidBy={e.paidBy}
-                    amount={e.amount}
-                    tags={e.tags.map((t) => t.path).join(", ")}
-                    splitType={e.splitType}
-                    settlementType={e.settlementType}
-                    notes={e.notes}
-                  />
-                  {!isSettled && currentUserKey && e.paidBy === currentUserKey && (
-                    <>
-                      <EditExpenseDialog
-                        expense={e}
-                        tags={tags!}
-                        closedMonths={closedMonthsList!}
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="text-muted-foreground"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTarget(e)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </td>
-            </tr>
+              <ExpenseRow
+                key={e._id}
+                expense={e}
+                isSettled={isSettled}
+                bulkEditMode={bulkEditMode}
+                isSelected={selectedIds.has(e._id)}
+                onToggleSelection={toggleSelection}
+                onDelete={setDeleteTarget}
+                currentUserKey={currentUserKey}
+                tags={tags}
+                closedMonthsList={closedMonthsList}
+                personMap={personMap}
+              />
             );
           })}
         </tbody>
@@ -174,6 +164,22 @@ export function ExpenseList({
           onOpenChange={(open) => {
             if (!open) setDeleteTarget(null);
           }}
+        />
+      )}
+
+      {confirmValues && tags && currentUserKey && (
+        <BulkEditConfirmDialog
+          open={!!confirmValues}
+          onOpenChange={(open) => {
+            if (!open) setConfirmValues(null);
+          }}
+          selectedExpenses={selectedExpenses}
+          closedMonths={closedMonths}
+          currentUserKey={currentUserKey}
+          isAdmin={isAdmin}
+          values={confirmValues}
+          tags={tags}
+          onDone={exitBulkEdit}
         />
       )}
     </div>
