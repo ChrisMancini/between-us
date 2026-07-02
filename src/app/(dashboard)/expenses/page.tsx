@@ -22,6 +22,10 @@ interface PageProps {
     paidBy?: string;
     month?: string;
     year?: string;
+    prefill_amount?: string;
+    prefill_where?: string;
+    prefill_date?: string;
+    prefill_tags?: string;
   }>;
 }
 
@@ -111,6 +115,15 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
     };
   });
 
+  const prefill = (params.prefill_amount || params.prefill_where || params.prefill_date || params.prefill_tags)
+    ? {
+        amount: params.prefill_amount,
+        where: params.prefill_where,
+        date: params.prefill_date,
+        tagIds: params.prefill_tags?.split(",").filter(Boolean),
+      }
+    : undefined;
+
   const isFiltered = !!(q || tagFilter || paidByFilter);
 
   return (
@@ -133,9 +146,11 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
 
       <div className="border rounded-xl p-6 bg-card shadow-sm">
         <ExpenseForm
+          key={prefill ? JSON.stringify(prefill) : "default"}
           tags={tags}
           paidBy={paidBy}
           closedMonths={[...closedMonths]}
+          prefill={prefill}
         />
       </div>
 

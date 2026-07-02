@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export const FOCUS_EXPENSE_FORM_EVENT = "focus-expense-form";
+export const OPEN_QUICK_ENTRY_EVENT = "open-quick-entry";
 
 const CHORD_TIMEOUT_MS = 1500;
 
@@ -72,11 +73,7 @@ export function useHotkeys() {
 
       if (key === "n") {
         e.preventDefault();
-        if (window.location.pathname === "/expenses") {
-          window.dispatchEvent(new CustomEvent(FOCUS_EXPENSE_FORM_EVENT));
-        } else {
-          router.push("/expenses");
-        }
+        window.dispatchEvent(new CustomEvent(OPEN_QUICK_ENTRY_EVENT));
         return;
       }
     }

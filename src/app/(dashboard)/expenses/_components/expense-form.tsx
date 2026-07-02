@@ -29,9 +29,15 @@ interface ExpenseFormProps {
   tags: SerializedTag[];
   paidBy: string;
   closedMonths: string[];
+  prefill?: {
+    amount?: string;
+    where?: string;
+    date?: string;
+    tagIds?: string[];
+  };
 }
 
-export function ExpenseForm({ tags: initialTags, paidBy, closedMonths }: ExpenseFormProps) {
+export function ExpenseForm({ tags: initialTags, paidBy, closedMonths, prefill }: ExpenseFormProps) {
   const [tags, setTags] = useState(initialTags);
   const router = useRouter();
 
@@ -69,10 +75,10 @@ export function ExpenseForm({ tags: initialTags, paidBy, closedMonths }: Expense
     resolver: zodResolver(formSchema),
     defaultValues: {
       paidBy,
-      date:           today(),
-      tagIds:         [],
-      amount:         "",
-      where:          "",
+      date:           prefill?.date ?? today(),
+      tagIds:         prefill?.tagIds ?? [],
+      amount:         prefill?.amount ?? "",
+      where:          prefill?.where ?? "",
       notes:          "",
       splitType:      "split",
       settlementType: "deferred",
@@ -163,7 +169,7 @@ export function ExpenseForm({ tags: initialTags, paidBy, closedMonths }: Expense
         dateIsSettled={dateIsSettled}
         watchedDate={watchedDate}
         dateTriggerRef={dateTriggerRef}
-        autoFocusDate
+        autoFocusDate={!prefill}
         enableDateArrowKeys
       />
 

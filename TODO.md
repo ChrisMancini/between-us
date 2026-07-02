@@ -19,7 +19,7 @@
 - [x] Bulk edit — select multiple expenses and change tag, split type, or settlement type at once
 - [x] Bulk delete with confirmation
 - [ ] Expand "where" search to also match notes field
-- [ ] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
+- [x] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
 
 ## Activity Feed
 
@@ -45,6 +45,7 @@
 - [ ] Expense table card layout on mobile — swap `<table>` for stacked cards below `sm` breakpoint
 - [ ] Inline expense editing — click a row to edit in-place instead of navigating away or opening a dialog
 - [ ] Pagination or infinite scroll on expense list (currently loads all expenses for the month)
+- [ ] Review all features to ensure the application works on mobile devices
 
 ## Code Health
 

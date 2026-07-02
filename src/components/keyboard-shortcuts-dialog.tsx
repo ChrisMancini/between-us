@@ -88,11 +88,27 @@ export function KeyboardShortcutsDialog({
             <div className="divide-y divide-border">
               <ShortcutRow
                 keys={<Kbd>n</Kbd>}
-                label="New expense"
+                label="Quick add expense"
               />
               <ShortcutRow
                 keys={<Kbd>?</Kbd>}
                 label="Show shortcuts"
+              />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Quick Entry
+            </h3>
+            <div className="divide-y divide-border">
+              <ShortcutRow
+                keys={<Kbd>Enter</Kbd>}
+                label="Save"
+              />
+              <ShortcutRow
+                keys={<><Kbd>Ctrl</Kbd><Kbd>Enter</Kbd></>}
+                label="Save & add another"
               />
             </div>
           </section>
