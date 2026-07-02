@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Trash2 } from "lucide-react";
 import { TagPicker } from "@/components/tag-picker";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { BulkEditValues } from "@/types/bulk-expense";
@@ -20,6 +21,7 @@ interface BulkEditBarProps {
   selectedCount: number;
   tags: SerializedTag[];
   onApply: (values: BulkEditValues) => void;
+  onDelete: () => void;
   onCancel: () => void;
 }
 
@@ -29,7 +31,7 @@ const TAG_MODE_LABELS: Record<TagMode, string> = {
   remove: "Remove",
 };
 
-export function BulkEditBar({ selectedCount, tags, onApply, onCancel }: BulkEditBarProps) {
+export function BulkEditBar({ selectedCount, tags, onApply, onDelete, onCancel }: BulkEditBarProps) {
   const [tagMode, setTagMode] = useState<TagMode>("replace");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [splitType, setSplitType] = useState<string>("__none__");
@@ -124,14 +126,27 @@ export function BulkEditBar({ selectedCount, tags, onApply, onCancel }: BulkEdit
           >
             Apply
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
+          <div className="border-l border-border pl-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              Delete
+            </Button>
+          </div>
+          <div className="border-l border-border pl-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       </div>
     </div>

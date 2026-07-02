@@ -15,3 +15,14 @@ export interface BulkEditResponse {
   results: BulkEditResult[];
   summary: { updated: number; skipped: number };
 }
+
+export interface BulkDeleteResult {
+  expenseId: string;
+  status: "deleted" | "skipped";
+  reason?: string;
+}
+
+export interface BulkDeleteResponse {
+  results: BulkDeleteResult[];
+  summary: { deleted: number; skipped: number };
+}

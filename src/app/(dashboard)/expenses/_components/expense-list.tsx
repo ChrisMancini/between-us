@@ -9,6 +9,7 @@ import { usePersons } from "@/components/persons-context";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { BulkEditBar } from "./bulk-edit-bar";
 import { BulkEditConfirmDialog } from "./bulk-edit-confirm-dialog";
+import { BulkDeleteConfirmDialog } from "./bulk-delete-confirm-dialog";
 import { ExpenseRow } from "./expense-row";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 
@@ -40,6 +41,8 @@ export function ExpenseList({
     selectedIds,
     confirmValues,
     setConfirmValues,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
     exitBulkEdit,
     toggleSelection,
     toggleSelectAll,
@@ -104,6 +107,7 @@ export function ExpenseList({
           selectedCount={selectedIds.size}
           tags={tags}
           onApply={(values) => setConfirmValues(values)}
+          onDelete={() => setShowDeleteConfirm(true)}
           onCancel={exitBulkEdit}
         />
       )}
@@ -179,6 +183,20 @@ export function ExpenseList({
           isAdmin={isAdmin}
           values={confirmValues}
           tags={tags}
+          onDone={exitBulkEdit}
+        />
+      )}
+
+      {showDeleteConfirm && currentUserKey && (
+        <BulkDeleteConfirmDialog
+          open={showDeleteConfirm}
+          onOpenChange={(open) => {
+            if (!open) setShowDeleteConfirm(false);
+          }}
+          selectedExpenses={selectedExpenses}
+          closedMonths={closedMonths}
+          currentUserKey={currentUserKey}
+          isAdmin={isAdmin}
           onDone={exitBulkEdit}
         />
       )}

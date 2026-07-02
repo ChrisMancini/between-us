@@ -4,19 +4,15 @@ import type { Session } from "next-auth";
 import { connectToDatabase } from "@/lib/db";
 import { Expense, type IExpense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
-import { Settlement } from "@/lib/models/settlement";
-import { bulkExpenseUpdateSchema } from "@/lib/validations/bulk-expense";
+import { bulkExpenseUpdateSchema, bulkExpenseDeleteSchema } from "@/lib/validations/bulk-expense";
 import { withAuth, canModifyExpense } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
-import { handleExpenseChange, getOtherPersonKey } from "@/lib/action-lifecycle";
-import type { BulkEditResult } from "@/types/bulk-expense";
-
-function monthKey(date: Date): string {
-  return `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
-}
+import { handleExpenseChange, handleExpenseDelete, getOtherPersonKey } from "@/lib/action-lifecycle";
+import type { BulkEditResult, BulkDeleteResult } from "@/types/bulk-expense";
+import { monthKey, validateExpenseIds, fetchExpensesAndClosedMonths } from "./helpers";
 
 function computeTagUpdate(
   expense: IExpense,
@@ -137,11 +133,8 @@ export const PATCH = withAuth(async (req, session) => {
 
   const { expenseIds, tags, splitType, settlementType } = parsed.data;
 
-  for (const id of expenseIds) {
-    if (!mongoose.isValidObjectId(id)) {
-      return NextResponse.json({ error: `Invalid expense ID: ${id}` }, { status: 400 });
-    }
-  }
+  const idError = validateExpenseIds(expenseIds);
+  if (idError) return idError;
 
   if (tags) {
     for (const tagId of tags.tagIds) {
@@ -160,20 +153,7 @@ export const PATCH = withAuth(async (req, session) => {
     }
   }
 
-  const expenses = await Expense.find({ _id: { $in: expenseIds } });
-
-  const expenseDates = expenses.map((e) => e.date);
-  const monthKeys = [...new Set(expenseDates.map((d) => monthKey(d)))];
-  const monthPairs = monthKeys.map((k) => {
-    const [year, month] = k.split("-").map(Number);
-    return { month, year };
-  });
-
-  const closedSettlements = await Settlement.find({
-    $or: monthPairs.map(({ month, year }) => ({ month, year, status: { $ne: "open" } })),
-  }).lean();
-
-  const closedMonths = new Set(closedSettlements.map((s) => `${s.year}-${s.month}`));
+  const { expenses, closedMonths } = await fetchExpensesAndClosedMonths(expenseIds);
 
   const results: BulkEditResult[] = [];
   const readinessResetDates: Date[] = [];
@@ -204,4 +184,67 @@ export const PATCH = withAuth(async (req, session) => {
   const skippedCount = results.filter((r) => r.status === "skipped").length;
 
   return NextResponse.json({ results, summary: { updated: updatedCount, skipped: skippedCount } });
+});
+
+export const DELETE = withAuth(async (req, session) => {
+  const body = await req.json();
+  const parsed = bulkExpenseDeleteSchema.safeParse(body);
+  if (!parsed.success) return validationError(parsed);
+
+  const { expenseIds } = parsed.data;
+
+  const idError = validateExpenseIds(expenseIds);
+  if (idError) return idError;
+
+  await connectToDatabase();
+
+  const { expenses, closedMonths } = await fetchExpensesAndClosedMonths(expenseIds);
+
+  const allTagIds = [...new Set(expenses.flatMap((e) => e.tags.map((t: mongoose.Types.ObjectId) => t.toString())))];
+  const tagDocs = allTagIds.length > 0 ? await Tag.find({ _id: { $in: allTagIds } }).lean() : [];
+  const tagMap = new Map(tagDocs.map((t) => [t._id.toString(), t.path as string]));
+
+  const results: BulkDeleteResult[] = [];
+  const readinessResetDates: Date[] = [];
+
+  for (const expense of expenses) {
+    const isSettled = closedMonths.has(monthKey(expense.date));
+
+    if (isSettled) {
+      results.push({ expenseId: expense._id.toString(), status: "skipped", reason: "settled" });
+      continue;
+    }
+
+    if (!canModifyExpense(session, expense.paidBy)) {
+      results.push({ expenseId: expense._id.toString(), status: "skipped", reason: "not_owner" });
+      continue;
+    }
+
+    await Expense.findByIdAndDelete(expense._id);
+    await handleExpenseDelete(expense, session.user.paidByKey);
+
+    readinessResetDates.push(expense.date);
+
+    const tagNames = expense.tags
+      .map((t: mongoose.Types.ObjectId) => tagMap.get(t.toString()) ?? t.toString())
+      .join(", ");
+
+    await logActivity(
+      session.user.paidByKey,
+      "expense_delete",
+      `deleted ${formatCurrency(expense.amount)} at ${expense.where} (bulk delete)`,
+      { amount: expense.amount, where: expense.where, tagNames, paidBy: expense.paidBy, bulkDelete: true },
+    );
+
+    results.push({ expenseId: expense._id.toString(), status: "deleted" });
+  }
+
+  if (readinessResetDates.length > 0) {
+    await resetReadinessForMonths(session.user.paidByKey, readinessResetDates);
+  }
+
+  const deletedCount = results.filter((r) => r.status === "deleted").length;
+  const skippedCount = results.filter((r) => r.status === "skipped").length;
+
+  return NextResponse.json({ results, summary: { deleted: deletedCount, skipped: skippedCount } });
 });

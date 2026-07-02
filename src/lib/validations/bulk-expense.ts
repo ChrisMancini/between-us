@@ -20,3 +20,7 @@ export const bulkExpenseUpdateSchema = z
     { message: "At least one field (tags, splitType, or settlementType) must be provided" },
   );
 
+export const bulkExpenseDeleteSchema = z.object({
+  expenseIds: z.array(z.string().min(1)).min(1).max(500),
+});
+

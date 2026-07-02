@@ -17,7 +17,7 @@
 
 - [x] Duplicate detection on manual expense form (warn before saving if same date + amount exists)
 - [x] Bulk edit — select multiple expenses and change tag, split type, or settlement type at once
-- [ ] Bulk delete with confirmation
+- [x] Bulk delete with confirmation
 - [ ] Expand "where" search to also match notes field
 - [ ] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
 
