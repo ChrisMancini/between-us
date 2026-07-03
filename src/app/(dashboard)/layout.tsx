@@ -5,6 +5,7 @@ import { AppFooter } from "@/components/app-footer";
 import { NavLinks } from "@/components/nav-links";
 import { ActivityPoller } from "@/components/activity-poller";
 import { HotkeyHandler } from "@/components/hotkey-handler";
+import { QuickEntryFab } from "@/components/quick-entry/quick-entry-fab";
 import { PersonsProvider } from "@/components/persons-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeSync } from "@/components/theme-sync";
@@ -72,6 +73,7 @@ export default async function DashboardLayout({
           <ActivityPoller />
           <HotkeyHandler />
           {children}
+          <QuickEntryFab paidBy={session.user.paidByKey} />
         </PersonsProvider>
       </main>
 

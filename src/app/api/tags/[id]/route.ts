@@ -9,6 +9,7 @@ import { tagApiSchema } from "@/lib/validations/tag";
 import { serializeTag, ensureAncestors } from "@/lib/tag-utils";
 import { withAdmin } from "@/lib/auth-guard";
 import { validationError, invalidId, duplicateKeyResponse } from "@/lib/api-utils";
+import { escapeRegex } from "@/lib/escape-regex";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -49,7 +50,7 @@ export const PUT = withAdmin<RouteContext>(async (req, _session, context) => {
     }
 
     const descendants = await Tag.find({
-      path: { $regex: `^${oldPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/`, $options: "i" },
+      path: { $regex: `^${escapeRegex(oldPath)}/`, $options: "i" },
     });
 
     for (const desc of descendants) {
@@ -81,7 +82,7 @@ export const DELETE = withAdmin<RouteContext>(
     }
 
     const descendants = await Tag.find({
-      path: { $regex: `^${tag.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/`, $options: "i" },
+      path: { $regex: `^${escapeRegex(tag.path)}/`, $options: "i" },
     }).lean();
 
     const allIds = [

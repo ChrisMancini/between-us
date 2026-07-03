@@ -34,16 +34,22 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
   const searchParams = useSearchParams();
   const { persons, personMap } = usePersons();
   const [searchValue, setSearchValue] = useState(filters.q);
+  const lastPushedRef = useRef(filters.q);
 
-  // Sync search input when URL changes externally
+  // Sync search input only when URL changes externally (e.g. Reset button),
+  // not when the server echoes back a value we pushed ourselves.
   useEffect(() => {
-    setSearchValue(filters.q);
+    if (filters.q !== lastPushedRef.current) {
+      setSearchValue(filters.q);
+      lastPushedRef.current = filters.q;
+    }
   }, [filters.q]);
 
   // Debounce search → URL
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (searchValue !== filters.q) {
+      if (searchValue !== lastPushedRef.current) {
+        lastPushedRef.current = searchValue;
         pushParams({ q: searchValue });
       }
     }, 300);
@@ -72,7 +78,7 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
       <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search where..."
+          placeholder="Search expenses..."
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           className="pl-8 h-8"

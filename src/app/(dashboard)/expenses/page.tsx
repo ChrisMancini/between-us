@@ -6,9 +6,8 @@ import { Tag } from "@/lib/models/tag";
 import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import { serializeTag } from "@/lib/tag-utils";
-import { getMonthDateRange } from "@/lib/utils";
 import type { SerializedTag } from "@/lib/models/tag";
-import type { SerializedExpense } from "@/lib/models/expense";
+import { parseExpenseParams, buildExpenseQuery, serializeExpense } from "./_lib/expense-queries";
 import { ExpenseForm } from "./_components/expense-form";
 import { ExpenseList } from "./_components/expense-list";
 import { ExpenseFilters } from "./_components/expense-filters";
@@ -22,6 +21,10 @@ interface PageProps {
     paidBy?: string;
     month?: string;
     year?: string;
+    prefill_amount?: string;
+    prefill_where?: string;
+    prefill_date?: string;
+    prefill_tags?: string;
   }>;
 }
 
@@ -30,13 +33,7 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
   const paidBy = session?.user?.paidByKey ?? "";
 
   const params = await searchParams;
-  const now = new Date();
-
-  const month = params.month === "all" ? null : (params.month ? parseInt(params.month) : now.getMonth() + 1);
-  const year = params.year ? parseInt(params.year) : now.getFullYear();
-  const q = params.q?.trim() || "";
-  const tagFilter = params.tag || "";
-  const paidByFilter = params.paidBy || "";
+  const { month, year, q, tagFilter, paidByFilter, prefill, isFiltered } = parseExpenseParams(params);
 
   await connectToDatabase();
 
@@ -45,38 +42,10 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
     Settlement.find({ status: "closed" }, { month: 1, year: 1, _id: 0 }).lean(),
   ]);
 
-  const query: Record<string, unknown> = {};
-
-  if (month !== null) {
-    const { start, end } = getMonthDateRange(month, year);
-    query.date = { $gte: start, $lt: end };
-  }
-
-  if (q) {
-    query.where = { $regex: q, $options: "i" };
-  }
-
-  if (paidByFilter) {
-    query.paidBy = paidByFilter;
-  }
-
-  if (tagFilter) {
-    // Match by exact tag path or any descendant (hierarchical filter)
-    const matchingTag = rawTags.find(
-      (t) => t.path.toLowerCase() === tagFilter.toLowerCase()
-    );
-    if (matchingTag) {
-      // Find this tag and all descendants
-      const matchingIds = rawTags
-        .filter(
-          (t) =>
-            t._id.toString() === matchingTag._id.toString() ||
-            t.path.toLowerCase().startsWith(matchingTag.path.toLowerCase() + "/")
-        )
-        .map((t) => t._id);
-      query.tags = { $in: matchingIds };
-    }
-  }
+  const query = buildExpenseQuery(
+    { month, year, q, tagFilter, paidByFilter },
+    rawTags
+  );
 
   const rawExpenses = await Expense.find(query)
     .sort({ date: -1, createdAt: -1 })
@@ -90,28 +59,7 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
 
   const tags: SerializedTag[] = rawTags.map(serializeTag);
 
-  const expenses: SerializedExpense[] = rawExpenses.map((e) => {
-    const expTags = (e.tags ?? []) as unknown as Array<{
-      _id: { toString(): string };
-      path: string;
-      sortOrder: number;
-    }>;
-    return {
-      _id: e._id.toString(),
-      paidBy: e.paidBy,
-      date: (e.date as Date).toISOString(),
-      tags: expTags.map(serializeTag),
-      amount: e.amount,
-      where: e.where,
-      notes: e.notes,
-      splitType: e.splitType,
-      settlementType: e.settlementType,
-      createdAt: (e.createdAt as Date).toISOString(),
-      updatedAt: (e.updatedAt as Date).toISOString(),
-    };
-  });
-
-  const isFiltered = !!(q || tagFilter || paidByFilter);
+  const expenses = rawExpenses.map(serializeExpense);
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -133,9 +81,11 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
 
       <div className="border rounded-xl p-6 bg-card shadow-sm">
         <ExpenseForm
+          key={prefill ? JSON.stringify(prefill) : "default"}
           tags={tags}
           paidBy={paidBy}
           closedMonths={[...closedMonths]}
+          prefill={prefill}
         />
       </div>
 
@@ -155,6 +105,7 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
         closedMonths={closedMonths}
         isFiltered={isFiltered}
         currentUserKey={paidBy}
+        isAdmin={session?.user?.role === "admin"}
         tags={tags}
         closedMonthsList={[...closedMonths]}
       />
