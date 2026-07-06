@@ -11,6 +11,24 @@ import { withAuth } from "@/lib/auth-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { formatCurrency } from "@/lib/utils";
 import { createActionForSettlement } from "@/lib/action-lifecycle";
+import type { ISettlement, SerializedSettlement } from "@/lib/models/settlement";
+
+function serializeSettlement(doc: ISettlement): SerializedSettlement {
+  return {
+    _id: doc._id.toString(),
+    month: doc.month,
+    year: doc.year,
+    status: doc.status ?? "closed",
+    totalOwed: doc.totalOwed,
+    owedBy: doc.owedBy,
+    owedTo: doc.owedTo,
+    closedAt: doc.closedAt.toISOString(),
+    note: doc.note,
+    previousTotalOwed: doc.previousTotalOwed,
+    previousOwedBy: doc.previousOwedBy,
+    reopenedAt: doc.reopenedAt?.toISOString(),
+  };
+}
 
 function serializeExpenseRow(e: Record<string, unknown>): SettlementExpenseRow | null {
   const tags = e.tags as Array<Record<string, unknown>> | null;
@@ -66,19 +84,7 @@ export const GET = withAuth(async (req) => {
   if (existing && existing.status !== "open") {
     return NextResponse.json({
       status: "closed",
-      settlement: {
-        _id: existing._id.toString(),
-        month: existing.month,
-        year: existing.year,
-        status: existing.status ?? "closed",
-        totalOwed: existing.totalOwed,
-        owedBy: existing.owedBy,
-        owedTo: existing.owedTo,
-        closedAt: existing.closedAt.toISOString(),
-        previousTotalOwed: existing.previousTotalOwed,
-        previousOwedBy: existing.previousOwedBy,
-        reopenedAt: existing.reopenedAt?.toISOString(),
-      },
+      settlement: serializeSettlement(existing as ISettlement),
     });
   }
 
@@ -91,15 +97,18 @@ export const GET = withAuth(async (req) => {
       ? {
           totalOwed: existing.totalOwed,
           owedBy: existing.owedBy,
+          note: existing.note,
         }
       : null,
   });
 });
 
+// fallow-ignore-next-line complexity
 export const POST = withAuth(async (req, session) => {
   const body = await req.json();
   const month = parseInt(body.month);
   const year = parseInt(body.year);
+  const note = typeof body.note === "string" ? body.note.trim() || undefined : undefined;
 
   if (isNaN(month) || isNaN(year) || month < 1 || month > 12) {
     return NextResponse.json({ error: "Invalid month/year" }, { status: 400 });
@@ -138,6 +147,7 @@ export const POST = withAuth(async (req, session) => {
         owedBy,
         owedTo,
         closedAt: new Date(),
+        note,
       },
       { returnDocument: "after" },
     );
@@ -150,6 +160,7 @@ export const POST = withAuth(async (req, session) => {
       owedBy,
       owedTo,
       closedAt: new Date(),
+      note,
     });
   }
 
@@ -174,20 +185,45 @@ export const POST = withAuth(async (req, session) => {
   }
 
   return NextResponse.json(
-    {
-      settlement: {
-        _id: settlement!._id.toString(),
-        month: settlement!.month,
-        year: settlement!.year,
-        status: settlement!.status,
-        totalOwed: settlement!.totalOwed,
-        owedBy: settlement!.owedBy,
-        owedTo: settlement!.owedTo,
-        closedAt: settlement!.closedAt.toISOString(),
-        previousTotalOwed: settlement!.previousTotalOwed,
-        previousOwedBy: settlement!.previousOwedBy,
-      },
-    },
+    { settlement: serializeSettlement(settlement!) },
     { status: existing ? 200 : 201 },
   );
+});
+
+export const PATCH = withAuth(async (req) => {
+  const body = await req.json();
+  const month = parseInt(body.month);
+  const year = parseInt(body.year);
+
+  if (isNaN(month) || isNaN(year) || month < 1 || month > 12) {
+    return NextResponse.json({ error: "Invalid month/year" }, { status: 400 });
+  }
+
+  if (typeof body.note !== "string") {
+    return NextResponse.json({ error: "Note is required" }, { status: 400 });
+  }
+
+  const trimmed = body.note.trim();
+
+  await connectToDatabase();
+
+  const existing = await Settlement.findOne({ month, year });
+
+  if (!existing) {
+    return NextResponse.json({ error: "No settlement found" }, { status: 404 });
+  }
+
+  const update = trimmed
+    ? { $set: { note: trimmed } }
+    : { $unset: { note: 1 } };
+
+  const updated = await Settlement.findByIdAndUpdate(
+    existing._id,
+    update,
+    { returnDocument: "after" },
+  );
+
+  return NextResponse.json({
+    settlement: serializeSettlement(updated!),
+  });
 });

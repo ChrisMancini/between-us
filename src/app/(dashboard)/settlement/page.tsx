@@ -22,6 +22,7 @@ import { ExpenseDetailPopover } from "@/components/expense-detail-popover";
 import { CloseMonthDialog } from "./_components/close-month-dialog";
 import { ReopenMonthDialog } from "./_components/reopen-month-dialog";
 import { ReadinessStatus } from "./_components/readiness-status";
+import { SettlementNote } from "./_components/settlement-note";
 import { MonthReadiness } from "@/lib/models/month-readiness";
 import mongoose from "mongoose";
 
@@ -137,6 +138,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
           owedBy: existing.owedBy,
           owedTo: existing.owedTo,
           closedAt: existing.closedAt.toISOString(),
+          note: existing.note,
           previousTotalOwed: existing.previousTotalOwed,
           previousOwedBy: existing.previousOwedBy,
           reopenedAt: existing.reopenedAt?.toISOString(),
@@ -205,6 +207,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
                 newTotalOwed={breakdown.netAmount}
                 newOwedBy={breakdown.netOwedBy}
                 previous={previousSettlement}
+                existingNote={existing?.note}
                 disabled={(readiness?.doneBy?.length ?? 0) < 2}
               />
             )
@@ -347,6 +350,10 @@ export default async function SettlementPage({ searchParams }: PageProps) {
         person2={p2}
         personMap={personMap}
         label={formatMonthYear(month, year)}
+        note={isClosed ? closedSettlement!.note : existing?.note}
+        month={month}
+        year={year}
+        isClosed={isClosed}
       />
 
       {/* Deferred expense breakdown */}
@@ -390,6 +397,10 @@ function NetResultCard({
   person2,
   personMap,
   label,
+  note,
+  month,
+  year,
+  isClosed,
 }: {
   owedBy: string;
   amount: number;
@@ -399,6 +410,10 @@ function NetResultCard({
   person2: SerializedPerson;
   personMap: Map<string, SerializedPerson>;
   label: string;
+  note?: string;
+  month: number;
+  year: number;
+  isClosed: boolean;
 }) {
   const isEven = owedBy === "even";
   const payer = personMap.get(owedBy)?.displayName ?? owedBy;
@@ -434,6 +449,7 @@ function NetResultCard({
               </p>
             </div>
           )}
+          <SettlementNote month={month} year={year} note={note} isClosed={isClosed} />
         </div>
 
         {/* Breakdown */}

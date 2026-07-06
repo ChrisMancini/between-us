@@ -20,6 +20,7 @@
 - [x] Bulk delete with confirmation
 - [x] Expand "where" search to also match notes field
 - [x] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
+- [ ] Possible bug. I entered an expense that had a date in which no other expenses had been entered. There wasn't an expense at all for that month. I received a possible duplicate expense notification. 
 
 ## Activity Feed
 
@@ -30,7 +31,7 @@
 ## Settlement
 
 - [x] Settlement reminders — visual nudge on dashboard when a month is past due for closing
-- [ ] Settlement notes — optional free-text note when closing a month (e.g., "Paid via Zelle")
+- [x] Settlement notes — optional free-text note when closing a month (e.g., "Paid via Zelle")
 - [ ] Running balance — show cumulative unsettled amount across all open months, not just current
 
 ## Recurring Templates

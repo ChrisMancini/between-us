@@ -7,6 +7,7 @@ import { Settlement } from "@/lib/models/settlement";
 import { formatCurrency, formatMonthYear } from "@/lib/utils";
 import { PersonBadge } from "@/components/person-badge";
 import { getPersons, buildPersonMap, badgeProps } from "@/lib/persons";
+import { TruncatedNote } from "./_components/truncated-note";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,9 @@ export default async function SettlementHistoryPage() {
                 <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
                   Closed On
                 </th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
+                  Note
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -109,6 +113,13 @@ export default async function SettlementHistoryPage() {
                       day: "numeric",
                       year: "numeric",
                     })}
+                  </td>
+                  <td className="px-4 py-2.5 text-muted-foreground text-xs max-w-[200px]">
+                    {s.note ? (
+                      <TruncatedNote text={s.note} />
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

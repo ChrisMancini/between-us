@@ -74,6 +74,53 @@ describe("GET /api/settlement", () => {
     expect(body.settlement.totalOwed).toBe(10000);
   });
 
+  it("includes note in closed settlement response", async () => {
+    mockAuth.mockResolvedValue(makeSession());
+    const settlement = makeSettlement({ note: "Venmo'd on 7/3" });
+    asMock(Settlement.findOne).mockReturnValue({
+      lean: jest.fn().mockResolvedValue(settlement),
+    });
+
+    const res = await GET(
+      makeGetRequest("/api/settlement", { month: "4", year: "2026" })
+    );
+    const body = await expectStatus(res, 200);
+    expect(body.settlement.note).toBe("Venmo'd on 7/3");
+  });
+
+  it("includes note in previousSettlement for reopened month", async () => {
+    mockAuth.mockResolvedValue(makeSession());
+    const reopened = makeSettlement({
+      status: "open",
+      previousTotalOwed: 10000,
+      previousOwedBy: "john",
+      note: "Original Zelle payment",
+    });
+    asMock(Settlement.findOne).mockReturnValue({
+      lean: jest.fn().mockResolvedValue(reopened),
+    });
+    asMock(getPersons).mockResolvedValue([
+      { key: "john" },
+      { key: "jane" },
+    ]);
+    asMock(Expense.find).mockReturnValue({
+      populate: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue([]),
+      }),
+    });
+    asMock(calculateSettlement).mockReturnValue({
+      netAmount: 0,
+      netOwedBy: "even",
+    });
+
+    const res = await GET(
+      makeGetRequest("/api/settlement", { month: "4", year: "2026" })
+    );
+    const body = await expectStatus(res, 200);
+    expect(body.status).toBe("open");
+    expect(body.previousSettlement.note).toBe("Original Zelle payment");
+  });
+
   it("returns open breakdown when month is open", async () => {
     mockAuth.mockResolvedValue(makeSession());
     asMock(Settlement.findOne).mockReturnValue({

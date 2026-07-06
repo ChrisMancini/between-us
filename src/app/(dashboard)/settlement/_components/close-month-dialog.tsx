@@ -14,6 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { usePersons } from "@/components/persons-context";
 import { formatCurrency } from "@/lib/utils";
 
@@ -29,6 +31,7 @@ interface CloseMonthDialogProps {
   newTotalOwed: number;
   newOwedBy: string;
   previous?: PreviousSettlement;
+  existingNote?: string;
   disabled?: boolean;
 }
 
@@ -39,12 +42,14 @@ export function CloseMonthDialog({
   newTotalOwed,
   newOwedBy,
   previous,
+  existingNote,
   disabled,
 }: CloseMonthDialogProps) {
   const router = useRouter();
   const { personMap } = usePersons();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState(existingNote ?? "");
 
   const isReclose = !!previous;
 
@@ -94,7 +99,7 @@ export function CloseMonthDialog({
       const res = await fetch("/api/settlement", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month, year }),
+        body: JSON.stringify({ month, year, note: note.trim() || undefined }),
       });
 
       if (!res.ok) {
@@ -181,7 +186,21 @@ export function CloseMonthDialog({
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <div className="space-y-1.5">
+          <Label htmlFor="settlement-note" className="text-sm font-medium">
+            Payment note <span className="text-muted-foreground font-normal">(optional)</span>
+          </Label>
+          <Textarea
+            id="settlement-note"
+            placeholder="e.g., Paid via Zelle"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button
             variant="outline"
             onClick={() => setOpen(false)}

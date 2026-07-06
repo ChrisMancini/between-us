@@ -138,6 +138,7 @@ export function makeSettlement(overrides?: Partial<{
   owedBy: string;
   owedTo: string;
   closedAt: Date;
+  note: string;
   previousTotalOwed: number;
   previousOwedBy: string;
   reopenedAt: Date;
