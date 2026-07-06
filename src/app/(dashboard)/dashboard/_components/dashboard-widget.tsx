@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DashboardWidgetProps {
   id: string;
@@ -11,6 +12,7 @@ interface DashboardWidgetProps {
   collapsed: boolean;
   isDragActive: boolean;
   badge?: number;
+  indicatorDot?: string;
   onToggleCollapse: () => void;
   children: ReactNode;
 }
@@ -21,6 +23,7 @@ export function DashboardWidget({
   collapsed,
   isDragActive,
   badge,
+  indicatorDot,
   onToggleCollapse,
   children,
 }: DashboardWidgetProps) {
@@ -62,6 +65,14 @@ export function DashboardWidget({
             <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground align-text-top">
               {badge}
             </span>
+          )}
+          {collapsed && indicatorDot && (
+            <span
+              className={cn(
+                "ml-2 inline-block h-2.5 w-2.5 rounded-full",
+                indicatorDot
+              )}
+            />
           )}
         </p>
 

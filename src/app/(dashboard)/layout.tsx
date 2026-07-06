@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { getPersons } from "@/lib/persons";
 import { connectToDatabase } from "@/lib/db";
 import { UserPreference } from "@/lib/models/user-preference";
+import { getUnsettledMonthsForUser } from "@/lib/unsettled-months";
+import { SettlementReminderBanner } from "@/components/settlement-reminder-banner";
 
 export default async function DashboardLayout({
   children,
@@ -27,10 +29,13 @@ export default async function DashboardLayout({
   if (!persons) redirect("/setup");
 
   await connectToDatabase();
-  const prefs = await UserPreference.findOne(
-    { userId: session.user.id },
-    { theme: 1 }
-  ).lean();
+  const [prefs, unsettledMonthsForUser] = await Promise.all([
+    UserPreference.findOne(
+      { userId: session.user.id },
+      { theme: 1 }
+    ).lean(),
+    getUnsettledMonthsForUser(session.user.paidByKey),
+  ]);
   const savedTheme = prefs?.theme as string | undefined;
 
   return (
@@ -66,6 +71,8 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
+
+      <SettlementReminderBanner months={unsettledMonthsForUser} />
 
       <main className="flex-1 px-6 py-8 max-w-screen-xl mx-auto w-full">
         <PersonsProvider persons={persons}>

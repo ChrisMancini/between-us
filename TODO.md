@@ -29,7 +29,7 @@
 
 ## Settlement
 
-- [ ] Settlement reminders — visual nudge on dashboard when a month is past due for closing
+- [x] Settlement reminders — visual nudge on dashboard when a month is past due for closing
 - [ ] Settlement notes — optional free-text note when closing a month (e.g., "Paid via Zelle")
 - [ ] Running balance — show cumulative unsettled amount across all open months, not just current
 
@@ -40,6 +40,9 @@
 - [ ] Clone template — duplicate an existing template as a starting point for a new one
 
 ## UX Polish
+
+- [ ] Adopt `formatMonthYear({ omitCurrentYear: true })` across the app — when displaying contextual month labels (dashboard header, report titles, settlement status, empty states), omit the year for the current year to reduce noise (e.g., "June" instead of "June 2026"). Keep the year in historical contexts where dates span multiple years (settlement history table, activity feed entries, stored action descriptions). Candidate call sites: `dashboard/page.tsx` label, `reports/page.tsx` headings and empty state, `settlement/page.tsx` status label and empty state, `month-nav.tsx` header, `expense-form-fields.tsx` month display. Do not change `action-lifecycle.ts` (descriptions are stored) or `settlement-guard.ts` (error messages referencing specific months).
+
 
 - [ ] Loading skeletons for dashboard, reports, and expense list (Suspense boundaries with fallback UI)
 - [ ] Expense table card layout on mobile — swap `<table>` for stacked cards below `sm` breakpoint

@@ -13,10 +13,17 @@ export function formatCurrency(cents: number) {
   });
 }
 
-export function formatMonthYear(month: number, year: number): string {
-  return new Date(year, month - 1).toLocaleDateString("en-US", {
+export function formatMonthYear(month: number, year: number, options?: { omitCurrentYear?: boolean }): string {
+  if (options?.omitCurrentYear && year === new Date().getUTCFullYear()) {
+    return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", {
+      month: "long",
+      timeZone: "UTC",
+    });
+  }
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 

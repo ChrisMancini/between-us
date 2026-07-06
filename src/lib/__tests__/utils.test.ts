@@ -37,6 +37,33 @@ describe("formatMonthYear", () => {
   it("formats December", () => {
     expect(formatMonthYear(12, 2025)).toBe("December 2025");
   });
+
+  describe("omitCurrentYear", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(Date.UTC(2026, 5, 15)));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("omits year when it matches the current year", () => {
+      expect(formatMonthYear(5, 2026, { omitCurrentYear: true })).toBe("May");
+    });
+
+    it("includes year when it differs from the current year", () => {
+      expect(formatMonthYear(12, 2025, { omitCurrentYear: true })).toBe("December 2025");
+    });
+
+    it("always includes year when omitCurrentYear is false", () => {
+      expect(formatMonthYear(5, 2026, { omitCurrentYear: false })).toBe("May 2026");
+    });
+
+    it("always includes year when options are omitted", () => {
+      expect(formatMonthYear(5, 2026)).toBe("May 2026");
+    });
+  });
 });
 
 describe("parseMonthYearParams", () => {
