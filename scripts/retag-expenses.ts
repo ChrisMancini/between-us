@@ -57,6 +57,7 @@ function formatDate(date: Date): string {
   });
 }
 
+// fallow-ignore-next-line complexity
 async function main() {
   const args = process.argv.slice(2);
   const configPath = args.find((a) => !a.startsWith("--"));

@@ -32,6 +32,7 @@ function ask(question: string): Promise<string> {
   });
 }
 
+// fallow-ignore-next-line complexity
 async function main() {
   console.log("Connecting to MongoDB...");
   await mongoose.connect(MONGODB_URI!);
