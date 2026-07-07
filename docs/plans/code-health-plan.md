@@ -38,7 +38,9 @@ Extract shared two-phase confirmation pattern into `bulk-confirm-shared.tsx` (ho
 
 ## Target 5: Bulk expense PATCH handler
 
-Extract validation and update logic from `src/app/api/expenses/bulk/route.ts`.
+**Status:** Done
+
+Extract tag validation into `validateTagIds` helper in `helpers.ts`. Removes the last production-code complexity suppression.
 
 ## Target 6: CsvFormatFormDialog
 

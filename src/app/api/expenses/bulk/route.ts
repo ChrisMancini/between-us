@@ -12,7 +12,7 @@ import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
 import { handleExpenseChange, handleExpenseDelete, getOtherPersonKey } from "@/lib/action-lifecycle";
 import type { BulkEditResult, BulkDeleteResult } from "@/types/bulk-expense";
-import { monthKey, validateExpenseIds, fetchExpensesAndClosedMonths } from "./helpers";
+import { monthKey, validateExpenseIds, validateTagIds, fetchExpensesAndClosedMonths } from "./helpers";
 
 function computeTagUpdate(
   expense: IExpense,
@@ -125,7 +125,6 @@ async function applyAndLog(
   return { expenseId: expense._id.toString(), status: "updated", changedFields: changes };
 }
 
-// fallow-ignore-next-line complexity
 export const PATCH = withAuth(async (req, session) => {
   const body = await req.json();
   const parsed = bulkExpenseUpdateSchema.safeParse(body);
@@ -136,22 +135,10 @@ export const PATCH = withAuth(async (req, session) => {
   const idError = validateExpenseIds(expenseIds);
   if (idError) return idError;
 
-  if (tags) {
-    for (const tagId of tags.tagIds) {
-      if (!mongoose.isValidObjectId(tagId)) {
-        return NextResponse.json({ error: `Invalid tag ID: ${tagId}` }, { status: 400 });
-      }
-    }
-  }
-
   await connectToDatabase();
 
-  if (tags) {
-    const foundTags = await Tag.find({ _id: { $in: tags.tagIds } }).lean();
-    if (foundTags.length !== tags.tagIds.length) {
-      return NextResponse.json({ error: "One or more tags not found" }, { status: 422 });
-    }
-  }
+  const tagError = await validateTagIds(tags);
+  if (tagError) return tagError;
 
   const { expenses, closedMonths } = await fetchExpensesAndClosedMonths(expenseIds);
 
