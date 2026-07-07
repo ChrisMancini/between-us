@@ -6,12 +6,13 @@ export interface DuplicateMatch {
 
 export async function checkDuplicateExpenses(
   date: string,
-  amountCents: number
+  amountCents: number,
+  excludeId?: string
 ): Promise<DuplicateMatch[]> {
   try {
-    const res = await fetch(
-      `/api/expenses/check-duplicates?startDate=${date}&endDate=${date}`
-    );
+    const params = new URLSearchParams({ startDate: date, endDate: date });
+    if (excludeId) params.set("excludeId", excludeId);
+    const res = await fetch(`/api/expenses/check-duplicates?${params}`);
     if (!res.ok) return [];
     const data = await res.json();
     return (data.expenses as DuplicateMatch[]).filter(

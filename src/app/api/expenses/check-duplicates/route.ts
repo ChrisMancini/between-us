@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
 import { withAuth } from "@/lib/auth-guard";
@@ -7,6 +8,7 @@ export const GET = withAuth(async (req) => {
   const { searchParams } = req.nextUrl;
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
+  const excludeId = searchParams.get("excludeId");
 
   if (!startDate || !endDate) {
     return NextResponse.json(
@@ -27,8 +29,13 @@ export const GET = withAuth(async (req) => {
     );
   }
 
+  const filter: Record<string, unknown> = { date: { $gte: start, $lte: end } };
+  if (excludeId && mongoose.isValidObjectId(excludeId)) {
+    filter._id = { $ne: new mongoose.Types.ObjectId(excludeId) };
+  }
+
   const expenses = await Expense.find(
-    { date: { $gte: start, $lte: end } },
+    filter,
     { date: 1, amount: 1, where: 1 }
   ).lean();
 
