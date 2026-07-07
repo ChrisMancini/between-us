@@ -30,6 +30,54 @@ interface CsvFormatFormDialogProps {
   trigger: React.ReactElement;
 }
 
+const EMPTY_FORM: CsvFormatFormValues = {
+  name: "",
+  dateColumn: "",
+  dateFormat: "MM/DD/YYYY",
+  descriptionColumn: "",
+  amountType: "separate",
+  debitColumn: "",
+  creditColumn: "",
+  amountColumn: "",
+  purchaseSign: undefined,
+  tagColumn: "",
+  notesColumn: "",
+  tagMappings: [],
+};
+
+function buildDefaultValues(format?: SerializedCsvFormat): CsvFormatFormValues {
+  if (!format) return { ...EMPTY_FORM };
+  return {
+    name: format.name,
+    dateColumn: format.dateColumn,
+    dateFormat: format.dateFormat,
+    descriptionColumn: format.descriptionColumn,
+    amountType: format.amountType,
+    debitColumn: format.debitColumn ?? "",
+    creditColumn: format.creditColumn ?? "",
+    amountColumn: format.amountColumn ?? "",
+    purchaseSign: format.purchaseSign,
+    tagColumn: format.tagColumn ?? "",
+    notesColumn: format.notesColumn ?? "",
+    tagMappings: format.tagMappings,
+  };
+}
+
+type FieldError = { field: keyof CsvFormatFormValues; message: string };
+
+function validateAmountFields(values: CsvFormatFormValues): FieldError[] {
+  const errors: FieldError[] = [];
+  if (values.amountType === "separate") {
+    if (!values.debitColumn) errors.push({ field: "debitColumn", message: "Debit column is required" });
+    if (!values.creditColumn) errors.push({ field: "creditColumn", message: "Credit column is required" });
+  }
+  if (values.amountType === "single") {
+    if (!values.amountColumn) errors.push({ field: "amountColumn", message: "Amount column is required" });
+    if (!values.purchaseSign) errors.push({ field: "purchaseSign", message: "Purchase sign is required" });
+  }
+  return errors;
+}
+
 export function CsvFormatFormDialog({
   format,
   tags: initialTags,
@@ -40,20 +88,7 @@ export function CsvFormatFormDialog({
   const [open, setOpen] = useState(false);
   const [tags, setTags] = useState(initialTags);
 
-  const defaultValues: CsvFormatFormValues = {
-    name: format?.name ?? "",
-    dateColumn: format?.dateColumn ?? "",
-    dateFormat: format?.dateFormat ?? "MM/DD/YYYY",
-    descriptionColumn: format?.descriptionColumn ?? "",
-    amountType: format?.amountType ?? "separate",
-    debitColumn: format?.debitColumn ?? "",
-    creditColumn: format?.creditColumn ?? "",
-    amountColumn: format?.amountColumn ?? "",
-    purchaseSign: format?.purchaseSign,
-    tagColumn: format?.tagColumn ?? "",
-    notesColumn: format?.notesColumn ?? "",
-    tagMappings: format?.tagMappings ?? [],
-  };
+  const defaultValues = buildDefaultValues(format);
 
   const {
     register,
@@ -76,28 +111,11 @@ export function CsvFormatFormDialog({
   }
 
   async function onSubmit(values: CsvFormatFormValues) {
-    let hasError = false;
-    if (values.amountType === "separate") {
-      if (!values.debitColumn) {
-        setError("debitColumn", { message: "Debit column is required" });
-        hasError = true;
-      }
-      if (!values.creditColumn) {
-        setError("creditColumn", { message: "Credit column is required" });
-        hasError = true;
-      }
+    const fieldErrors = validateAmountFields(values);
+    if (fieldErrors.length > 0) {
+      for (const e of fieldErrors) setError(e.field, { message: e.message });
+      return;
     }
-    if (values.amountType === "single") {
-      if (!values.amountColumn) {
-        setError("amountColumn", { message: "Amount column is required" });
-        hasError = true;
-      }
-      if (!values.purchaseSign) {
-        setError("purchaseSign", { message: "Purchase sign is required" });
-        hasError = true;
-      }
-    }
-    if (hasError) return;
 
     const url = isEdit
       ? `/api/csv-formats/${format!._id}`

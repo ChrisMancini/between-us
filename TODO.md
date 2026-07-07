@@ -58,8 +58,8 @@
 - [ ] Reduce cyclomatic complexity in settlement POST handler (extract settlement creation logic)
 - [x] Reduce cyclomatic complexity in BulkEditConfirmDialog and BulkDeleteConfirmDialog (extract shared two-phase confirmation pattern)
 - [x] Reduce cyclomatic complexity in bulk expense PATCH handler
-- [ ] Reduce complexity in CsvFormatFormDialog
-- [ ] Reduce complexity in expense PUT handler
+- [x] Reduce complexity in CsvFormatFormDialog
+- [x] Reduce complexity in expense PUT handler
 - [ ] Reduce complexity in AuthSettingsForm handleSave
 - [ ] Reduce complexity in FileUploadStep complete
 - [ ] Reduce complexity in setup POST handler

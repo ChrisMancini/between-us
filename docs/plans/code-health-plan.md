@@ -44,11 +44,15 @@ Extract tag validation into `validateTagIds` helper in `helpers.ts`. Removes the
 
 ## Target 6: CsvFormatFormDialog
 
-Reduce complexity in `src/app/(dashboard)/admin/csv-formats/_components/csv-format-form-dialog.tsx`.
+**Status:** Done
+
+Extract `EMPTY_FORM` constant, `buildDefaultValues` function, and `validateAmountFields` function from `csv-format-form-dialog.tsx`. Eliminates all `??` branch pairs from the default-values path and moves validation branching outside the component.
 
 ## Target 7: Expense PUT handler
 
-Reduce complexity in `src/app/api/expenses/[id]/route.ts` PUT handler.
+**Status:** Done
+
+Extract `detectChanges` function from the PUT handler in `src/app/api/expenses/[id]/route.ts`. Moves 7 field comparisons into a standalone function.
 
 ## Target 8: AuthSettingsForm handleSave
 
