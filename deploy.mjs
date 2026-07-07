@@ -3,7 +3,7 @@
 import { execSync } from "node:child_process";
 
 const IMAGE = "ghcr.io/chrismancini/between-us:latest";
-const CONTAINER = process.argv[2] ?? "ghcr-io-chrismancini-between-us";
+const CONTAINER = process.argv[2] ?? "between-us";
 const NAS = "nas";
 const DOCKER = "sudo /volume1/@appstore/ContainerManager/usr/bin/docker";
 const ENV_FILE = "/volume1/docker/between-us/.env";
@@ -54,11 +54,11 @@ try {
   process.exit(1);
 }
 
-// ── 3. Recreate container with new image ─────────────────────────────────────
-console.log(`\nRecreating ${CONTAINER}...`);
+// ── 3. Remove existing container (if any) and start a fresh one ─────────────
+console.log(`\nDeploying ${CONTAINER}...`);
 try {
-  sshExec(`${DOCKER} stop ${CONTAINER}`);
-  sshExec(`${DOCKER} rm ${CONTAINER}`);
+  sshExec(`${DOCKER} stop ${CONTAINER} 2>/dev/null || true`, { stdio: "pipe" });
+  sshExec(`${DOCKER} rm ${CONTAINER} 2>/dev/null || true`, { stdio: "pipe" });
   sshExec(
     `${DOCKER} run -d` +
       ` --name ${CONTAINER}` +
@@ -69,10 +69,7 @@ try {
   );
 } catch {
   console.error(`
-  Error: Failed to recreate container "${CONTAINER}".
-
-  If this is a first-time setup, the container does not exist yet.
-  See the "Deploying to Synology NAS" section in README.md for initial setup.
+  Error: Failed to start container "${CONTAINER}".
 
   Make sure ${ENV_FILE} exists on the NAS with:
     MONGODB_URI=mongodb://<nas-ip>:27017/between-us
