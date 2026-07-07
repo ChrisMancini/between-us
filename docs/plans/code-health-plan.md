@@ -32,7 +32,9 @@ Extract settlement creation/closing logic from `src/app/api/settlement/route.ts`
 
 ## Target 4: BulkEditConfirmDialog / BulkDeleteConfirmDialog
 
-Extract shared two-phase confirmation pattern from both dialogs.
+**Status:** Done
+
+Extract shared two-phase confirmation pattern into `bulk-confirm-shared.tsx` (hook, utilities, results component). Both suppressions removed.
 
 ## Target 5: Bulk expense PATCH handler
 
