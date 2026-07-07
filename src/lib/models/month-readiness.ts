@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-interface IMonthReadiness extends Document {
+export interface IMonthReadiness extends Document {
   month: number;
   year: number;
   doneBy: string[];
