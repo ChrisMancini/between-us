@@ -250,7 +250,22 @@ printf 'administrator ALL=(root) NOPASSWD: /volume1/@appstore/ContainerManager/u
 sudo chmod 440 /etc/sudoers.d/docker-nopwd
 ```
 
-### 1. Pull the image (first-time only)
+### 1. Create the environment file on the NAS (one-time)
+
+The deploy script passes environment variables to the container via a file on the NAS. Create it once:
+
+```bash
+ssh nas "sudo mkdir -p /volume1/docker/between-us"
+ssh nas "sudo tee /volume1/docker/between-us/.env" <<'EOF'
+MONGODB_URI=mongodb://<nas-ip>:27017/between-us
+AUTH_SECRET=<generated-secret>
+AUTH_TRUST_HOST=true
+EOF
+```
+
+Generate a secret with `openssl rand -base64 32`. If you use OAuth providers, add their credentials to this file as well — see [Environment Variables](#environment-variables) for the full list.
+
+### 2. Pull the image (first-time only)
 
 Container Manager's GUI does not support third-party registries like ghcr.io — pull via SSH instead:
 
@@ -258,21 +273,18 @@ Container Manager's GUI does not support third-party registries like ghcr.io —
 ssh nas "sudo /volume1/@appstore/ContainerManager/usr/bin/docker pull ghcr.io/chrismancini/between-us:latest"
 ```
 
-### 2. Create the container (first-time only)
+### 3. Create the container (first-time only)
 
 1. Go to **Container** in the left sidebar
 2. Click **Create** and select the `ghcr.io/chrismancini/between-us:latest` image
 3. Configure the following:
    - **Container name:** `between-us`
    - **Port:** Map local port `3000` to container port `3000`
-   - **Environment variables:**
-     - `MONGODB_URI` = `mongodb://<nas-ip>:27017/between-us` (must start with `mongodb://` — no quotes, no extra characters)
-     - `AUTH_SECRET` = a generated secret (run `openssl rand -base64 32`)
-     - *(Optional)* OAuth provider credentials — see [Environment Variables](#environment-variables) for the full list of supported providers
+   - **Environment variables:** `MONGODB_URI`, `AUTH_SECRET`, and `AUTH_TRUST_HOST` (same values as the env file from step 1)
    - **Restart policy:** `always` (survives NAS restarts)
 4. Click **Apply** / **Done**
 
-### 3. Verify
+### 4. Verify
 
 Open `http://<nas-ip>:3000` in a browser. You should see the login page.
 
@@ -293,4 +305,4 @@ Open `http://<nas-ip>:3000` in a browser. You should see the login page.
 node deploy.mjs
 ```
 
-This pulls the latest image from `ghcr.io` directly on the NAS and restarts the container — no tar files, no GUI required.
+This pulls the latest image from `ghcr.io` directly on the NAS, then stops and removes the old container and creates a fresh one from the new image using the env file at `/volume1/docker/between-us/.env`. No manual steps in DSM required.

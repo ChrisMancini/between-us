@@ -6,6 +6,7 @@ const IMAGE = "ghcr.io/chrismancini/between-us:latest";
 const CONTAINER = process.argv[2] ?? "ghcr-io-chrismancini-between-us";
 const NAS = "nas";
 const DOCKER = "sudo /volume1/@appstore/ContainerManager/usr/bin/docker";
+const ENV_FILE = "/volume1/docker/between-us/.env";
 
 function sshExec(command, opts = {}) {
   return execSync(`ssh ${NAS} "${command}"`, { stdio: "inherit", ...opts });
@@ -53,18 +54,30 @@ try {
   process.exit(1);
 }
 
-// ── 3. Restart container ─────────────────────────────────────────────────────
-console.log(`\nRestarting ${CONTAINER}...`);
+// ── 3. Recreate container with new image ─────────────────────────────────────
+console.log(`\nRecreating ${CONTAINER}...`);
 try {
-  sshExec(`${DOCKER} restart ${CONTAINER}`);
+  sshExec(`${DOCKER} stop ${CONTAINER}`);
+  sshExec(`${DOCKER} rm ${CONTAINER}`);
+  sshExec(
+    `${DOCKER} run -d` +
+      ` --name ${CONTAINER}` +
+      ` -p 3000:3000` +
+      ` --restart always` +
+      ` --env-file ${ENV_FILE}` +
+      ` ${IMAGE}`
+  );
 } catch {
   console.error(`
-  Error: Failed to restart container "${CONTAINER}".
+  Error: Failed to recreate container "${CONTAINER}".
 
   If this is a first-time setup, the container does not exist yet.
   See the "Deploying to Synology NAS" section in README.md for initial setup.
 
-  If the container already exists, check Container Manager in DSM for details.
+  Make sure ${ENV_FILE} exists on the NAS with:
+    MONGODB_URI=mongodb://<nas-ip>:27017/between-us
+    AUTH_SECRET=<your-secret>
+    AUTH_TRUST_HOST=true
 `);
   process.exit(1);
 }
