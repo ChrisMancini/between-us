@@ -60,6 +60,18 @@ describe("checkDuplicateExpenses", () => {
     );
   });
 
+  it("includes excludeId in the query string when provided", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ expenses: [] }),
+    });
+
+    await checkDuplicateExpenses("2026-06-15", 4250, "abc123");
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/expenses/check-duplicates?startDate=2026-06-15&endDate=2026-06-15&excludeId=abc123"
+    );
+  });
+
   it("filters out expenses with different amounts", async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,

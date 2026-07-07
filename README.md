@@ -8,10 +8,14 @@ A shared expense tracker for two partners who share household expenses but maint
 
 ### Dashboard
 
+- Draggable, collapsible widget column with per-user layout preferences (drag to reorder, click to collapse — saved automatically)
 - At-a-glance current month spending summary with deferred/immediate and per-person breakdown
 - Settlement status showing who owes whom and whether the month is open or closed
+- Actions widget showing pending payments with "Mark Paid" and "Confirm Receipt" buttons
 - Recent expenses across all months
+- Partner activity feed showing the 5 most recent things your partner did
 - Quick-action links to log expenses, view reports, and manage settlement
+- Settlement reminder banner with escalating urgency when past months remain unsettled
 
 ### Expense Tracking
 
@@ -21,9 +25,13 @@ A shared expense tracker for two partners who share household expenses but maint
 - Create tags on the fly while entering expenses
 - Mark expenses as 50/50 split or full reimbursement
 - Choose settlement type per expense: deferred (monthly) or immediate
+- Quick-entry mode — floating action button opens a drawer for rapid logging (amount, where, date, tags) with smart defaults; supports "Save & add another" for batch entry
+- Duplicate detection — warns before saving if an expense with the same date and amount already exists
 - Edit unsettled expenses you created (all fields except payer)
 - Delete unsettled expenses you created, with confirmation dialog
-- Filter expenses by month, tag (hierarchical — selecting a parent matches descendants), payer, and merchant search
+- Bulk edit — select multiple expenses and change tags, split type, or settlement type at once
+- Bulk delete — select multiple expenses and delete with a single confirmation
+- Filter expenses by month, tag (hierarchical — selecting a parent matches descendants), payer, and search (matches both merchant and notes)
 - Month-by-month expense list with tag and payer badges
 
 ### Monthly Settlement
@@ -34,13 +42,15 @@ A shared expense tracker for two partners who share household expenses but maint
 - One-click month close calculates the net amount owed between partners
 - Separates expenses into "settled monthly" (deferred) and "settled immediately" (e.g. mortgage)
 - Reopen a closed month to add corrections, then re-close
+- Optional payment note when closing a month (e.g., "Paid via Zelle") — editable after closing
+- Running balance across all open months, netting everything into a single "who owes whom" figure
 - Settlement history page showing all past closed months at a glance
 - Alerts for reopened months and unsettled past months
 
 ### Reports
 
 - Monthly spending summary with deferred/immediate breakdown
-- Tag breakdown with visual bar charts (groupable by tag level)
+- Tag breakdown with visual bar charts
 - Person-by-tag matrix showing who paid what, with expandable drill-down to individual expenses
 - 6-month spending trend table
 
@@ -62,8 +72,7 @@ A shared expense tracker for two partners who share household expenses but maint
 
 ### Activity Feed
 
-- See what your partner has been doing — every expense, edit, deletion, settlement, template application, and CSV import is logged
-- Dashboard widget shows the 5 most recent partner activities at a glance
+- See what your partner has been doing — expenses, edits, deletions, settlements, template applications, CSV imports, done-flag changes, and payment actions are all logged
 - Dedicated `/activity` page with full history and cursor-based pagination
 - Filter toggle: view partner-only activity (default) or switch to all activity
 - Toast notifications — when your partner does something, a toast pops up within 30 seconds (polling-based, no WebSocket infrastructure needed)
@@ -80,6 +89,21 @@ A shared expense tracker for two partners who share household expenses but maint
 - Automatic duplicate detection — flags expenses that match existing entries by date and amount
 - Payments and credits are automatically excluded (only purchases are imported)
 - Available to both users from the Expenses page
+
+### Payment Tracking
+
+- When a month is closed, an action is created for the person who owes money
+- Three-step lifecycle: pending → paid → confirmed
+- The person who owes marks the payment as "Paid"; the person who is owed confirms receipt
+- Actions widget on the dashboard shows all pending and unconfirmed payments
+- Cancelled and confirmed actions are tracked in the activity feed
+
+### Keyboard Shortcuts
+
+- Global hotkeys for navigation: `g` then `d`/`e`/`r`/`s`/`t`/`a` to jump to Dashboard, Expenses, Reports, Settlement, Templates, or Activity
+- `n` to open quick entry from any page
+- `?` to show the shortcuts help dialog
+- Arrow keys on the date field to increment/decrement by one day
 
 ### Authentication
 
@@ -121,7 +145,7 @@ Two authentication methods are available, chosen during initial setup and change
 
 ### Admin
 
-- Tag management: add, edit, reorder, and delete hierarchical expense tags
+- Tag management: add, edit, and delete hierarchical expense tags
 - CSV format management: define column mappings for different credit card CSV exports
 - People management: view people and swap admin/user roles
 - Authentication settings: switch between person selector and OAuth, manage provider and email mappings
@@ -246,9 +270,11 @@ Make sure SSH is enabled on the NAS: **DSM → Control Panel → Terminal & SNMP
 The Docker socket on Synology is root-only. `deploy.mjs` uses `sudo` to run Docker commands, but `sudo` must be configured to not require a password for non-interactive SSH sessions. SSH into the NAS interactively and run:
 
 ```bash
-printf 'administrator ALL=(root) NOPASSWD: /volume1/@appstore/ContainerManager/usr/bin/docker\n' | sudo tee /etc/sudoers.d/docker-nopwd
+printf '<your-dsm-username> ALL=(root) NOPASSWD: /volume1/@appstore/ContainerManager/usr/bin/docker\n' | sudo tee /etc/sudoers.d/docker-nopwd
 sudo chmod 440 /etc/sudoers.d/docker-nopwd
 ```
+
+Replace `<your-dsm-username>` with the same DSM login you used in `~/.ssh/config`.
 
 ### 1. Create the environment file on the NAS (one-time)
 
@@ -265,26 +291,15 @@ EOF
 
 Generate a secret with `openssl rand -base64 32`. If you use OAuth providers, add their credentials to this file as well — see [Environment Variables](#environment-variables) for the full list.
 
-### 2. Pull the image (first-time only)
-
-Container Manager's GUI does not support third-party registries like ghcr.io — pull via SSH instead:
+### 2. Deploy
 
 ```bash
-ssh nas "sudo /volume1/@appstore/ContainerManager/usr/bin/docker pull ghcr.io/chrismancini/between-us:latest"
+node deploy.mjs
 ```
 
-### 3. Create the container (first-time only)
+This pulls the latest image from `ghcr.io`, creates (or recreates) a container named `between-us` on port 3000 with `--restart always`, and reads environment variables from the env file created in step 1. The same command works for both first-time setup and subsequent updates.
 
-1. Go to **Container** in the left sidebar
-2. Click **Create** and select the `ghcr.io/chrismancini/between-us:latest` image
-3. Configure the following:
-   - **Container name:** `between-us`
-   - **Port:** Map local port `3000` to container port `3000`
-   - **Environment variables:** `MONGODB_URI`, `AUTH_SECRET`, and `AUTH_TRUST_HOST` (same values as the env file from step 1)
-   - **Restart policy:** `always` (survives NAS restarts)
-4. Click **Apply** / **Done**
-
-### 4. Verify
+### 3. Verify
 
 Open `http://<nas-ip>:3000` in a browser. You should see the login page.
 
@@ -305,4 +320,4 @@ Open `http://<nas-ip>:3000` in a browser. You should see the login page.
 node deploy.mjs
 ```
 
-This pulls the latest image from `ghcr.io` directly on the NAS, then stops and removes the old container and creates a fresh one from the new image using the env file at `/volume1/docker/between-us/.env`. No manual steps in DSM required.
+Same command as the initial deploy — it pulls the latest image, replaces the running container, and preserves the env file configuration. No manual steps in DSM required.

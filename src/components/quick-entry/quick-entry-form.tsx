@@ -101,10 +101,11 @@ export function QuickEntryForm({
         return;
       }
 
+      const savedId: string | undefined = (await res.json()).expense?._id;
       toast.success("Expense added");
       router.refresh();
 
-      checkDuplicateExpenses(values.date, amountCents).then((matches) => {
+      checkDuplicateExpenses(values.date, amountCents, savedId).then((matches) => {
         if (matches.length > 0) {
           const match = matches[0];
           toast("Possible duplicate", {

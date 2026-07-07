@@ -40,6 +40,10 @@
 - [ ] Template usage history — show when a template was last applied and how many times total
 - [ ] Clone template — duplicate an existing template as a starting point for a new one
 
+## Documentation
+
+- [x] Revise "Deploying to Synology NAS" section in README — deploy.mjs now recreates the container automatically (stop → rm → run), and defaults to container name `ghcr-io-chrismancini-between-us`. The manual GUI setup instructions in step 3 and the container name are out of date.
+
 ## UX Polish
 
 - [ ] Adopt `formatMonthYear({ omitCurrentYear: true })` across the app — when displaying contextual month labels (dashboard header, report titles, settlement status, empty states), omit the year for the current year to reduce noise (e.g., "June" instead of "June 2026"). Keep the year in historical contexts where dates span multiple years (settlement history table, activity feed entries, stored action descriptions). Candidate call sites: `dashboard/page.tsx` label, `reports/page.tsx` headings and empty state, `settlement/page.tsx` status label and empty state, `month-nav.tsx` header, `expense-form-fields.tsx` month display. Do not change `action-lifecycle.ts` (descriptions are stored) or `settlement-guard.ts` (error messages referencing specific months).
