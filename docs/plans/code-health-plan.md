@@ -26,7 +26,9 @@ Page shrinks to ~130 lines composing extracted pieces. Unit tests cover the data
 
 ## Target 3: Settlement POST handler
 
-Extract settlement creation/closing logic from `src/app/api/settlement/route.ts` into a helper.
+**Status:** Done
+
+Extract settlement creation/closing logic from `src/app/api/settlement/route.ts` into `_helpers/close-month.ts`.
 
 ## Target 4: BulkEditConfirmDialog / BulkDeleteConfirmDialog
 
