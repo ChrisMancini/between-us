@@ -24,6 +24,57 @@ interface AuthSettingsFormProps {
   persons: PersonData[];
 }
 
+function validateOAuthSettings(
+  authMethod: string,
+  oauthProvider: string | null,
+  persons: PersonData[],
+  providerName: string | null,
+): string | null {
+  if (authMethod !== "oauth") return null;
+
+  if (!oauthProvider) return "Please select an OAuth provider.";
+
+  for (const p of persons) {
+    if (!(p.emails[oauthProvider] ?? "").trim()) {
+      return `${providerName} email is required for ${p.displayName}.`;
+    }
+  }
+
+  if (
+    persons.length === 2 &&
+    (persons[0].emails[oauthProvider] ?? "").toLowerCase() ===
+      (persons[1].emails[oauthProvider] ?? "").toLowerCase()
+  ) {
+    return "Email addresses must be different.";
+  }
+
+  return null;
+}
+
+function buildAuthPayload(
+  authMethod: string,
+  oauthProvider: string | null,
+  persons: PersonData[],
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    authMethod,
+    oauthProvider: authMethod === "oauth" ? oauthProvider : null,
+  };
+
+  if (authMethod === "oauth") {
+    payload.persons = persons.map((p) => ({
+      personKey: p.key,
+      emails: Object.fromEntries(
+        Object.entries(p.emails)
+          .filter(([, v]) => v.trim())
+          .map(([k, v]) => [k, v.trim().toLowerCase()])
+      ),
+    }));
+  }
+
+  return payload;
+}
+
 export function AuthSettingsForm({
   currentAuthMethod,
   currentProvider,
@@ -58,25 +109,9 @@ export function AuthSettingsForm({
   }
 
   async function handleSave() {
-    if (authMethod === "oauth" && oauthProvider) {
-      for (const p of persons) {
-        if (!(p.emails[oauthProvider] ?? "").trim()) {
-          toast.error(`${providerName} email is required for ${p.displayName}.`);
-          return;
-        }
-      }
-      if (
-        persons.length === 2 &&
-        (persons[0].emails[oauthProvider] ?? "").toLowerCase() ===
-          (persons[1].emails[oauthProvider] ?? "").toLowerCase()
-      ) {
-        toast.error("Email addresses must be different.");
-        return;
-      }
-    }
-
-    if (authMethod === "oauth" && !oauthProvider) {
-      toast.error("Please select an OAuth provider.");
+    const error = validateOAuthSettings(authMethod, oauthProvider, persons, providerName);
+    if (error) {
+      toast.error(error);
       return;
     }
 
@@ -86,22 +121,7 @@ export function AuthSettingsForm({
       const res = await fetch("/api/admin/auth", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          authMethod,
-          oauthProvider: authMethod === "oauth" ? oauthProvider : null,
-          ...(authMethod === "oauth"
-            ? {
-                persons: persons.map((p) => ({
-                  personKey: p.key,
-                  emails: Object.fromEntries(
-                    Object.entries(p.emails)
-                      .filter(([, v]) => v.trim())
-                      .map(([k, v]) => [k, v.trim().toLowerCase()])
-                  ),
-                })),
-              }
-            : {}),
-        }),
+        body: JSON.stringify(buildAuthPayload(authMethod, oauthProvider, persons)),
       });
 
       if (!res.ok) {

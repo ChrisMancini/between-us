@@ -56,12 +56,18 @@ Extract `detectChanges` function from the PUT handler in `src/app/api/expenses/[
 
 ## Target 8: AuthSettingsForm handleSave
 
-Reduce complexity in `src/app/(dashboard)/admin/auth/_components/auth-settings-form.tsx`.
+**Status:** Done
+
+Extract `validateOAuthSettings` and `buildAuthPayload` functions from `auth-settings-form.tsx`. Moves validation branching and payload construction outside `handleSave`.
 
 ## Target 9: FileUploadStep complete
 
-Reduce complexity in `src/app/(dashboard)/expenses/import/_components/file-upload-step.tsx`.
+**Status:** Done
+
+Extract `findMissingColumns` function from `file-upload-step.tsx`. Moves column validation branching out of the Papa.parse callback.
 
 ## Target 10: Setup POST handler
 
-Reduce complexity in `src/app/api/setup/route.ts` POST handler.
+**Status:** Done
+
+Extract `createStarterTags` function from `src/app/api/setup/route.ts`. Moves the tag creation loop with ancestor handling out of the POST handler.

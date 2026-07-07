@@ -18,6 +18,21 @@ import type { SerializedCsvFormat } from "@/lib/models/csv-format";
 import type { CsvParseResult } from "@/lib/csv-parsers/types";
 import { parseCsv } from "@/lib/csv-parsers/parse";
 
+function findMissingColumns(headers: string[], format: SerializedCsvFormat): string[] {
+  const required = [format.dateColumn, format.descriptionColumn];
+
+  if (format.amountType === "separate") {
+    if (format.debitColumn) required.push(format.debitColumn);
+    if (format.creditColumn) required.push(format.creditColumn);
+  } else {
+    if (format.amountColumn) required.push(format.amountColumn);
+  }
+
+  if (format.notesColumn) required.push(format.notesColumn);
+
+  return required.filter((col) => !headers.includes(col));
+}
+
 interface FileUploadStepProps {
   formats: SerializedCsvFormat[];
   onParsed: (result: CsvParseResult, format: SerializedCsvFormat) => void;
@@ -56,32 +71,8 @@ export function FileUploadStep({ formats, onParsed }: FileUploadStepProps) {
           return;
         }
 
-        // Validate that expected columns exist
         const headers = results.meta.fields ?? [];
-        const missingColumns: string[] = [];
-
-        if (!headers.includes(format.dateColumn)) {
-          missingColumns.push(format.dateColumn);
-        }
-        if (!headers.includes(format.descriptionColumn)) {
-          missingColumns.push(format.descriptionColumn);
-        }
-        if (format.amountType === "separate") {
-          if (format.debitColumn && !headers.includes(format.debitColumn)) {
-            missingColumns.push(format.debitColumn);
-          }
-          if (format.creditColumn && !headers.includes(format.creditColumn)) {
-            missingColumns.push(format.creditColumn);
-          }
-        } else {
-          if (format.amountColumn && !headers.includes(format.amountColumn)) {
-            missingColumns.push(format.amountColumn);
-          }
-        }
-
-        if (format.notesColumn && !headers.includes(format.notesColumn)) {
-          missingColumns.push(format.notesColumn);
-        }
+        const missingColumns = findMissingColumns(headers, format);
 
         if (missingColumns.length > 0) {
           toast.error(
