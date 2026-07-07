@@ -20,6 +20,36 @@ export interface SettlementBreakdown {
   deferredExpenses: SettlementExpenseRow[];
 }
 
+export interface RunningBalance {
+  netOwedBy: string | "even";
+  netAmount: number; // cents
+  monthCount: number;
+}
+
+export function calculateRunningBalance(
+  breakdowns: SettlementBreakdown[],
+  person1Key: string,
+  person2Key: string
+): RunningBalance {
+  let totalP1OwesP2 = 0;
+  let totalP2OwesP1 = 0;
+
+  for (const b of breakdowns) {
+    totalP1OwesP2 += b.person1OwesPerson2;
+    totalP2OwesP1 += b.person2OwesPerson1;
+  }
+
+  const net = totalP2OwesP1 - totalP1OwesP2;
+
+  if (net > 0) {
+    return { netOwedBy: person2Key, netAmount: net, monthCount: breakdowns.length };
+  } else if (net < 0) {
+    return { netOwedBy: person1Key, netAmount: Math.abs(net), monthCount: breakdowns.length };
+  } else {
+    return { netOwedBy: "even", netAmount: 0, monthCount: breakdowns.length };
+  }
+}
+
 export function calculateSettlement(
   expenses: SettlementExpenseRow[],
   person1Key: string,

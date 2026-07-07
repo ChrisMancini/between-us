@@ -1,4 +1,9 @@
-import { calculateSettlement, type SettlementExpenseRow } from "@/lib/settlement-calc";
+import {
+  calculateSettlement,
+  calculateRunningBalance,
+  type SettlementExpenseRow,
+  type SettlementBreakdown,
+} from "@/lib/settlement-calc";
 
 function makeExpense(
   overrides: Partial<SettlementExpenseRow> = {}
@@ -111,5 +116,100 @@ describe("calculateSettlement", () => {
     ];
     const result = calculateSettlement(expenses, "john", "jane");
     expect(result.person2OwesPerson1).toBe(800);
+  });
+});
+
+function makeBreakdown(
+  overrides: Partial<SettlementBreakdown> = {}
+): SettlementBreakdown {
+  return {
+    person1OwesPerson2: 0,
+    person2OwesPerson1: 0,
+    netOwedBy: "even",
+    netAmount: 0,
+    deferredExpenses: [],
+    ...overrides,
+  };
+}
+
+describe("calculateRunningBalance", () => {
+  it("returns even with monthCount 0 for empty array", () => {
+    const result = calculateRunningBalance([], "john", "jane");
+    expect(result).toEqual({
+      netOwedBy: "even",
+      netAmount: 0,
+      monthCount: 0,
+    });
+  });
+
+  it("passes through a single breakdown", () => {
+    const breakdowns = [
+      makeBreakdown({
+        person1OwesPerson2: 200,
+        person2OwesPerson1: 500,
+        netOwedBy: "jane",
+        netAmount: 300,
+      }),
+    ];
+    const result = calculateRunningBalance(breakdowns, "john", "jane");
+    expect(result).toEqual({
+      netOwedBy: "jane",
+      netAmount: 300,
+      monthCount: 1,
+    });
+  });
+
+  it("sums two breakdowns in the same direction", () => {
+    const breakdowns = [
+      makeBreakdown({ person1OwesPerson2: 0, person2OwesPerson1: 500 }),
+      makeBreakdown({ person1OwesPerson2: 0, person2OwesPerson1: 300 }),
+    ];
+    const result = calculateRunningBalance(breakdowns, "john", "jane");
+    expect(result).toEqual({
+      netOwedBy: "jane",
+      netAmount: 800,
+      monthCount: 2,
+    });
+  });
+
+  it("nets two breakdowns in opposing directions", () => {
+    const breakdowns = [
+      makeBreakdown({ person1OwesPerson2: 0, person2OwesPerson1: 700 }),
+      makeBreakdown({ person1OwesPerson2: 400, person2OwesPerson1: 0 }),
+    ];
+    const result = calculateRunningBalance(breakdowns, "john", "jane");
+    expect(result).toEqual({
+      netOwedBy: "jane",
+      netAmount: 300,
+      monthCount: 2,
+    });
+  });
+
+  it("returns even when breakdowns cancel out", () => {
+    const breakdowns = [
+      makeBreakdown({ person1OwesPerson2: 0, person2OwesPerson1: 500 }),
+      makeBreakdown({ person1OwesPerson2: 500, person2OwesPerson1: 0 }),
+    ];
+    const result = calculateRunningBalance(breakdowns, "john", "jane");
+    expect(result).toEqual({
+      netOwedBy: "even",
+      netAmount: 0,
+      monthCount: 2,
+    });
+  });
+
+  it("accumulates 3+ breakdowns correctly", () => {
+    const breakdowns = [
+      makeBreakdown({ person1OwesPerson2: 100, person2OwesPerson1: 400 }),
+      makeBreakdown({ person1OwesPerson2: 200, person2OwesPerson1: 100 }),
+      makeBreakdown({ person1OwesPerson2: 0, person2OwesPerson1: 300 }),
+    ];
+    // totals: p1OwesP2 = 300, p2OwesP1 = 800, net = 800-300 = 500 → jane owes
+    const result = calculateRunningBalance(breakdowns, "john", "jane");
+    expect(result).toEqual({
+      netOwedBy: "jane",
+      netAmount: 500,
+      monthCount: 3,
+    });
   });
 });

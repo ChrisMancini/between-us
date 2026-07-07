@@ -20,6 +20,7 @@
 - [x] Bulk delete with confirmation
 - [x] Expand "where" search to also match notes field
 - [x] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
+- [ ] Possible bug. I entered an expense that had a date in which no other expenses had been entered. There wasn't an expense at all for that month. I received a possible duplicate expense notification. 
 
 ## Activity Feed
 
@@ -29,9 +30,9 @@
 
 ## Settlement
 
-- [ ] Settlement reminders — visual nudge on dashboard when a month is past due for closing
-- [ ] Settlement notes — optional free-text note when closing a month (e.g., "Paid via Zelle")
-- [ ] Running balance — show cumulative unsettled amount across all open months, not just current
+- [x] Settlement reminders — visual nudge on dashboard when a month is past due for closing
+- [x] Settlement notes — optional free-text note when closing a month (e.g., "Paid via Zelle")
+- [x] Running balance — show cumulative unsettled amount across all open months, not just current
 
 ## Recurring Templates
 
@@ -41,6 +42,9 @@
 
 ## UX Polish
 
+- [ ] Adopt `formatMonthYear({ omitCurrentYear: true })` across the app — when displaying contextual month labels (dashboard header, report titles, settlement status, empty states), omit the year for the current year to reduce noise (e.g., "June" instead of "June 2026"). Keep the year in historical contexts where dates span multiple years (settlement history table, activity feed entries, stored action descriptions). Candidate call sites: `dashboard/page.tsx` label, `reports/page.tsx` headings and empty state, `settlement/page.tsx` status label and empty state, `month-nav.tsx` header, `expense-form-fields.tsx` month display. Do not change `action-lifecycle.ts` (descriptions are stored) or `settlement-guard.ts` (error messages referencing specific months).
+
+
 - [ ] Loading skeletons for dashboard, reports, and expense list (Suspense boundaries with fallback UI)
 - [ ] Expense table card layout on mobile — swap `<table>` for stacked cards below `sm` breakpoint
 - [ ] Inline expense editing — click a row to edit in-place instead of navigating away or opening a dialog
@@ -49,6 +53,8 @@
 
 ## Code Health
 
+- [ ] Reduce cyclomatic complexity in SettlementPage (extract data-fetching into helper, extract alert banners into components)
+- [ ] Reduce cyclomatic complexity in settlement POST handler (extract settlement creation logic)
 - [ ] Reduce cyclomatic complexity in BulkEditConfirmDialog and BulkDeleteConfirmDialog (extract shared two-phase confirmation pattern)
 - [ ] Reduce cyclomatic complexity in bulk expense PATCH handler
 

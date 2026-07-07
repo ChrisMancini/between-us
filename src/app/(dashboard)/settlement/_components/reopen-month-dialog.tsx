@@ -79,7 +79,7 @@ export function ReopenMonthDialog({
           dialog can show you exactly what changed.
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button
             variant="outline"
             onClick={() => setOpen(false)}

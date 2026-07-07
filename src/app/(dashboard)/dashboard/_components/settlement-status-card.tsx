@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   CheckCircle2,
-  AlertTriangle,
   ArrowRight,
   Minus,
 } from "lucide-react";
@@ -15,14 +14,12 @@ interface SettlementStatusCardProps {
   isClosed: boolean;
   netOwedBy: string;
   netAmount: number;
-  unsettledMonthCount: number;
 }
 
 export function SettlementStatusCard({
   isClosed,
   netOwedBy,
   netAmount,
-  unsettledMonthCount,
 }: SettlementStatusCardProps) {
   const { personMap } = usePersons();
   const isEven = netOwedBy === "even";
@@ -66,17 +63,6 @@ export function SettlementStatusCard({
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{payer}</span> owes{" "}
               <span className="font-medium text-foreground">{receiver}</span>
-            </p>
-          </div>
-        )}
-
-        {/* Unsettled past months warning */}
-        {unsettledMonthCount > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50 px-3 py-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" />
-            <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-              {unsettledMonthCount} past{" "}
-              {unsettledMonthCount === 1 ? "month" : "months"} not yet closed
             </p>
           </div>
         )}

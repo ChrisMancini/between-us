@@ -118,6 +118,59 @@ describe("POST /api/settlement", () => {
     );
   });
 
+  it("saves note when provided on close", async () => {
+    mockAuth.mockResolvedValue(makeSession());
+    asMock(Settlement.findOne).mockResolvedValue(null);
+    setupCommonMocks();
+    const created = {
+      _id: VALID_ID,
+      month: 4,
+      year: 2026,
+      status: "closed",
+      totalOwed: 5000,
+      owedBy: "john",
+      owedTo: "jane",
+      closedAt: new Date(),
+      note: "Paid via Zelle",
+    };
+    asMock(Settlement.create).mockResolvedValue(created);
+
+    const res = await POST(
+      makeJsonRequest("/api/settlement", { month: 4, year: 2026, note: "Paid via Zelle" })
+    );
+    const body = await expectStatus(res, 201);
+    expect(body.settlement.note).toBe("Paid via Zelle");
+    expect(Settlement.create).toHaveBeenCalledWith(
+      expect.objectContaining({ note: "Paid via Zelle" })
+    );
+  });
+
+  it("omits note when not provided", async () => {
+    mockAuth.mockResolvedValue(makeSession());
+    asMock(Settlement.findOne).mockResolvedValue(null);
+    setupCommonMocks();
+    const created = {
+      _id: VALID_ID,
+      month: 4,
+      year: 2026,
+      status: "closed",
+      totalOwed: 5000,
+      owedBy: "john",
+      owedTo: "jane",
+      closedAt: new Date(),
+    };
+    asMock(Settlement.create).mockResolvedValue(created);
+
+    const res = await POST(
+      makeJsonRequest("/api/settlement", { month: 4, year: 2026 })
+    );
+    const body = await expectStatus(res, 201);
+    expect(body.settlement.note).toBeUndefined();
+    expect(Settlement.create).toHaveBeenCalledWith(
+      expect.not.objectContaining({ note: expect.anything() })
+    );
+  });
+
   it("returns 200 when re-closing an open settlement", async () => {
     mockAuth.mockResolvedValue(makeSession());
     const existing = { _id: VALID_ID, status: "open" };
@@ -139,5 +192,35 @@ describe("POST /api/settlement", () => {
       makeJsonRequest("/api/settlement", { month: 4, year: 2026 })
     );
     await expectStatus(res, 200);
+  });
+
+  it("saves note when re-closing an open settlement", async () => {
+    mockAuth.mockResolvedValue(makeSession());
+    const existing = { _id: VALID_ID, status: "open" };
+    asMock(Settlement.findOne).mockResolvedValue(existing);
+    setupCommonMocks();
+    const updated = {
+      _id: VALID_ID,
+      month: 4,
+      year: 2026,
+      status: "closed",
+      totalOwed: 5000,
+      owedBy: "john",
+      owedTo: "jane",
+      closedAt: new Date(),
+      note: "Venmo'd on 7/3",
+    };
+    asMock(Settlement.findByIdAndUpdate).mockResolvedValue(updated);
+
+    const res = await POST(
+      makeJsonRequest("/api/settlement", { month: 4, year: 2026, note: "Venmo'd on 7/3" })
+    );
+    const body = await expectStatus(res, 200);
+    expect(body.settlement.note).toBe("Venmo'd on 7/3");
+    expect(Settlement.findByIdAndUpdate).toHaveBeenCalledWith(
+      VALID_ID,
+      expect.objectContaining({ note: "Venmo'd on 7/3" }),
+      expect.anything()
+    );
   });
 });

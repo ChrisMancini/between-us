@@ -19,6 +19,7 @@ import {
 import type { WidgetPreference, WidgetId } from "@/lib/widget-preferences";
 import type { SerializedActivity } from "@/lib/models/activity";
 import type { SerializedAction } from "@/lib/models/action";
+import { getHighestEscalationTier, ESCALATION_TIER_STYLES } from "@/lib/escalation-tiers";
 import { DashboardWidget } from "./dashboard-widget";
 import { SettlementStatusCard } from "./settlement-status-card";
 import { ActivityWidget } from "./activity-widget";
@@ -30,12 +31,12 @@ interface SettlementProps {
   isClosed: boolean;
   netOwedBy: string;
   netAmount: number;
-  unsettledMonthCount: number;
 }
 
 interface DashboardWidgetColumnProps {
   widgetPreferences: WidgetPreference[];
   settlementProps: SettlementProps;
+  unsettledMonths: Array<{ month: number; year: number }>;
   activities: SerializedActivity[];
   actions: SerializedAction[];
   currentUserKey: string;
@@ -51,6 +52,7 @@ const WIDGET_TITLES: Record<string, string> = {
 export function DashboardWidgetColumn({
   widgetPreferences,
   settlementProps,
+  unsettledMonths,
   activities,
   actions,
   currentUserKey,
@@ -105,7 +107,11 @@ export function DashboardWidgetColumn({
     switch (widgetId) {
       case "actions":
         return (
-          <ActionsWidget actions={actions} currentUserKey={currentUserKey} />
+          <ActionsWidget
+            actions={actions}
+            unsettledMonths={unsettledMonths}
+            currentUserKey={currentUserKey}
+          />
         );
       case "settlement-status":
         return <SettlementStatusCard {...settlementProps} />;
@@ -117,6 +123,8 @@ export function DashboardWidgetColumn({
         return null;
     }
   }
+
+  const escalationTier = getHighestEscalationTier(unsettledMonths);
 
   const visibleWidgets = preferences.filter(
     (w) => WIDGET_TITLES[w.widgetId] !== undefined
@@ -149,7 +157,12 @@ export function DashboardWidgetColumn({
                 title={title}
                 collapsed={widget.collapsed}
                 isDragActive={isDragActive}
-                badge={widget.widgetId === "actions" ? actions.length : undefined}
+                badge={widget.widgetId === "actions" ? actions.length + unsettledMonths.length : undefined}
+                indicatorDot={
+                  widget.widgetId === "actions" && escalationTier
+                    ? ESCALATION_TIER_STYLES[escalationTier].dot
+                    : undefined
+                }
                 onToggleCollapse={() =>
                   handleToggleCollapse(widget.widgetId)
                 }

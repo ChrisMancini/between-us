@@ -16,6 +16,7 @@ import { Action } from "@/lib/models/action";
 import type { SerializedAction } from "@/lib/models/action";
 import { UserPreference } from "@/lib/models/user-preference";
 import { mergeWidgetPreferences } from "@/lib/widget-preferences";
+import { getUnsettledMonthsForUser } from "@/lib/unsettled-months";
 import { SpendingSummaryCard } from "../reports/_components/spending-summary-card";
 import { RecentExpenses } from "./_components/recent-expenses";
 import { DashboardWidgetColumn } from "./_components/dashboard-widget-column";
@@ -39,12 +40,11 @@ export default async function DashboardPage() {
     spendingAgg,
     settlementRecord,
     recentRaw,
-    expenseMonths,
-    closedSettlements,
     currentMonthExpensesRaw,
     recentActivitiesRaw,
     activeActionsRaw,
     userPreferenceDoc,
+    unsettledMonths,
   ] = await Promise.all([
     // 1. Current month spending by settlement type × person
     Expense.aggregate<{
@@ -76,42 +76,19 @@ export default async function DashboardPage() {
       .populate("tags")
       .lean(),
 
-    // 4. Distinct expense months before current month (for unsettled check)
-    Expense.aggregate<{ _id: { month: number; year: number } }>([
-      {
-        $match: {
-          date: { $lt: new Date(Date.UTC(year, month - 1, 1)) },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            month: { $month: "$date" },
-            year: { $year: "$date" },
-          },
-        },
-      },
-    ]),
-
-    // 5. All closed settlements
-    Settlement.find(
-      { status: "closed" },
-      { month: 1, year: 1, _id: 0 }
-    ).lean(),
-
-    // 6. Current month expenses for settlement calculation
+    // 4. Current month expenses for settlement calculation
     Expense.find({ date: { $gte: start, $lt: end } })
       .sort({ date: 1, createdAt: 1 })
       .populate("tags")
       .lean(),
 
-    // 7. Recent partner activity for widget
+    // 5. Recent partner activity for widget
     Activity.find({ actorKey: { $ne: session.user.paidByKey } })
       .sort({ createdAt: -1 })
       .limit(5)
       .lean<IActivity[]>(),
 
-    // 8. Active actions for current user
+    // 6. Active actions for current user
     Action.find({
       $or: [
         { debtorKey: session.user.paidByKey },
@@ -123,8 +100,11 @@ export default async function DashboardPage() {
       .limit(10)
       .lean(),
 
-    // 9. User widget preferences
+    // 7. User widget preferences
     UserPreference.findOne({ userId: session.user.id }).lean(),
+
+    // 8. Unsettled months for this user
+    getUnsettledMonthsForUser(session.user.paidByKey),
   ]);
 
   // ── Spending summary totals ───────────────────────────────────────────
@@ -182,14 +162,6 @@ export default async function DashboardPage() {
   const netAmount = isClosed
     ? settlementRecord!.totalOwed
     : breakdown.netAmount;
-
-  // ── Unsettled past months ─────────────────────────────────────────────
-  const closedSet = new Set(
-    closedSettlements.map((s) => `${s.year}-${s.month}`)
-  );
-  const unsettledMonthCount = expenseMonths
-    .map((e) => e._id)
-    .filter((m) => !closedSet.has(`${m.year}-${m.month}`)).length;
 
   // ── Recent expenses ───────────────────────────────────────────────────
   const recentExpenses = (
@@ -289,8 +261,8 @@ export default async function DashboardPage() {
             isClosed,
             netOwedBy,
             netAmount,
-            unsettledMonthCount,
           }}
+          unsettledMonths={unsettledMonths}
           activities={recentActivities}
           actions={activeActions}
           currentUserKey={session.user.paidByKey}

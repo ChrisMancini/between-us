@@ -8,6 +8,7 @@ export interface ISettlement extends Document {
   owedBy: string;
   owedTo: string;
   closedAt: Date;
+  note?: string;
   // Set when a closed month is reopened; cleared on re-close
   previousTotalOwed?: number;
   previousOwedBy?: string;
@@ -23,6 +24,7 @@ export interface SerializedSettlement {
   owedBy: string;
   owedTo: string;
   closedAt: string;
+  note?: string;
   previousTotalOwed?: number;
   previousOwedBy?: string;
   reopenedAt?: string;
@@ -36,6 +38,7 @@ const SettlementSchema = new Schema<ISettlement>({
   owedBy: { type: String, required: true },
   owedTo: { type: String, required: true },
   closedAt: { type: Date, required: true },
+  note: { type: String },
   previousTotalOwed: { type: Number },
   previousOwedBy: { type: String },
   reopenedAt: { type: Date },
