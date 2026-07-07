@@ -1,0 +1,73 @@
+# Code Health Plan
+
+Reduce cyclomatic/cognitive complexity flagged by fallow, targeting a clean `npm run fallow` build with zero `fallow-ignore-next-line complexity` suppressions on production code.
+
+## Target 1: Suppress migration scripts
+
+**Status:** Done
+
+Add `// fallow-ignore-next-line complexity` to run-once migration scripts. These are operational scripts, not production code — suppression is the right call.
+
+- `scripts/migrate-categories-to-tags.ts` — `main()`
+- `scripts/retag-expenses.ts` — `main()`
+
+## Target 2: SettlementPage — extract data-fetching and components
+
+**Status:** Done
+
+Extract the 589-line `page.tsx` into focused files:
+
+- `_helpers/fetch-settlement-data.ts` — all DB queries, serialization, calculation
+- `_components/settlement-alerts.tsx` — reopened/unsettled/closed alert banners
+- `_components/net-result-card.tsx` — net result display with running balance
+- `_components/expense-table.tsx` — expense breakdown table
+
+Page shrinks to ~130 lines composing extracted pieces. Unit tests cover the data-fetching helper.
+
+## Target 3: Settlement POST handler
+
+**Status:** Done
+
+Extract settlement creation/closing logic from `src/app/api/settlement/route.ts` into `_helpers/close-month.ts`.
+
+## Target 4: BulkEditConfirmDialog / BulkDeleteConfirmDialog
+
+**Status:** Done
+
+Extract shared two-phase confirmation pattern into `bulk-confirm-shared.tsx` (hook, utilities, results component). Both suppressions removed.
+
+## Target 5: Bulk expense PATCH handler
+
+**Status:** Done
+
+Extract tag validation into `validateTagIds` helper in `helpers.ts`. Removes the last production-code complexity suppression.
+
+## Target 6: CsvFormatFormDialog
+
+**Status:** Done
+
+Extract `EMPTY_FORM` constant, `buildDefaultValues` function, and `validateAmountFields` function from `csv-format-form-dialog.tsx`. Eliminates all `??` branch pairs from the default-values path and moves validation branching outside the component.
+
+## Target 7: Expense PUT handler
+
+**Status:** Done
+
+Extract `detectChanges` function from the PUT handler in `src/app/api/expenses/[id]/route.ts`. Moves 7 field comparisons into a standalone function.
+
+## Target 8: AuthSettingsForm handleSave
+
+**Status:** Done
+
+Extract `validateOAuthSettings` and `buildAuthPayload` functions from `auth-settings-form.tsx`. Moves validation branching and payload construction outside `handleSave`.
+
+## Target 9: FileUploadStep complete
+
+**Status:** Done
+
+Extract `findMissingColumns` function from `file-upload-step.tsx`. Moves column validation branching out of the Papa.parse callback.
+
+## Target 10: Setup POST handler
+
+**Status:** Done
+
+Extract `createStarterTags` function from `src/app/api/setup/route.ts`. Moves the tag creation loop with ancestor handling out of the POST handler.

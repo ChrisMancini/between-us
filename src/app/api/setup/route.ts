@@ -58,6 +58,24 @@ const setupSchema = z
     { message: "Email addresses must be different" }
   );
 
+async function createStarterTags(paths: unknown): Promise<void> {
+  if (!Array.isArray(paths) || paths.length === 0) return;
+
+  let sortOrder = 1;
+  for (const path of paths) {
+    if (typeof path !== "string" || !path.trim()) continue;
+    const trimmed = path.trim();
+    await ensureAncestors(trimmed);
+    const existing = await Tag.findOne({ path: trimmed }).collation({
+      locale: "en",
+      strength: 2,
+    });
+    if (!existing) {
+      await Tag.create({ path: trimmed, sortOrder: sortOrder++ });
+    }
+  }
+}
+
 export async function POST(req: Request) {
   const body = await req.json();
   const parsed = setupSchema.safeParse(body);
@@ -99,23 +117,7 @@ export async function POST(req: Request) {
     { upsert: true }
   );
 
-  // Create optional starter tags from the setup wizard
-  const tags = body.tags as string[] | undefined;
-  if (tags && Array.isArray(tags) && tags.length > 0) {
-    let sortOrder = 1;
-    for (const path of tags) {
-      if (typeof path === "string" && path.trim()) {
-        await ensureAncestors(path.trim());
-        const existing = await Tag.findOne({ path: path.trim() }).collation({
-          locale: "en",
-          strength: 2,
-        });
-        if (!existing) {
-          await Tag.create({ path: path.trim(), sortOrder: sortOrder++ });
-        }
-      }
-    }
-  }
+  await createStarterTags(body.tags);
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

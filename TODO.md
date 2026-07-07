@@ -53,10 +53,16 @@
 
 ## Code Health
 
-- [ ] Reduce cyclomatic complexity in SettlementPage (extract data-fetching into helper, extract alert banners into components)
-- [ ] Reduce cyclomatic complexity in settlement POST handler (extract settlement creation logic)
-- [ ] Reduce cyclomatic complexity in BulkEditConfirmDialog and BulkDeleteConfirmDialog (extract shared two-phase confirmation pattern)
-- [ ] Reduce cyclomatic complexity in bulk expense PATCH handler
+- [x] Suppress migration script complexity (run-once scripts, not production code)
+- [x] Reduce cyclomatic complexity in SettlementPage (extract data-fetching into helper, extract alert banners into components)
+- [x] Reduce cyclomatic complexity in settlement POST handler (extract settlement creation logic)
+- [x] Reduce cyclomatic complexity in BulkEditConfirmDialog and BulkDeleteConfirmDialog (extract shared two-phase confirmation pattern)
+- [x] Reduce cyclomatic complexity in bulk expense PATCH handler
+- [x] Reduce complexity in CsvFormatFormDialog
+- [x] Reduce complexity in expense PUT handler
+- [x] Reduce complexity in AuthSettingsForm handleSave
+- [x] Reduce complexity in FileUploadStep complete
+- [x] Reduce complexity in setup POST handler
 
 ## Reliability
 

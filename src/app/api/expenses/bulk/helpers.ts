@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { Expense, type IExpense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
+import { Tag } from "@/lib/models/tag";
 
 export function monthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}`;
@@ -13,6 +14,25 @@ export function validateExpenseIds(ids: string[]): NextResponse | null {
       return NextResponse.json({ error: `Invalid expense ID: ${id}` }, { status: 400 });
     }
   }
+  return null;
+}
+
+export async function validateTagIds(
+  tags: { tagIds: string[] } | undefined,
+): Promise<NextResponse | null> {
+  if (!tags) return null;
+
+  for (const tagId of tags.tagIds) {
+    if (!mongoose.isValidObjectId(tagId)) {
+      return NextResponse.json({ error: `Invalid tag ID: ${tagId}` }, { status: 400 });
+    }
+  }
+
+  const foundTags = await Tag.find({ _id: { $in: tags.tagIds } }).lean();
+  if (foundTags.length !== tags.tagIds.length) {
+    return NextResponse.json({ error: "One or more tags not found" }, { status: 422 });
+  }
+
   return null;
 }
 

@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +11,12 @@ import {
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import type { SerializedExpense } from "@/lib/models/expense";
-import type { BulkDeleteResponse, BulkDeleteResult } from "@/types/bulk-expense";
+import type { BulkDeleteResponse } from "@/types/bulk-expense";
+import {
+  monthKeyFromDate,
+  BulkConfirmResults,
+  useBulkConfirmDialog,
+} from "./bulk-confirm-shared";
 
 interface BulkDeleteConfirmDialogProps {
   open: boolean;
@@ -25,33 +28,6 @@ interface BulkDeleteConfirmDialogProps {
   onDone: () => void;
 }
 
-const SKIP_REASON_LABELS: Record<string, string> = {
-  settled: "month is settled",
-  not_owner: "not your expense",
-};
-
-function monthKeyFromDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
-}
-
-function SkipReasonsList({ results }: { results: BulkDeleteResult[] }) {
-  const reasons: Record<string, number> = {};
-  for (const r of results) {
-    if (r.status === "skipped" && r.reason) {
-      reasons[r.reason] = (reasons[r.reason] ?? 0) + 1;
-    }
-  }
-  return (
-    <div className="text-xs text-muted-foreground space-y-1">
-      {Object.entries(reasons).map(([reason, count]) => (
-        <p key={reason}>{count} skipped: {SKIP_REASON_LABELS[reason] ?? reason}</p>
-      ))}
-    </div>
-  );
-}
-
-// fallow-ignore-next-line complexity
 export function BulkDeleteConfirmDialog({
   open,
   onOpenChange,
@@ -61,10 +37,8 @@ export function BulkDeleteConfirmDialog({
   isAdmin = false,
   onDone,
 }: BulkDeleteConfirmDialogProps) {
-  const router = useRouter();
-  const [phase, setPhase] = useState<"confirming" | "results">("confirming");
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<BulkDeleteResponse | null>(null);
+  const { phase, loading, results, handleDone, handleOpenChange, submitBulkAction } =
+    useBulkConfirmDialog<BulkDeleteResponse["summary"]>(onDone);
 
   const canModify = (paidBy: string) => isAdmin || paidBy === currentUserKey;
 
@@ -74,46 +48,8 @@ export function BulkDeleteConfirmDialog({
   const ineligibleCount = selectedExpenses.length - eligible.length;
   const eligibleTotal = eligible.reduce((sum, e) => sum + e.amount, 0);
 
-  async function handleDelete() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/expenses/bulk", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expenseIds: selectedExpenses.map((e) => e._id),
-        }),
-      });
-
-      const data: BulkDeleteResponse = res.ok
-        ? await res.json()
-        : { results: [], summary: { deleted: 0, skipped: selectedExpenses.length } };
-
-      setResults(data);
-      setPhase("results");
-      if (res.ok) router.refresh();
-    } catch {
-      setResults({ results: [], summary: { deleted: 0, skipped: selectedExpenses.length } });
-      setPhase("results");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleDone() {
-    setPhase("confirming");
-    setResults(null);
-    onDone();
-  }
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) {
-      if (phase === "results") handleDone(); else onOpenChange(false);
-    }
-  }
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => handleOpenChange(next, onOpenChange)}>
       <DialogContent className="sm:max-w-md">
         {phase === "confirming" ? (
           <>
@@ -148,7 +84,13 @@ export function BulkDeleteConfirmDialog({
               </Button>
               <Button
                 variant="destructive"
-                onClick={handleDelete}
+                onClick={() =>
+                  submitBulkAction({
+                    method: "DELETE",
+                    body: { expenseIds: selectedExpenses.map((e) => e._id) },
+                    fallbackSummary: { deleted: 0, skipped: selectedExpenses.length },
+                  })
+                }
                 disabled={loading || eligible.length === 0}
               >
                 {loading ? "Deleting…" : "Delete"}
@@ -156,24 +98,13 @@ export function BulkDeleteConfirmDialog({
             </DialogFooter>
           </>
         ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>Bulk Delete Complete</DialogTitle>
-              <DialogDescription>
-                {results
-                  ? `${results.summary.deleted} ${results.summary.deleted === 1 ? "expense" : "expenses"} deleted${results.summary.skipped > 0 ? `, ${results.summary.skipped} skipped` : ""}.`
-                  : "Something went wrong."}
-              </DialogDescription>
-            </DialogHeader>
-
-            {results && results.summary.skipped > 0 && (
-              <SkipReasonsList results={results.results} />
-            )}
-
-            <DialogFooter>
-              <Button onClick={handleDone}>Done</Button>
-            </DialogFooter>
-          </>
+          <BulkConfirmResults
+            title="Delete"
+            successCount={results?.summary.deleted ?? 0}
+            skippedCount={results?.summary.skipped ?? 0}
+            results={results?.results ?? null}
+            onDone={handleDone}
+          />
         )}
       </DialogContent>
     </Dialog>

@@ -18,6 +18,23 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+function detectChanges(
+  existing: IExpense,
+  updated: { date: string; tagIds: string[]; amount: number; where: string; notes?: string; splitType: string; settlementType: string },
+): string[] {
+  const changes: string[] = [];
+  if (existing.amount !== updated.amount) changes.push("amount");
+  if (existing.where !== updated.where) changes.push("where");
+  const oldTagIds = existing.tags.map((t: mongoose.Types.ObjectId) => t.toString()).sort().join(",");
+  const newTagIds = [...updated.tagIds].sort().join(",");
+  if (oldTagIds !== newTagIds) changes.push("tags");
+  if (existing.date.toISOString() !== new Date(updated.date).toISOString()) changes.push("date");
+  if (existing.splitType !== updated.splitType) changes.push("split type");
+  if (existing.settlementType !== updated.settlementType) changes.push("settlement type");
+  if ((existing.notes ?? "") !== (updated.notes ?? "")) changes.push("notes");
+  return changes;
+}
+
 export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const { id } = await context.params;
   const idErr = invalidId(id);
@@ -73,17 +90,7 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
 
   await resetReadinessForMonths(session.user.paidByKey, [existing.date, date]);
 
-  const changes: string[] = [];
-  if (existing.amount !== amount) changes.push("amount");
-  if (existing.where !== where) changes.push("where");
-  const oldTagIds = existing.tags.map((t: mongoose.Types.ObjectId) => t.toString()).sort().join(",");
-  const newTagIds = tagIds.sort().join(",");
-  if (oldTagIds !== newTagIds) changes.push("tags");
-  if (existing.date.toISOString() !== new Date(date).toISOString()) changes.push("date");
-  if (existing.splitType !== splitType) changes.push("split type");
-  if (existing.settlementType !== settlementType) changes.push("settlement type");
-  if ((existing.notes ?? "") !== (notes ?? "")) changes.push("notes");
-
+  const changes = detectChanges(existing, { date, tagIds, amount, where, notes, splitType, settlementType });
   const changedLabel = changes.length > 0 ? ` (${changes.join(", ")})` : "";
   const tagNames = tags.map((t) => t.path).join(", ");
 
