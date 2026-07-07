@@ -12,7 +12,9 @@ import type { SerializedSettlement } from "@/lib/models/settlement";
 import {
   calculateSettlement,
   type SettlementExpenseRow,
+  type RunningBalance,
 } from "@/lib/settlement-calc";
+import { fetchRunningBalance } from "@/lib/running-balance-data";
 import { serializeTag } from "@/lib/tag-utils";
 import { getPersons, buildPersonMap, badgeProps } from "@/lib/persons";
 import type { SerializedPerson } from "@/lib/models/person";
@@ -32,6 +34,7 @@ interface PageProps {
   searchParams: Promise<{ month?: string; year?: string }>;
 }
 
+// fallow-ignore-next-line complexity
 export default async function SettlementPage({ searchParams }: PageProps) {
   const session = await auth();
   if (!session) redirect("/login");
@@ -157,6 +160,20 @@ export default async function SettlementPage({ searchParams }: PageProps) {
           owedBy: existing.previousOwedBy as string,
         }
       : undefined;
+
+  const runningBalance = await fetchRunningBalance({
+    unsettledMonths,
+    reopenedSettlements: reopenedSettlements.map((s) => ({ month: s.month, year: s.year })),
+    closedSet,
+    currentMonth,
+    currentYear,
+    viewedMonth: month,
+    viewedYear: year,
+    isClosed,
+    viewedBreakdown: breakdown,
+    person1Key: p1.key,
+    person2Key: p2.key,
+  });
 
   function netSummaryText(owedBy: string, amount: number) {
     if (owedBy === "even") return "All settled — no money changes hands";
@@ -354,6 +371,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
         month={month}
         year={year}
         isClosed={isClosed}
+        runningBalance={runningBalance}
       />
 
       {/* Deferred expense breakdown */}
@@ -401,6 +419,7 @@ function NetResultCard({
   month,
   year,
   isClosed,
+  runningBalance,
 }: {
   owedBy: string;
   amount: number;
@@ -414,6 +433,7 @@ function NetResultCard({
   month: number;
   year: number;
   isClosed: boolean;
+  runningBalance?: RunningBalance | null;
 }) {
   const isEven = owedBy === "even";
   const payer = personMap.get(owedBy)?.displayName ?? owedBy;
@@ -448,6 +468,13 @@ function NetResultCard({
                 <span className="font-medium text-foreground">{receiver}</span>
               </p>
             </div>
+          )}
+          {runningBalance && runningBalance.monthCount >= 2 && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {runningBalance.netOwedBy === "even"
+                ? `All even across ${runningBalance.monthCount} open months`
+                : `${personMap.get(runningBalance.netOwedBy)?.displayName ?? runningBalance.netOwedBy} owes ${[...personMap.values()].find((p) => p.key !== runningBalance.netOwedBy)?.displayName ?? ""} ${formatCurrency(runningBalance.netAmount)} across ${runningBalance.monthCount} open months`}
+            </p>
           )}
           <SettlementNote month={month} year={year} note={note} isClosed={isClosed} />
         </div>

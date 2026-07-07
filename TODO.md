@@ -32,7 +32,7 @@
 
 - [x] Settlement reminders — visual nudge on dashboard when a month is past due for closing
 - [x] Settlement notes — optional free-text note when closing a month (e.g., "Paid via Zelle")
-- [ ] Running balance — show cumulative unsettled amount across all open months, not just current
+- [x] Running balance — show cumulative unsettled amount across all open months, not just current
 
 ## Recurring Templates
 
@@ -53,6 +53,8 @@
 
 ## Code Health
 
+- [ ] Reduce cyclomatic complexity in SettlementPage (extract data-fetching into helper, extract alert banners into components)
+- [ ] Reduce cyclomatic complexity in settlement POST handler (extract settlement creation logic)
 - [ ] Reduce cyclomatic complexity in BulkEditConfirmDialog and BulkDeleteConfirmDialog (extract shared two-phase confirmation pattern)
 - [ ] Reduce cyclomatic complexity in bulk expense PATCH handler
 
