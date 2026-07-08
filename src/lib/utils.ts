@@ -27,6 +27,21 @@ export function formatMonthYear(month: number, year: number, options?: { omitCur
   });
 }
 
+export function formatShortDate(
+  date: string | Date,
+  options?: { omitCurrentYear?: boolean }
+): string {
+  const d = new Date(date);
+  const sameYear =
+    options?.omitCurrentYear && d.getUTCFullYear() === new Date().getUTCFullYear();
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    timeZone: "UTC",
+  });
+}
+
 export function parseMonthYearParams(params: { month?: string; year?: string }) {
   const now = new Date();
   return {

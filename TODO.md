@@ -20,7 +20,7 @@
 - [x] Bulk delete with confirmation
 - [x] Expand "where" search to also match notes field
 - [x] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
-- [ ] Possible bug. I entered an expense that had a date in which no other expenses had been entered. There wasn't an expense at all for that month. I received a possible duplicate expense notification. 
+- [x] Possible bug. I entered an expense that had a date in which no other expenses had been entered. There wasn't an expense at all for that month. I received a possible duplicate expense notification. 
 
 ## Activity Feed
 
@@ -37,7 +37,7 @@
 ## Recurring Templates
 
 - [ ] Auto-apply option — schedule a template to apply automatically on a given day each month
-- [ ] Template usage history — show when a template was last applied and how many times total
+- [x] Template usage history — show when a template was last applied and how many times total
 - [ ] Clone template — duplicate an existing template as a starting point for a new one
 
 ## Documentation

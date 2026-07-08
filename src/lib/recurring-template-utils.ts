@@ -52,6 +52,8 @@ export function serializeTemplate(
     _id: unknown;
     name: string;
     items: IRecurringTemplateItem[];
+    lastAppliedAt: Date | null;
+    applyCount: number;
     createdAt: Date;
     updatedAt: Date;
   }
@@ -60,6 +62,8 @@ export function serializeTemplate(
     _id: String(t._id),
     name: t.name,
     items: t.items.map(serializeTemplateItem),
+    lastAppliedAt: t.lastAppliedAt ? t.lastAppliedAt.toISOString() : null,
+    applyCount: t.applyCount,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
   };
