@@ -14,6 +14,8 @@ interface IRecurringTemplate extends Document {
   name: string;
   createdBy: mongoose.Types.ObjectId;
   items: IRecurringTemplateItem[];
+  lastAppliedAt: Date | null;
+  applyCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +34,8 @@ export interface SerializedRecurringTemplate {
   _id: string;
   name: string;
   items: SerializedRecurringTemplateItem[];
+  lastAppliedAt: string | null;
+  applyCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,6 +80,8 @@ const RecurringTemplateSchema = new Schema<IRecurringTemplate>(
         message: "At least one item is required",
       },
     },
+    lastAppliedAt: { type: Date, default: null },
+    applyCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

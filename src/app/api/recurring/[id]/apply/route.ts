@@ -78,6 +78,11 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
     })),
   );
 
+  await RecurringTemplate.updateOne(
+    { _id: id },
+    { $set: { lastAppliedAt: new Date() }, $inc: { applyCount: 1 } }
+  );
+
   await resetReadinessForMonths(session.user.paidByKey, [date]);
 
   const immediateExpenses = expenses.filter((e) => e.settlementType === "immediate");
@@ -88,6 +93,7 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
 
   await logActivity(session.user.paidByKey, "recurring_apply", `applied "${template.name}" (${expenses.length} expenses)`, {
     templateName: template.name,
+    templateId: id,
     count: expenses.length,
     date,
   });

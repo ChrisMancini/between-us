@@ -11,7 +11,7 @@ import type { SerializedRecurringTemplate } from "@/lib/models/recurring-templat
 import { TemplateFormDialog } from "./template-form-dialog";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { ApplyTemplateDialog } from "./apply-template-dialog";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatShortDate } from "@/lib/utils";
 
 interface TemplateListProps {
   templates: SerializedRecurringTemplate[];
@@ -78,14 +78,21 @@ function TemplateCard({
     <>
       <div className="rounded-xl border border-primary/10 bg-card shadow-sm overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="border-b border-primary/10 bg-primary/5 px-5 py-3 flex items-center justify-between">
+        <div className="border-b border-primary/10 bg-primary/5 px-5 py-3 flex items-start justify-between">
           <p className="font-semibold text-sm text-foreground">
             {template.name}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {template.items.length} item{template.items.length !== 1 && "s"}{" "}
-            &middot; {formatCurrency(total)}
-          </p>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">
+              {template.items.length} item{template.items.length !== 1 && "s"}{" "}
+              &middot; {formatCurrency(total)}
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">
+              {template.lastAppliedAt
+                ? `Last applied ${formatShortDate(template.lastAppliedAt, { omitCurrentYear: true })} · ${template.applyCount} time${template.applyCount !== 1 ? "s" : ""}`
+                : "Never applied"}
+            </p>
+          </div>
         </div>
 
         {/* Items list */}

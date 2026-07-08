@@ -19,7 +19,7 @@ jest.mock("@/lib/action-lifecycle", () => ({
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/db", () => ({ connectToDatabase: jest.fn() }));
 jest.mock("@/lib/models/recurring-template", () => ({
-  RecurringTemplate: { findOne: jest.fn() },
+  RecurringTemplate: { findOne: jest.fn(), updateOne: jest.fn() },
 }));
 jest.mock("@/lib/models/tag", () => ({
   Tag: { find: jest.fn() },
@@ -149,15 +149,20 @@ describe("POST /api/recurring/[id]/apply", () => {
       lean: jest.fn().mockResolvedValue([{ _id: VALID_ID_2 }]),
     });
     asMock(Expense.insertMany).mockResolvedValue([{ _id: VALID_ID }]);
+    asMock(RecurringTemplate.updateOne).mockResolvedValue({});
 
     const res = await POST(makeJsonRequest("/api/recurring/apply", {}), makeIdContext());
     const body = await expectStatus(res, 201);
     expect(body.count).toBe(1);
+    expect(RecurringTemplate.updateOne).toHaveBeenCalledWith(
+      { _id: VALID_ID },
+      { $set: { lastAppliedAt: expect.any(Date) }, $inc: { applyCount: 1 } }
+    );
     expect(logActivity).toHaveBeenCalledWith(
       "john",
       "recurring_apply",
       expect.stringContaining("applied"),
-      expect.objectContaining({ count: 1 })
+      expect.objectContaining({ count: 1, templateId: VALID_ID })
     );
   });
 });

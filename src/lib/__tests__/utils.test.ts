@@ -1,6 +1,7 @@
 import {
   formatCurrency,
   formatMonthYear,
+  formatShortDate,
   parseMonthYearParams,
   getMonthDateRange,
   formatActivityDate,
@@ -63,6 +64,35 @@ describe("formatMonthYear", () => {
     it("always includes year when options are omitted", () => {
       expect(formatMonthYear(5, 2026)).toBe("May 2026");
     });
+  });
+});
+
+describe("formatShortDate", () => {
+  describe("omitCurrentYear", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(Date.UTC(2026, 5, 15)));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("omits year for a current-year date", () => {
+      expect(formatShortDate("2026-06-05T00:00:00.000Z", { omitCurrentYear: true })).toBe("Jun 5");
+    });
+
+    it("includes year for a past-year date", () => {
+      expect(formatShortDate("2025-06-05T00:00:00.000Z", { omitCurrentYear: true })).toBe("Jun 5, 2025");
+    });
+  });
+
+  it("formats a date with year by default", () => {
+    expect(formatShortDate("2025-06-05T00:00:00.000Z")).toBe("Jun 5, 2025");
+  });
+
+  it("accepts a Date object", () => {
+    expect(formatShortDate(new Date(Date.UTC(2025, 5, 5)))).toBe("Jun 5, 2025");
   });
 });
 
