@@ -20,7 +20,8 @@
 - [x] Bulk delete with confirmation
 - [x] Expand "where" search to also match notes field
 - [x] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
-- [x] Possible bug. I entered an expense that had a date in which no other expenses had been entered. There wasn't an expense at all for that month. I received a possible duplicate expense notification. 
+- [x] Possible bug. I entered an expense that had a date in which no other expenses had been entered. There wasn't an expense at all for that month. I received a possible duplicate expense notification.
+- [ ] Tag validation — decide whether to forbid tagging an expense with both a parent and one of its descendants (e.g., `Bills` and `Bills/Electric`). Prevents double-counting within parent rollups in reports. Cross-cutting: would apply at the manual expense form, quick-entry, bulk edit, recurring templates, and CSV import. Note: a going-forward rule does not retroactively clean historical data, so rollup reports must still handle co-tagging gracefully. (Surfaced while planning the month-over-month comparison feature.)
 
 ## Activity Feed
 
@@ -42,6 +43,7 @@
 
 ## Documentation
 
+- [ ] Scrub partner names (Chris/Lauren) from repo docs and code — genericize to role descriptors or Partner A/B. In scope: `docs/adr/*` and `docs/plans/*` personas + example UI strings (e.g. "Chris owes Lauren $70" → "Partner A owes Partner B $70"), test fixtures in `src/lib/__tests__/action-lifecycle.test.ts` (re-run after), and any `compare-prototype/` comment references still present when that throwaway folder is folded in. Leave intact: the `LICENSE` copyright line (legal authorship) and the `ChrisMancini/between-us` GitHub repo slug/URL in `app-footer.tsx` and `docs/agents/issue-tracker.md` (functional link, not prose). (The comparison-feature issues #37/#47/#48 have already been scrubbed.)
 - [x] Revise "Deploying to Synology NAS" section in README — deploy.mjs now recreates the container automatically (stop → rm → run), and defaults to container name `ghcr-io-chrismancini-between-us`. The manual GUI setup instructions in step 3 and the container name are out of date.
 
 ## UX Polish
