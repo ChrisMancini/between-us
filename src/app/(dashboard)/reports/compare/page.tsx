@@ -16,6 +16,7 @@ import {
 import { addMonths, clampToPast, currentYM, parseYM, ymToParam } from "./_lib/month-range";
 import { ComparisonHeadline } from "./_components/comparison-headline";
 import { ComparisonSection } from "./_components/comparison-section";
+import { TwoMonthSelector } from "./_components/two-month-selector";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,9 @@ export default async function ComparePage({ searchParams }: PageProps) {
           What changed from {fromLabel} to {toLabel}, and where.
         </p>
       </div>
+
+      {/* Month selection strip */}
+      <TwoMonthSelector from={from} to={to} />
 
       {!hasMovers ? (
         <div className="rounded-xl border border-dashed border-primary/20 bg-card py-12 text-center">
