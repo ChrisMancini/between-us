@@ -7,11 +7,12 @@
 // function: totals in, structures out. No DB, no formatting (that is
 // `delta-format.ts`), no rendering.
 //
-// Scope note (#49): this tracer bullet produces a single flat list rolled up to
-// the top-level parent tag, with a combined household headline. The
-// Deferred/Immediate section split (#50), mover dimming, and drill-down into
-// children arrive in later tickets.
-import type { TagTotal } from "../../_lib/report-transforms";
+// Scope note: the tracer bullet (#49) produced a single flat list rolled up to
+// the top-level parent tag, with a combined household headline. #50 adds the
+// Deferred/Immediate section split below (`splitBySettlementType` +
+// `buildSectionedComparison`). Mover dimming and drill-down arrive in later
+// tickets.
+import { buildTagTotals, type TagTotal } from "../../_lib/report-transforms";
 
 // up/down/steady describe a tag present in both months; new/gone describe a tag
 // present in only one. Direction is carried by `status` + `delta`, never color.
@@ -203,4 +204,93 @@ export function buildHeadline(rows: CompareRow[]): HeadlineTotals {
     pct: percentage(status, fromTotal, delta),
     status,
   };
+}
+
+// --- Settlement-type split (#50) -------------------------------------------
+//
+// The comparison splits into two honest sections — Deferred and Immediate — so
+// already-settled spend (e.g. the mortgage) is separated from spend that
+// accumulates into the monthly settlement. Settlement type comes from the
+// aggregation `_id` (see `tagPersonSettlementPipeline`), never from
+// `TagTotal.settlementType`, which `buildTagTotals` hardcodes to "deferred".
+
+export type SettlementType = "deferred" | "immediate";
+
+/** A row shaped like `tagPersonSettlementPipeline` emits. */
+export interface SettlementAggRow {
+  _id: {
+    tagPath: string;
+    tagSortOrder: number;
+    paidBy: string;
+    settlementType: SettlementType;
+  };
+  total: number;
+}
+
+/** One month's tag totals, partitioned by settlement type. */
+export interface SettlementSplit {
+  deferred: TagTotal[];
+  immediate: TagTotal[];
+}
+
+export interface SettlementSection {
+  settlementType: SettlementType;
+  /** Movers for this section, already rolled up and sorted by |delta|. */
+  rows: CompareRow[];
+  /** This section's own `from → to` subtotal, in the same shape as the headline. */
+  subtotal: HeadlineTotals;
+}
+
+export interface SectionedComparison {
+  deferred: SettlementSection;
+  immediate: SettlementSection;
+  /** Combined household total = deferred + immediate together. */
+  headline: HeadlineTotals;
+}
+
+/**
+ * Partition one month's settlement-aware aggregation rows into deferred and
+ * immediate `TagTotal[]`, reusing `buildTagTotals` for each bucket. This is the
+ * only place settlement type is read — from the aggregation `_id`, so the split
+ * is trustworthy where `TagTotal.settlementType` is not.
+ */
+export function splitBySettlementType(
+  agg: SettlementAggRow[],
+  allTags: TagLean[],
+  person1Key: string
+): SettlementSplit {
+  const deferred = agg.filter((r) => r._id.settlementType === "deferred");
+  const immediate = agg.filter((r) => r._id.settlementType === "immediate");
+  return {
+    deferred: buildTagTotals(deferred, allTags, person1Key),
+    immediate: buildTagTotals(immediate, allTags, person1Key),
+  };
+}
+
+function buildSection(
+  settlementType: SettlementType,
+  fromTotals: TagTotal[],
+  toTotals: TagTotal[],
+  allTags: TagLean[]
+): SettlementSection {
+  const rows = buildComparison(fromTotals, toTotals, allTags);
+  return { settlementType, rows, subtotal: buildHeadline(rows) };
+}
+
+/**
+ * Build the two-section comparison. Each section rolls up, diffs, and sorts its
+ * movers independently (via `buildComparison`) and carries its own subtotal. The
+ * combined headline sums every mover across both sections, so it continues to
+ * equal deferred + immediate together — the split is never duplicated up top.
+ */
+export function buildSectionedComparison(
+  from: SettlementSplit,
+  to: SettlementSplit,
+  allTags: TagLean[]
+): SectionedComparison {
+  const deferred = buildSection("deferred", from.deferred, to.deferred, allTags);
+  const immediate = buildSection("immediate", from.immediate, to.immediate, allTags);
+  const headline = buildHeadline([...deferred.rows, ...immediate.rows]);
+
+  return { deferred, immediate, headline };
 }

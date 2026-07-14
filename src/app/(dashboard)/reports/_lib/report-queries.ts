@@ -37,6 +37,40 @@ export function tagPersonPipeline(
   ];
 }
 
+// Settlement-type-aware fork of `tagPersonPipeline` for the comparison view
+// (spec #48, section split #50). Identical to `tagPersonPipeline` except that
+// `settlementType` is carried in the `$group._id`, so each tag/person total is
+// attributable to the Deferred vs. Immediate section. This is deliberately a
+// separate function so the existing `/reports` page keeps using the untouched
+// `tagPersonPipeline`. Callers split the rows by `_id.settlementType` — the
+// compare view never trusts the hardcoded `TagTotal.settlementType`.
+export function tagPersonSettlementPipeline(dateRange: DateRange): PipelineStage[] {
+  return [
+    { $match: { date: { $gte: dateRange.start, $lt: dateRange.end } } },
+    {
+      $lookup: {
+        from: "tags",
+        localField: "tags",
+        foreignField: "_id",
+        as: "tagDocs",
+      },
+    },
+    { $unwind: "$tagDocs" },
+    {
+      $group: {
+        _id: {
+          tagPath: "$tagDocs.path",
+          tagSortOrder: "$tagDocs.sortOrder",
+          paidBy: "$paidBy",
+          settlementType: "$settlementType",
+        },
+        total: { $sum: "$amount" },
+      },
+    },
+    { $sort: { "_id.tagSortOrder": 1, "_id.paidBy": 1 } },
+  ];
+}
+
 export function trendPipeline(dateRange: DateRange): PipelineStage[] {
   return [
     { $match: { date: { $gte: dateRange.start, $lt: dateRange.end } } },

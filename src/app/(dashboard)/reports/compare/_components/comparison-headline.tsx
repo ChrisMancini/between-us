@@ -1,6 +1,6 @@
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { HeadlineTotals } from "../_lib/compare-transforms";
-import { deltaAmount, deltaPct, directionClass, glyph } from "../_lib/delta-format";
+import { bookends, deltaAmount, deltaPct, directionClass, glyph } from "../_lib/delta-format";
 
 interface ComparisonHeadlineProps {
   fromLabel: string;
@@ -16,6 +16,7 @@ interface ComparisonHeadlineProps {
 export function ComparisonHeadline({ fromLabel, toLabel, totals }: ComparisonHeadlineProps) {
   const pct = deltaPct(totals.pct);
   const direction = directionClass(totals.status);
+  const ends = bookends(totals);
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
@@ -25,9 +26,9 @@ export function ComparisonHeadline({ fromLabel, toLabel, totals }: ComparisonHea
         </p>
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <p className="text-2xl font-bold tracking-tight tabular-nums">
-            {totals.fromTotal === 0 && totals.status === "new" ? "—" : formatCurrency(totals.fromTotal)}
+            {ends.from}
             <span className="mx-2 text-lg font-normal text-muted-foreground">→</span>
-            {totals.toTotal === 0 && totals.status === "gone" ? "—" : formatCurrency(totals.toTotal)}
+            {ends.to}
           </p>
           <p className={cn("text-lg font-semibold tabular-nums", direction)}>
             <span className="mr-1">{glyph(totals.status)}</span>

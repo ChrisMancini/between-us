@@ -4,6 +4,7 @@ import {
   deltaPct,
   statusLabel,
   directionClass,
+  bookends,
 } from "../delta-format";
 
 describe("glyph", () => {
@@ -55,6 +56,37 @@ describe("statusLabel", () => {
     expect(statusLabel("up")).toBeNull();
     expect(statusLabel("down")).toBeNull();
     expect(statusLabel("steady")).toBeNull();
+  });
+});
+
+describe("bookends", () => {
+  it("formats both sides as currency for an up/down/steady pair", () => {
+    expect(bookends({ fromTotal: 10000, toTotal: 15000, status: "up" })).toEqual({
+      from: "$100.00",
+      to: "$150.00",
+    });
+  });
+
+  it("renders the absent from side as an em-dash for a new tag", () => {
+    expect(bookends({ fromTotal: 0, toTotal: 45000, status: "new" })).toEqual({
+      from: "—",
+      to: "$450.00",
+    });
+  });
+
+  it("renders the absent to side as an em-dash for a gone tag", () => {
+    expect(bookends({ fromTotal: 30000, toTotal: 0, status: "gone" })).toEqual({
+      from: "$300.00",
+      to: "—",
+    });
+  });
+
+  it("shows a real $0.00 (not an em-dash) when a present side is genuinely zero", () => {
+    // A steady $0 → $0 is not new/gone, so both sides are formatted, never dashed.
+    expect(bookends({ fromTotal: 0, toTotal: 0, status: "steady" })).toEqual({
+      from: "$0.00",
+      to: "$0.00",
+    });
   });
 });
 

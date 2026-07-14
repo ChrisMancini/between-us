@@ -1,8 +1,12 @@
 import {
   buildComparison,
   buildHeadline,
+  buildSectionedComparison,
+  splitBySettlementType,
   sortMovers,
   type CompareRow,
+  type SettlementAggRow,
+  type SettlementSplit,
 } from "../compare-transforms";
 import type { TagTotal } from "../../../_lib/report-transforms";
 
@@ -199,6 +203,158 @@ describe("sortMovers", () => {
     ] as CompareRow[];
     sortMovers(rows);
     expect(rows.map((r) => r.path)).toEqual(["big", "tieB", "tieA", "small"]);
+  });
+});
+
+// --- Settlement-type split (#50) -------------------------------------------
+
+const P1 = "alice";
+const P2 = "bob";
+
+// A row shaped like `tagPersonSettlementPipeline` emits: settlement type lives
+// in the aggregation `_id`, never in the (hardcoded) TagTotal.settlementType.
+function aggRow(
+  tagPath: string,
+  sortOrder: number,
+  paidBy: string,
+  settlementType: "deferred" | "immediate",
+  amount: number
+): SettlementAggRow {
+  return { _id: { tagPath, tagSortOrder: sortOrder, paidBy, settlementType }, total: amount };
+}
+
+// A pre-split fixture: TagTotals for a single settlement bucket in one month.
+function split(deferred: TagTotal[], immediate: TagTotal[]): SettlementSplit {
+  return { deferred, immediate };
+}
+
+describe("splitBySettlementType", () => {
+  it("routes rows into deferred/immediate buckets by the aggregation _id", () => {
+    const agg = [
+      aggRow("Bills/Electric", 1, P1, "deferred", 100),
+      aggRow("Housing/Mortgage", 2, P2, "immediate", 900),
+    ];
+    const result = splitBySettlementType(agg, [tag("Bills/Electric", 1), tag("Housing/Mortgage", 2)], P1);
+
+    const deferredBills = result.deferred.find((t) => t.tagPath === "Bills/Electric");
+    const immediateMortgage = result.immediate.find((t) => t.tagPath === "Housing/Mortgage");
+    expect(deferredBills?.total).toBe(100);
+    expect(immediateMortgage?.total).toBe(900);
+    // The mortgage must NOT bleed into the deferred bucket.
+    expect(result.deferred.find((t) => t.tagPath === "Housing/Mortgage")?.total).toBe(0);
+  });
+
+  it("keeps a tag that appears in both buckets separate per settlement type", () => {
+    const agg = [
+      aggRow("Dining", 1, P1, "deferred", 100),
+      aggRow("Dining", 1, P1, "immediate", 30),
+    ];
+    const result = splitBySettlementType(agg, [tag("Dining", 1)], P1);
+    expect(result.deferred.find((t) => t.tagPath === "Dining")?.total).toBe(100);
+    expect(result.immediate.find((t) => t.tagPath === "Dining")?.total).toBe(30);
+  });
+
+  it("routes per-person paid amounts using person1Key within each bucket", () => {
+    const agg = [
+      aggRow("Bills", 1, P1, "deferred", 100),
+      aggRow("Bills", 1, P2, "deferred", 40),
+    ];
+    const bills = splitBySettlementType(agg, [tag("Bills", 1)], P1).deferred.find(
+      (t) => t.tagPath === "Bills"
+    );
+    expect(bills).toMatchObject({ person1Paid: 100, person2Paid: 40, total: 140 });
+  });
+});
+
+describe("buildSectionedComparison", () => {
+  const allTags = [tag("Bills/Electric", 1), tag("Housing/Mortgage", 2), tag("Dining", 3)];
+
+  // Shared fixture: deferred Bills +$50, immediate Mortgage −$100. Reused by the
+  // section-split, subtotal, and headline-reconciliation tests below.
+  const billsAndMortgage = {
+    from: split([total("Bills/Electric", 100, 0)], [total("Housing/Mortgage", 900, 0)]),
+    to: split([total("Bills/Electric", 150, 0)], [total("Housing/Mortgage", 800, 0)]),
+  };
+
+  it("splits movers into a deferred and an immediate section", () => {
+    const result = buildSectionedComparison(billsAndMortgage.from, billsAndMortgage.to, allTags);
+
+    expect(result.deferred.settlementType).toBe("deferred");
+    expect(result.immediate.settlementType).toBe("immediate");
+    expect(result.deferred.rows.map((r) => r.path)).toEqual(["Bills"]);
+    expect(result.immediate.rows.map((r) => r.path)).toEqual(["Housing"]);
+    expect(rowByPath(result.deferred.rows, "Bills").delta).toBe(50);
+    expect(rowByPath(result.immediate.rows, "Housing").delta).toBe(-100);
+  });
+
+  it("sorts each section's movers independently by |delta|", () => {
+    // Deferred: A +300 beats B −50. Immediate: C −400 beats D +10.
+    const from = split(
+      [total("A", 100, 0), total("B", 100, 0)],
+      [total("C", 500, 0), total("D", 100, 0)]
+    );
+    const to = split(
+      [total("A", 400, 0), total("B", 50, 0)],
+      [total("C", 100, 0), total("D", 110, 0)]
+    );
+    const result = buildSectionedComparison(from, to, [
+      tag("A", 1),
+      tag("B", 2),
+      tag("C", 3),
+      tag("D", 4),
+    ]);
+    expect(result.deferred.rows.map((r) => r.path)).toEqual(["A", "B"]);
+    expect(result.immediate.rows.map((r) => r.path)).toEqual(["C", "D"]);
+  });
+
+  it("gives each section its own subtotal that reconciles with its rows", () => {
+    const result = buildSectionedComparison(billsAndMortgage.from, billsAndMortgage.to, allTags);
+
+    expect(result.deferred.subtotal.fromTotal).toBe(100);
+    expect(result.deferred.subtotal.toTotal).toBe(150);
+    expect(result.deferred.subtotal.delta).toBe(50);
+    expect(result.immediate.subtotal.delta).toBe(-100);
+  });
+
+  it("keeps the combined headline equal to deferred + immediate together", () => {
+    const result = buildSectionedComparison(billsAndMortgage.from, billsAndMortgage.to, allTags);
+
+    expect(result.headline.fromTotal).toBe(
+      result.deferred.subtotal.fromTotal + result.immediate.subtotal.fromTotal
+    );
+    expect(result.headline.toTotal).toBe(
+      result.deferred.subtotal.toTotal + result.immediate.subtotal.toTotal
+    );
+    expect(result.headline.fromTotal).toBe(1000);
+    expect(result.headline.toTotal).toBe(950);
+    expect(result.headline.delta).toBe(-50);
+  });
+
+  it("attributes spend to the immediate section from the split, not TagTotal.settlementType", () => {
+    // Every TagTotal carries the hardcoded "deferred" field, yet a mortgage fed
+    // in through the immediate bucket must land in the immediate section only.
+    const mortgage = total("Housing/Mortgage", 900, 0);
+    expect(mortgage.settlementType).toBe("deferred"); // the untrustworthy field
+    const result = buildSectionedComparison(split([], [mortgage]), split([], [mortgage]), allTags);
+
+    expect(result.deferred.rows).toHaveLength(0);
+    expect(result.immediate.rows.map((r) => r.path)).toEqual(["Housing"]);
+  });
+
+  it("yields an empty section with a steady zero subtotal when a bucket has no spend", () => {
+    const result = buildSectionedComparison(
+      split([total("Dining", 100, 0)], []),
+      split([total("Dining", 150, 0)], []),
+      [tag("Dining", 3)]
+    );
+    expect(result.immediate.rows).toHaveLength(0);
+    expect(result.immediate.subtotal).toEqual({
+      fromTotal: 0,
+      toTotal: 0,
+      delta: 0,
+      pct: null,
+      status: "steady",
+    });
   });
 });
 

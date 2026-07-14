@@ -11,6 +11,23 @@
 import { formatCurrency } from "@/lib/utils";
 import type { CompareStatus } from "./compare-transforms";
 
+/**
+ * The `$from → $to` bookend strings for a from/to pair. The absent side of a
+ * new/gone pair renders as `—` (a `$0` that means "no spend that month", not
+ * "spent nothing") — so the em-dash meaning survives without color. Shared by
+ * the household headline and each section subtotal.
+ */
+export function bookends(totals: {
+  fromTotal: number;
+  toTotal: number;
+  status: CompareStatus;
+}): { from: string; to: string } {
+  return {
+    from: totals.fromTotal === 0 && totals.status === "new" ? "—" : formatCurrency(totals.fromTotal),
+    to: totals.toTotal === 0 && totals.status === "gone" ? "—" : formatCurrency(totals.toTotal),
+  };
+}
+
 /** Direction glyph. Full-width `＋`/`－`/`＝` distinguish new/gone/steady from ▲/▼. */
 export function glyph(status: CompareStatus): string {
   switch (status) {

@@ -7,12 +7,15 @@ import { Expense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
 import { getPersons } from "@/lib/persons";
 import { formatMonthYear, getMonthDateRange } from "@/lib/utils";
-import { tagPersonPipeline } from "../_lib/report-queries";
-import { buildTagTotals } from "../_lib/report-transforms";
-import { buildComparison, buildHeadline } from "./_lib/compare-transforms";
+import { tagPersonSettlementPipeline } from "../_lib/report-queries";
+import {
+  buildSectionedComparison,
+  splitBySettlementType,
+  type SettlementAggRow,
+} from "./_lib/compare-transforms";
 import { addMonths, clampToPast, currentYM, parseYM, ymToParam } from "./_lib/month-range";
 import { ComparisonHeadline } from "./_components/comparison-headline";
-import { ComparisonList } from "./_components/comparison-list";
+import { ComparisonSection } from "./_components/comparison-section";
 
 export const dynamic = "force-dynamic";
 
@@ -46,22 +49,17 @@ export default async function ComparePage({ searchParams }: PageProps) {
   const fromRange = getMonthDateRange(from.month, from.year);
   const toRange = getMonthDateRange(to.month, to.year);
 
-  type TagPersonAggRow = {
-    _id: { tagPath: string; tagSortOrder: number; paidBy: string };
-    total: number;
-  };
-
   const [fromAgg, toAgg, allTags] = await Promise.all([
-    Expense.aggregate<TagPersonAggRow>(tagPersonPipeline(fromRange)),
-    Expense.aggregate<TagPersonAggRow>(tagPersonPipeline(toRange)),
+    Expense.aggregate<SettlementAggRow>(tagPersonSettlementPipeline(fromRange)),
+    Expense.aggregate<SettlementAggRow>(tagPersonSettlementPipeline(toRange)),
     Tag.find().sort({ sortOrder: 1 }).lean(),
   ]);
 
-  const fromTotals = buildTagTotals(fromAgg, allTags, persons[0].key);
-  const toTotals = buildTagTotals(toAgg, allTags, persons[0].key);
+  const fromSplit = splitBySettlementType(fromAgg, allTags, persons[0].key);
+  const toSplit = splitBySettlementType(toAgg, allTags, persons[0].key);
 
-  const rows = buildComparison(fromTotals, toTotals, allTags);
-  const headline = buildHeadline(rows);
+  const { deferred, immediate, headline } = buildSectionedComparison(fromSplit, toSplit, allTags);
+  const hasMovers = deferred.rows.length > 0 || immediate.rows.length > 0;
 
   const fromLabel = formatMonthYear(from.month, from.year);
   const toLabel = formatMonthYear(to.month, to.year);
@@ -84,7 +82,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      {rows.length === 0 ? (
+      {!hasMovers ? (
         <div className="rounded-xl border border-dashed border-primary/20 bg-card py-12 text-center">
           <p className="text-sm text-muted-foreground">
             No expenses recorded in either {fromLabel} or {toLabel}.
@@ -93,7 +91,8 @@ export default async function ComparePage({ searchParams }: PageProps) {
       ) : (
         <>
           <ComparisonHeadline fromLabel={fromLabel} toLabel={toLabel} totals={headline} />
-          <ComparisonList rows={rows} />
+          {deferred.rows.length > 0 && <ComparisonSection section={deferred} />}
+          {immediate.rows.length > 0 && <ComparisonSection section={immediate} />}
         </>
       )}
     </div>
