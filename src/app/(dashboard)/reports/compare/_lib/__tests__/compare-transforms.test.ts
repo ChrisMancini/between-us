@@ -281,10 +281,12 @@ describe("buildSectionedComparison", () => {
 
     expect(result.deferred.settlementType).toBe("deferred");
     expect(result.immediate.settlementType).toBe("immediate");
-    expect(result.deferred.rows.map((r) => r.path)).toEqual(["Bills"]);
-    expect(result.immediate.rows.map((r) => r.path)).toEqual(["Housing"]);
-    expect(rowByPath(result.deferred.rows, "Bills").delta).toBe(50);
-    expect(rowByPath(result.immediate.rows, "Housing").delta).toBe(-100);
+    const deferredRows = [...result.deferred.brightRows, ...result.deferred.dimmedRows];
+    const immediateRows = [...result.immediate.brightRows, ...result.immediate.dimmedRows];
+    expect(deferredRows.map((r) => r.path)).toEqual(["Bills"]);
+    expect(immediateRows.map((r) => r.path)).toEqual(["Housing"]);
+    expect(rowByPath(deferredRows, "Bills").delta).toBe(50);
+    expect(rowByPath(immediateRows, "Housing").delta).toBe(-100);
   });
 
   it("sorts each section's movers independently by |delta|", () => {
@@ -303,8 +305,10 @@ describe("buildSectionedComparison", () => {
       tag("C", 3),
       tag("D", 4),
     ]);
-    expect(result.deferred.rows.map((r) => r.path)).toEqual(["A", "B"]);
-    expect(result.immediate.rows.map((r) => r.path)).toEqual(["C", "D"]);
+    const deferredRows = [...result.deferred.brightRows, ...result.deferred.dimmedRows];
+    const immediateRows = [...result.immediate.brightRows, ...result.immediate.dimmedRows];
+    expect(deferredRows.map((r) => r.path)).toEqual(["A", "B"]);
+    expect(immediateRows.map((r) => r.path)).toEqual(["C", "D"]);
   });
 
   it("gives each section its own subtotal that reconciles with its rows", () => {
@@ -337,8 +341,10 @@ describe("buildSectionedComparison", () => {
     expect(mortgage.settlementType).toBe("deferred"); // the untrustworthy field
     const result = buildSectionedComparison(split([], [mortgage]), split([], [mortgage]), allTags);
 
-    expect(result.deferred.rows).toHaveLength(0);
-    expect(result.immediate.rows.map((r) => r.path)).toEqual(["Housing"]);
+    const deferredRows = [...result.deferred.brightRows, ...result.deferred.dimmedRows];
+    const immediateRows = [...result.immediate.brightRows, ...result.immediate.dimmedRows];
+    expect(deferredRows).toHaveLength(0);
+    expect(immediateRows.map((r) => r.path)).toEqual(["Housing"]);
   });
 
   it("yields an empty section with a steady zero subtotal when a bucket has no spend", () => {
@@ -347,7 +353,8 @@ describe("buildSectionedComparison", () => {
       split([total("Dining", 150, 0)], []),
       [tag("Dining", 3)]
     );
-    expect(result.immediate.rows).toHaveLength(0);
+    const immediateRows = [...result.immediate.brightRows, ...result.immediate.dimmedRows];
+    expect(immediateRows).toHaveLength(0);
     expect(result.immediate.subtotal).toEqual({
       fromTotal: 0,
       toTotal: 0,
@@ -390,5 +397,142 @@ describe("buildHeadline — combined household total", () => {
       pct: null,
       status: "steady",
     });
+  });
+});
+
+// --- Mover dimming (#53) ------------------------------------------------
+//
+// A row is dimmed when BOTH are true:
+// - |Δ| < TRIVIAL_AMOUNT_CENTS ($25)
+// - |Δ%| < TRIVIAL_PCT (15%)
+// Otherwise it stays bright. `new`/`gone` with null pct treat null as always < 15%.
+
+describe("buildComparison — mover dimming", () => {
+  const allTags = [tag("Test", 1)];
+
+  it("dims a row when |Δ| < $25 AND |Δ%| < 15%", () => {
+    // $20 increase on $200 baseline = 10% → both small, should dim.
+    // total() takes amounts in cents, so 20000 cents = $200.
+    const rows = buildComparison([total("Test", 20000, 0)], [total("Test", 22000, 0)], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.delta).toBe(2000); // $20 in cents
+    expect(row.pct).toBeCloseTo(10);
+    expect(row.isDimmed).toBe(true);
+  });
+
+  it("stays bright when |Δ| ≥ $25", () => {
+    // $25 on $100 baseline = 25% — meets the dollar threshold.
+    // 100*100 cents = 10000 cents = $100, + $25 = 12500 cents = $125.
+    const rows = buildComparison([total("Test", 10000, 0)], [total("Test", 12500, 0)], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.delta).toBe(2500); // $25 in cents
+    expect(row.pct).toBeCloseTo(25);
+    expect(row.isDimmed).toBe(false);
+  });
+
+  it("stays bright when |Δ%| ≥ 15%", () => {
+    // $100 on $500 baseline = 20% (above 15%) with delta $100 < $25.
+    // 500*100 = 50000 cents = $500, + $100 = 60000 cents = $600.
+    const rows = buildComparison([total("Test", 50000, 0)], [total("Test", 60000, 0)], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.delta).toBe(10000); // $100 in cents
+    expect(row.pct).toBeCloseTo(20);
+    expect(row.isDimmed).toBe(false);
+  });
+
+  it("dims when both are below thresholds ($24 < $25 and 14.6% < 15%)", () => {
+    // $24 on $164 baseline = 14.6%, and |$24| < $25, so dims.
+    // From: 16400 cents = $164, To: 18800 cents = $188 (delta $24)
+    // 2400 / 16400 = 0.146 = 14.6%
+    const rows = buildComparison([total("Test", 16400, 0)], [total("Test", 18800, 0)], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.delta).toBe(2400); // $24 in cents
+    expect(row.pct).toBeCloseTo(14.6, 0);
+    expect(row.isDimmed).toBe(true);
+  });
+
+  it("stays bright when |Δ%| just above 15%", () => {
+    // $20 on $120 baseline = 16.67% > 15%, so stays bright even though $20 < $25.
+    // From: 12000 cents = $120, To: 14000 cents = $140
+    const rows = buildComparison([total("Test", 12000, 0)], [total("Test", 14000, 0)], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.delta).toBe(2000); // $20 in cents
+    expect(Math.abs(row.pct!)).toBeGreaterThan(15);
+    expect(row.isDimmed).toBe(false);
+  });
+
+  it("treats null pct as satisfying the percentage threshold for new/gone", () => {
+    // A new tag with no baseline pct is null, treated as < 15%.
+    // But the dollar delta is what matters: if it's >= $25, it stays bright.
+    // Test: $30 new → |$30| >= $25, so stays bright.
+    const rows = buildComparison([], [total("Test", 3000, 0)], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.status).toBe("new");
+    expect(row.pct).toBeNull();
+    expect(row.delta).toBe(3000); // $30
+    expect(row.isDimmed).toBe(false);
+  });
+
+  it("dims a new tag when amount < $25 (pct null treated as < 15%)", () => {
+    const rows = buildComparison([], [total("Test", 1000, 0)], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.status).toBe("new");
+    expect(row.pct).toBeNull();
+    expect(row.delta).toBe(1000); // $10
+    expect(row.isDimmed).toBe(true);
+  });
+
+  it("dims a gone tag when amount < $25 (pct null treated as < 15%)", () => {
+    const rows = buildComparison([total("Test", 1500, 0)], [], allTags);
+    const row = rowByPath(rows, "Test");
+    expect(row.status).toBe("gone");
+    expect(row.pct).toBeNull();
+    expect(row.delta).toBe(-1500); // −$15
+    expect(row.isDimmed).toBe(true);
+  });
+
+  it("applies dimming rules independently per section in a sectionedComparison", () => {
+    const allTags = [tag("A", 1), tag("B", 2)];
+    // Deferred: A with $20 delta on $200 base = 10% → dimmed
+    // Immediate: B with $30 new → bright
+    const from = split([total("A", 20000, 0)], []);
+    const to = split([total("A", 20200, 0)], [total("B", 3000, 0)]);
+    const result = buildSectionedComparison(from, to, allTags);
+
+    const a = [...result.deferred.brightRows, ...result.deferred.dimmedRows].find(
+      (r) => r.path === "A"
+    );
+    const b = [...result.immediate.brightRows, ...result.immediate.dimmedRows].find(
+      (r) => r.path === "B"
+    );
+
+    expect(a?.isDimmed).toBe(true);
+    expect(b?.isDimmed).toBe(false);
+  });
+});
+
+describe("SettlementSection — separation of bright and dimmed rows", () => {
+  it("puts bright movers in brightRows and dimmed in dimmedRows", () => {
+    const allTags = [tag("A", 1), tag("B", 2)];
+    const from = split([total("A", 200, 0), total("B", 100, 0)], []);
+    const to = split([total("A", 220, 0), total("B", 200, 0)], []);
+    const result = buildSectionedComparison(from, to, allTags);
+
+    // A: $20 on $200 = 10% → dimmed
+    // B: $100 on $100 = 100% → bright
+    expect(result.deferred.dimmedRows.length).toBe(1);
+    expect(result.deferred.brightRows.length).toBe(1);
+    expect(result.deferred.dimmedRows[0].path).toBe("A");
+    expect(result.deferred.brightRows[0].path).toBe("B");
+  });
+
+  it("keeps subtotal using all rows (bright + dimmed)", () => {
+    const allTags = [tag("A", 1), tag("B", 2)];
+    const from = split([total("A", 10000, 0), total("B", 10000, 0)], []);
+    const to = split([total("A", 11000, 0), total("B", 20000, 0)], []);
+    const result = buildSectionedComparison(from, to, allTags);
+
+    // Subtotal should sum A (+1000 cents = +$10) and B (+10000 cents = +$100) = +11000 cents = +$110.
+    expect(result.deferred.subtotal.delta).toBe(11000); // in cents
   });
 });

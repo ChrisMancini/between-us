@@ -60,7 +60,11 @@ export default async function ComparePage({ searchParams }: PageProps) {
   const toSplit = splitBySettlementType(toAgg, allTags, persons[0].key);
 
   const { deferred, immediate, headline } = buildSectionedComparison(fromSplit, toSplit, allTags);
-  const hasMovers = deferred.rows.length > 0 || immediate.rows.length > 0;
+  const hasMovers =
+    deferred.brightRows.length > 0 ||
+    deferred.dimmedRows.length > 0 ||
+    immediate.brightRows.length > 0 ||
+    immediate.dimmedRows.length > 0;
 
   const fromLabel = formatMonthYear(from.month, from.year);
   const toLabel = formatMonthYear(to.month, to.year);
@@ -95,8 +99,12 @@ export default async function ComparePage({ searchParams }: PageProps) {
       ) : (
         <>
           <ComparisonHeadline fromLabel={fromLabel} toLabel={toLabel} totals={headline} />
-          {deferred.rows.length > 0 && <ComparisonSection section={deferred} />}
-          {immediate.rows.length > 0 && <ComparisonSection section={immediate} />}
+          {(deferred.brightRows.length > 0 || deferred.dimmedRows.length > 0) && (
+            <ComparisonSection section={deferred} />
+          )}
+          {(immediate.brightRows.length > 0 || immediate.dimmedRows.length > 0) && (
+            <ComparisonSection section={immediate} />
+          )}
         </>
       )}
     </div>

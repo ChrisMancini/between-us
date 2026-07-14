@@ -10,9 +10,9 @@
 // Scope note: the tracer bullet (#49) produced a single flat list rolled up to
 // the top-level parent tag, with a combined household headline. #50 adds the
 // Deferred/Immediate section split below (`splitBySettlementType` +
-// `buildSectionedComparison`). Mover dimming and drill-down arrive in later
-// tickets.
+// `buildSectionedComparison`). #53 adds mover dimming and per-section expanders.
 import { buildTagTotals, type TagTotal } from "../../_lib/report-transforms";
+import { COMPARE_CONFIG } from "./compare-config";
 
 // up/down/steady describe a tag present in both months; new/gone describe a tag
 // present in only one. Direction is carried by `status` + `delta`, never color.
@@ -43,6 +43,8 @@ export interface CompareRow {
   status: CompareStatus;
   from: PersonMonth | null;
   to: PersonMonth | null;
+  /** True when |Δ| < TRIVIAL_AMOUNT_CENTS AND |Δ%| < TRIVIAL_PCT. */
+  isDimmed: boolean;
 }
 
 export interface HeadlineTotals {
@@ -111,6 +113,13 @@ function percentage(status: CompareStatus, fromTotal: number, delta: number): nu
   return (delta / fromTotal) * 100;
 }
 
+/** True when small on both axes: |Δ| < TRIVIAL_AMOUNT_CENTS AND |Δ%| < TRIVIAL_PCT. */
+function shouldDim(delta: number, pct: number | null): boolean {
+  const smallAmount = Math.abs(delta) < COMPARE_CONFIG.TRIVIAL_AMOUNT_CENTS;
+  const smallPct = pct === null || Math.abs(pct) < COMPARE_CONFIG.TRIVIAL_PCT;
+  return smallAmount && smallPct;
+}
+
 /**
  * The parent's own `sortOrder` if a Tag entity exists at that exact path;
  * otherwise the smallest `sortOrder` among its descendants so a prefix-only
@@ -166,6 +175,7 @@ export function buildComparison(
     const toTotal = to?.total ?? 0;
     const delta = toTotal - fromTotal;
     const status = classify(from !== null, to !== null, delta);
+    const pct = percentage(status, fromTotal, delta);
 
     rows.push({
       path: parent,
@@ -174,10 +184,11 @@ export function buildComparison(
       fromTotal,
       toTotal,
       delta,
-      pct: percentage(status, fromTotal, delta),
+      pct,
       status,
       from,
       to,
+      isDimmed: shouldDim(delta, pct),
     });
   }
 
@@ -235,8 +246,10 @@ export interface SettlementSplit {
 
 export interface SettlementSection {
   settlementType: SettlementType;
-  /** Movers for this section, already rolled up and sorted by |delta|. */
-  rows: CompareRow[];
+  /** Bright movers (notable on at least one axis) for this section. */
+  brightRows: CompareRow[];
+  /** Dimmed movers (trivial on both axes) for this section. */
+  dimmedRows: CompareRow[];
   /** This section's own `from → to` subtotal, in the same shape as the headline. */
   subtotal: HeadlineTotals;
 }
@@ -273,8 +286,10 @@ function buildSection(
   toTotals: TagTotal[],
   allTags: TagLean[]
 ): SettlementSection {
-  const rows = buildComparison(fromTotals, toTotals, allTags);
-  return { settlementType, rows, subtotal: buildHeadline(rows) };
+  const allRows = buildComparison(fromTotals, toTotals, allTags);
+  const brightRows = allRows.filter((r) => !r.isDimmed);
+  const dimmedRows = allRows.filter((r) => r.isDimmed);
+  return { settlementType, brightRows, dimmedRows, subtotal: buildHeadline(allRows) };
 }
 
 /**
@@ -290,7 +305,13 @@ export function buildSectionedComparison(
 ): SectionedComparison {
   const deferred = buildSection("deferred", from.deferred, to.deferred, allTags);
   const immediate = buildSection("immediate", from.immediate, to.immediate, allTags);
-  const headline = buildHeadline([...deferred.rows, ...immediate.rows]);
+  const allRows = [
+    ...deferred.brightRows,
+    ...deferred.dimmedRows,
+    ...immediate.brightRows,
+    ...immediate.dimmedRows,
+  ];
+  const headline = buildHeadline(allRows);
 
   return { deferred, immediate, headline };
 }

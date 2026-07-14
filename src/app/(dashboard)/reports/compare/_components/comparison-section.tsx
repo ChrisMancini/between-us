@@ -26,7 +26,8 @@ interface ComparisonSectionProps {
 /**
  * One settlement-type section: a light header (title + blurb + its own subtotal
  * Δ in `from → to  glyph+$Δ` form) above that section's movers. Its movers are
- * already rolled up and sorted independently by |Δ| in the transform.
+ * already rolled up and sorted independently by |Δ| in the transform. Bright
+ * movers are shown inline; dimmed movers are tucked behind an expander.
  */
 export function ComparisonSection({ section }: ComparisonSectionProps) {
   const meta = SECTION_META[section.settlementType];
@@ -55,7 +56,7 @@ export function ComparisonSection({ section }: ComparisonSectionProps) {
           </span>
         </div>
       </div>
-      <ComparisonList rows={section.rows} />
+      <ComparisonList brightRows={section.brightRows} dimmedRows={section.dimmedRows} />
     </section>
   );
 }
