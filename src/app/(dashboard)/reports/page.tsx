@@ -91,6 +91,12 @@ export default async function ReportsPage({ searchParams }: PageProps) {
               Spending breakdown and trends.
             </p>
             <Link
+              href="/reports/compare"
+              className="text-sm text-primary/70 hover:text-primary transition-colors"
+            >
+              Compare months &rarr;
+            </Link>
+            <Link
               href={`/reports/annual?year=${year}`}
               className="text-sm text-primary/70 hover:text-primary transition-colors"
             >
