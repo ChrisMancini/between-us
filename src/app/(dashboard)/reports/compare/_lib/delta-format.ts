@@ -70,3 +70,22 @@ export function directionClass(status: CompareStatus): string {
   if (status === "new" || status === "up") return "text-sky-600 dark:text-sky-400";
   return "text-muted-foreground";
 }
+
+/**
+ * Background gradient for dumbbell track, reinforcing direction.
+ * Same color axis as `directionClass` — sky for increases/new, slate for
+ * decreases/gone — so the dumbbell and the delta glyph tell the same story.
+ */
+export function trackGradientClass(status: CompareStatus): string {
+  if (status === "gone" || status === "down") {
+    return "from-slate-200 to-slate-100 dark:from-slate-700 dark:to-slate-800";
+  }
+  return "from-sky-100 to-sky-50 dark:from-sky-900 dark:to-sky-950";
+}
+
+/** Filled-dot color for the "to" side of the dumbbell, reinforcing direction. */
+export function dotFillClass(status: CompareStatus): string {
+  if (status === "gone" || status === "down") return "bg-slate-500 dark:bg-slate-400";
+  if (status === "new" || status === "up") return "bg-sky-600 dark:bg-sky-400";
+  return "bg-muted-foreground";
+}
