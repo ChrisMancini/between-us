@@ -1,8 +1,6 @@
 import "dotenv/config";
 import mongoose from "mongoose";
 import { Settlement } from "@/lib/models/settlement";
-import { Expense } from "@/lib/models/expense";
-import { Tag } from "@/lib/models/tag";
 import { calculateSettlement } from "@/lib/settlement-calc";
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -12,41 +10,39 @@ if (!MONGODB_URI) {
 }
 
 async function calculateMonthBreakdown(month: number, year: number, person1Key: string, person2Key: string) {
+  const db = mongoose.connection.db!;
+  const expensesCol = db.collection("expenses");
 
   const start = new Date(Date.UTC(year, month - 1, 1));
   const end = new Date(Date.UTC(year, month, 1));
 
-  const expenses = await Expense.find({
-    date: { $gte: start, $lt: end },
-  })
-    .populate("tags")
-    .lean();
+  const expenses = await expensesCol
+    .find({ date: { $gte: start, $lt: end } })
+    .toArray();
 
-  const rows = (expenses as unknown as Array<Record<string, unknown>>)
-    .filter((e) => {
-      const tags = e.tags as unknown;
-      return Array.isArray(tags) && tags.length > 0;
-    })
-    .map((e) => {
-      const tags = e.tags as Array<Record<string, unknown>>;
-      return {
-        _id: (e._id as mongoose.Types.ObjectId).toString(),
-        paidBy: e.paidBy as string,
-        amount: e.amount as number,
-        splitType: e.splitType as "split" | "full",
-        settlementType: e.settlementType as "immediate" | "deferred",
-        where: e.where as string,
-        date: (e.date as Date).toISOString(),
-        tags: tags.map((t) => ({
-          _id: (t._id as mongoose.Types.ObjectId).toString(),
-          path: t.path as string,
-          sortOrder: t.sortOrder as number,
-          name: (t.path as string).split("/").pop() ?? "",
-          parent: "",
-          depth: 1,
-        })),
-      };
+  const rows = [];
+  for (const e of expenses as unknown as Array<Record<string, unknown>>) {
+    const tags = e.tags as Array<string>;
+    if (!tags || tags.length === 0) continue;
+
+    rows.push({
+      _id: (e._id as { toString(): string }).toString(),
+      paidBy: e.paidBy as string,
+      amount: e.amount as number,
+      splitType: e.splitType as "split" | "full",
+      settlementType: e.settlementType as "immediate" | "deferred",
+      where: e.where as string,
+      date: (e.date as Date).toISOString(),
+      tags: tags.map((id) => ({
+        _id: (id as { toString(): string }).toString(),
+        path: "",
+        sortOrder: 0,
+        name: "",
+        parent: "",
+        depth: 1,
+      })),
     });
+  }
 
   const breakdown = calculateSettlement(rows, person1Key, person2Key);
   return breakdown;
