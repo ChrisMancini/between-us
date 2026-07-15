@@ -79,6 +79,8 @@ export async function closeMonth(
         owedTo,
         closedAt: new Date(),
         note,
+        person1OwesPerson2: breakdown.person1OwesPerson2,
+        person2OwesPerson1: breakdown.person2OwesPerson1,
       },
       { returnDocument: "after" },
     ))!;
@@ -93,6 +95,8 @@ export async function closeMonth(
       owedTo,
       closedAt: new Date(),
       note,
+      person1OwesPerson2: breakdown.person1OwesPerson2,
+      person2OwesPerson1: breakdown.person2OwesPerson1,
     });
     isNew = true;
   }

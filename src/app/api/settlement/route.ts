@@ -16,6 +16,8 @@ function serializeSettlement(doc: ISettlement): SerializedSettlement {
     owedTo: doc.owedTo,
     closedAt: doc.closedAt.toISOString(),
     note: doc.note,
+    person1OwesPerson2: doc.person1OwesPerson2,
+    person2OwesPerson1: doc.person2OwesPerson1,
     previousTotalOwed: doc.previousTotalOwed,
     previousOwedBy: doc.previousOwedBy,
     reopenedAt: doc.reopenedAt?.toISOString(),
