@@ -9,6 +9,9 @@ export interface ISettlement extends Document {
   owedTo: string;
   closedAt: Date;
   note?: string;
+  // Directional breakdown amounts (populated on close/reopen, optional for backwards compatibility)
+  person1OwesPerson2?: number; // cents
+  person2OwesPerson1?: number; // cents
   // Set when a closed month is reopened; cleared on re-close
   previousTotalOwed?: number;
   previousOwedBy?: string;
@@ -25,6 +28,8 @@ export interface SerializedSettlement {
   owedTo: string;
   closedAt: string;
   note?: string;
+  person1OwesPerson2?: number;
+  person2OwesPerson1?: number;
   previousTotalOwed?: number;
   previousOwedBy?: string;
   reopenedAt?: string;
@@ -39,6 +44,8 @@ const SettlementSchema = new Schema<ISettlement>({
   owedTo: { type: String, required: true },
   closedAt: { type: Date, required: true },
   note: { type: String },
+  person1OwesPerson2: { type: Number, min: 0 },
+  person2OwesPerson1: { type: Number, min: 0 },
   previousTotalOwed: { type: Number },
   previousOwedBy: { type: String },
   reopenedAt: { type: Date },
