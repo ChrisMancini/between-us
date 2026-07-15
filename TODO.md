@@ -27,7 +27,7 @@
 
 - [ ] Filter activity by action type (expense added, deleted, settlement closed, etc.)
 - [ ] Date range filter on activity feed
-- [ ] Inline links from activity items to the referenced expense or settlement
+- [x] Inline links from activity items to the referenced expense or settlement
 
 ## Settlement
 

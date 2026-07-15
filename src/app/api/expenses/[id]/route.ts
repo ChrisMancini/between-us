@@ -18,6 +18,21 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
+export const HEAD = withAuth<RouteContext>(async (_req, session, context) => {
+  const { id } = await context.params;
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
+
+  await connectToDatabase();
+
+  const expense = await Expense.findById(id).lean();
+  if (!expense) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  return new NextResponse(null, { status: 200 });
+});
+
 function detectChanges(
   existing: IExpense,
   updated: { date: string; tagIds: string[]; amount: number; where: string; notes?: string; splitType: string; settlementType: string },
@@ -34,6 +49,41 @@ function detectChanges(
   if ((existing.notes ?? "") !== (updated.notes ?? "")) changes.push("notes");
   return changes;
 }
+
+export const GET = withAuth<RouteContext>(async (_req, session, context) => {
+  const { id } = await context.params;
+  const idErr = invalidId(id);
+  if (idErr) return idErr;
+
+  await connectToDatabase();
+
+  const expense = await Expense.findById(id).populate("tags").lean();
+  if (!expense) {
+    return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+  }
+
+  const tags = (expense.tags ?? []) as unknown as Array<{
+    _id: mongoose.Types.ObjectId;
+    path: string;
+    sortOrder: number;
+  }>;
+
+  return NextResponse.json({
+    expense: {
+      _id: expense._id.toString(),
+      paidBy: expense.paidBy,
+      date: (expense.date as Date).toISOString(),
+      tags: tags.map(serializeTag),
+      amount: expense.amount,
+      where: expense.where,
+      notes: expense.notes,
+      splitType: expense.splitType,
+      settlementType: expense.settlementType,
+      createdAt: (expense.createdAt as Date).toISOString(),
+      updatedAt: (expense.updatedAt as Date).toISOString(),
+    },
+  });
+});
 
 export const PUT = withAuth<RouteContext>(async (req, session, context) => {
   const { id } = await context.params;
