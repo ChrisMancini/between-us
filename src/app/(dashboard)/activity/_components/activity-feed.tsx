@@ -19,6 +19,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { PersonBadge } from "@/components/person-badge";
+import { ActivityLink } from "@/components/activity-link";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
 import type { SerializedActivity } from "@/lib/models/activity";
@@ -176,23 +177,25 @@ function ActivityItem({
   const { timeAgo, fullDate } = formatActivityDate(item.createdAt, true);
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/60 transition-colors">
-      <div className={`flex-shrink-0 rounded-lg p-2 ${colorClass}`}>
-        <Icon className="h-4 w-4" />
+    <ActivityLink activity={item}>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className={`flex-shrink-0 rounded-lg p-2 ${colorClass}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm">
+            <PersonBadge {...badgeProps(item.actorKey, personMap)} className="mr-1.5" />
+            <span className="text-foreground">{item.summary}</span>
+          </p>
+        </div>
+        <time
+          dateTime={item.createdAt}
+          title={fullDate}
+          className="flex-shrink-0 text-xs text-muted-foreground"
+        >
+          {timeAgo}
+        </time>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm">
-          <PersonBadge {...badgeProps(item.actorKey, personMap)} className="mr-1.5" />
-          <span className="text-foreground">{item.summary}</span>
-        </p>
-      </div>
-      <time
-        dateTime={item.createdAt}
-        title={fullDate}
-        className="flex-shrink-0 text-xs text-muted-foreground"
-      >
-        {timeAgo}
-      </time>
-    </div>
+    </ActivityLink>
   );
 }
