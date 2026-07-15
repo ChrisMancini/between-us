@@ -1,6 +1,6 @@
 {
   "name": "between-us",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,7 +15,8 @@
     "fallow:dupes": "fallow dupes",
     "fallow:health": "fallow health",
     "fallow:fix": "fallow fix --dry-run",
-    "fallow:audit": "fallow audit"
+    "fallow:audit": "fallow audit",
+    "migrate:backfill-settlement": "node --loader ts-node/esm scripts/backfill-settlement-breakdown.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

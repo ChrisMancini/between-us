@@ -289,9 +289,10 @@ function SettlementDetailContent({
   activity: SerializedActivity;
 }) {
   const { personMap } = usePersons();
-  const { month, year, totalOwed, owedBy, owedTo, closedAt, note } = settlement;
-  const person1OwesPerson2 = owedBy === "person1" ? totalOwed : 0;
-  const person2OwesPerson1 = owedBy === "person2" ? totalOwed : 0;
+  const { month, year, totalOwed, owedBy, owedTo, closedAt, note, person1OwesPerson2: p1OwesP2, person2OwesPerson1: p2OwesP1 } = settlement;
+  // Use persisted breakdown amounts if available, otherwise fallback to deriving from totalOwed
+  const person1OwesPerson2 = p1OwesP2 ?? (owedBy === "person1" ? totalOwed : 0);
+  const person2OwesPerson1 = p2OwesP1 ?? (owedBy === "person2" ? totalOwed : 0);
   const payer = personMap.get(owedBy)?.displayName ?? owedBy;
   const receiver = personMap.get(owedTo)?.displayName ?? owedTo;
 
