@@ -2,6 +2,7 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import { Settlement } from "@/lib/models/settlement";
 import { Expense } from "@/lib/models/expense";
+import { Tag } from "@/lib/models/tag";
 import { calculateSettlement } from "@/lib/settlement-calc";
 
 const MONGODB_URI = process.env.MONGODB_URI;
