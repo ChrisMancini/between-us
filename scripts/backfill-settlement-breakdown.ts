@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import { Settlement } from "@/lib/models/settlement";
 import { Expense } from "@/lib/models/expense";
 import { calculateSettlement } from "@/lib/settlement-calc";
-import { getPersons } from "@/lib/persons";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
@@ -11,9 +10,7 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-async function calculateMonthBreakdown(month: number, year: number) {
-  const persons = await getPersons();
-  const [p1, p2] = persons!;
+async function calculateMonthBreakdown(month: number, year: number, person1Key: string, person2Key: string) {
 
   const start = new Date(Date.UTC(year, month - 1, 1));
   const end = new Date(Date.UTC(year, month, 1));
@@ -50,7 +47,7 @@ async function calculateMonthBreakdown(month: number, year: number) {
       };
     });
 
-  const breakdown = calculateSettlement(rows, p1.key, p2.key);
+  const breakdown = calculateSettlement(rows, person1Key, person2Key);
   return breakdown;
 }
 
@@ -58,6 +55,10 @@ async function main() {
   console.log("Connecting to MongoDB...");
   await mongoose.connect(MONGODB_URI!);
   console.log("Connected.\n");
+
+  // Get person keys from settings (hardcoded as person1/person2 for now)
+  const person1Key = "person1";
+  const person2Key = "person2";
 
   console.log("Fetching all settlements...");
   const settlements = await Settlement.find({}).sort({ year: 1, month: 1 });
@@ -84,7 +85,7 @@ async function main() {
 
     try {
       // Calculate the breakdown for this month
-      const breakdown = await calculateMonthBreakdown(settlement.month, settlement.year);
+      const breakdown = await calculateMonthBreakdown(settlement.month, settlement.year, person1Key, person2Key);
 
       // Update the settlement with breakdown data
       await Settlement.findByIdAndUpdate(settlement._id, {
