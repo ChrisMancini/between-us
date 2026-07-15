@@ -12,6 +12,7 @@ if (!MONGODB_URI) {
 async function calculateMonthBreakdown(month: number, year: number, person1Key: string, person2Key: string) {
   const db = mongoose.connection.db!;
   const expensesCol = db.collection("expenses");
+  const tagsCol = db.collection("tags");
 
   const start = new Date(Date.UTC(year, month - 1, 1));
   const end = new Date(Date.UTC(year, month, 1));
@@ -20,9 +21,27 @@ async function calculateMonthBreakdown(month: number, year: number, person1Key: 
     .find({ date: { $gte: start, $lt: end } })
     .toArray();
 
+  // Build a map of all tag IDs -> tag data
+  const allTagIds = new Set<string>();
+  for (const e of expenses as unknown as Array<Record<string, unknown>>) {
+    const tags = e.tags as Array<{ toString(): string }>;
+    if (tags) {
+      tags.forEach((id) => allTagIds.add(id.toString()));
+    }
+  }
+
+  const tagsMap = new Map<string, Record<string, unknown>>();
+  if (allTagIds.size > 0) {
+    const tagIds = Array.from(allTagIds).map((id) => new (mongoose.Types.ObjectId as unknown)(id));
+    const tagDocs = await tagsCol.find({ _id: { $in: tagIds } }).toArray();
+    tagDocs.forEach((tag) => {
+      tagsMap.set((tag._id as { toString(): string }).toString(), tag);
+    });
+  }
+
   const rows = [];
   for (const e of expenses as unknown as Array<Record<string, unknown>>) {
-    const tags = e.tags as Array<string>;
+    const tags = e.tags as Array<{ toString(): string }>;
     if (!tags || tags.length === 0) continue;
 
     rows.push({
@@ -33,14 +52,21 @@ async function calculateMonthBreakdown(month: number, year: number, person1Key: 
       settlementType: e.settlementType as "immediate" | "deferred",
       where: e.where as string,
       date: (e.date as Date).toISOString(),
-      tags: tags.map((id) => ({
-        _id: (id as { toString(): string }).toString(),
-        path: "",
-        sortOrder: 0,
-        name: "",
-        parent: "",
-        depth: 1,
-      })),
+      tags: tags
+        .map((id) => {
+          const tagId = id.toString();
+          const tagDoc = tagsMap.get(tagId);
+          if (!tagDoc) return null;
+          return {
+            _id: tagId,
+            path: tagDoc.path as string,
+            sortOrder: tagDoc.sortOrder as number,
+            name: (tagDoc.path as string).split("/").pop() ?? "",
+            parent: "",
+            depth: 1,
+          };
+        })
+        .filter(Boolean),
     });
   }
 
