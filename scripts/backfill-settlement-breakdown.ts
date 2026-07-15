@@ -99,13 +99,6 @@ async function main() {
   for (const settlement of settlements) {
     const monthStr = `${settlement.year}-${String(settlement.month).padStart(2, "0")}`;
 
-    // Skip if already has breakdown data
-    if (settlement.person1OwesPerson2 !== undefined && settlement.person2OwesPerson1 !== undefined) {
-      console.log(`✓ ${monthStr}: Already has breakdown data`);
-      skippedCount++;
-      continue;
-    }
-
     try {
       // Calculate the breakdown for this month
       const breakdown = await calculateMonthBreakdown(settlement.month, settlement.year, person1Key, person2Key);
