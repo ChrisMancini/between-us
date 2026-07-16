@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { TrendingDown, TrendingUp, CalendarDays } from "lucide-react";
 import { ExpenseDetailContent } from "@/components/expense-detail-popover";
 import { PersonBadge } from "@/components/person-badge";
@@ -10,6 +10,24 @@ import { formatCurrency, formatMonthYear, formatShortDate } from "@/lib/utils";
 import type { SerializedActivity } from "@/lib/models/activity";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedSettlement } from "@/lib/models/settlement";
+
+function clampToViewport(el: HTMLDivElement, clickX: number, clickY: number) {
+  const margin = 8;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const { width, height } = el.getBoundingClientRect();
+
+  let x = clickX;
+  let y = clickY;
+
+  if (x + width > vw - margin) x = vw - width - margin;
+  if (y + height > vh - margin) y = vh - height - margin;
+  if (x < margin) x = margin;
+  if (y < margin) y = margin;
+
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+}
 
 interface ActivityLinkProps {
   children: React.ReactNode;
@@ -80,8 +98,16 @@ function ActivityExpensePopover({
   const [error, setError] = useState<string | null>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const config = extractFetchConfig(activity.action, activity.metadata);
+
+  useLayoutEffect(() => {
+    if (isOpen && popoverRef.current) {
+      clampToViewport(popoverRef.current, position.x, position.y);
+    }
+  }, [isOpen, position, isLoading, expenseData, error]);
+
   if (!config) return <>{children}</>;
 
   const handleClick = async (e: React.MouseEvent) => {
@@ -140,11 +166,8 @@ function ActivityExpensePopover({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           <div
+            ref={popoverRef}
             className="fixed z-50 w-[300px] bg-popover border border-popover-border rounded-md shadow-md"
-            style={{
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
           >
             {isLoading ? (
               <div className="px-4 py-8 text-center">
@@ -177,8 +200,16 @@ function ActivitySettlementPopover({
   const [error, setError] = useState<string | null>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const config = extractFetchConfig(activity.action, activity.metadata);
+
+  useLayoutEffect(() => {
+    if (isOpen && popoverRef.current) {
+      clampToViewport(popoverRef.current, position.x, position.y);
+    }
+  }, [isOpen, position, isLoading, settlementData, error]);
+
   if (!config) return <>{children}</>;
 
   const handleClick = async (e: React.MouseEvent) => {
@@ -242,11 +273,8 @@ function ActivitySettlementPopover({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           <div
+            ref={popoverRef}
             className="fixed z-50 w-[300px] bg-popover border border-popover-border rounded-md shadow-md"
-            style={{
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
           >
             {isLoading ? (
               <div className="px-4 py-8 text-center">
