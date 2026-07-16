@@ -32,13 +32,11 @@ const PERSON1 = "chris";
 const PERSON2 = "lauren";
 
 const emptyBreakdown: SettlementBreakdown = {
-  person1Key: PERSON1,
-  person2Key: PERSON2,
-  person1Total: 0,
-  person2Total: 0,
+  person1OwesPerson2: 0,
+  person2OwesPerson1: 0,
+  netOwedBy: "even",
   netAmount: 0,
-  netOwedBy: PERSON1,
-  netOwedTo: PERSON2,
+  deferredExpenses: [],
 };
 
 function baseParams(overrides: Record<string, unknown> = {}) {
@@ -138,12 +136,12 @@ describe("fetchRunningBalance", () => {
   it("includes viewedBreakdown when viewed month is open", async () => {
     const viewedBreakdown: SettlementBreakdown = {
       ...emptyBreakdown,
-      person1Total: 5000,
+      person1OwesPerson2: 5000,
       netAmount: 2500,
     };
 
     mockFind.mockReturnValue(mockLean([]));
-    const otherBreakdown = { ...emptyBreakdown, person2Total: 3000 };
+    const otherBreakdown = { ...emptyBreakdown, person2OwesPerson1: 3000 };
     mockCalcSettlement.mockReturnValue(otherBreakdown);
     const expectedBalance = { totalOwed: 1000, owedBy: PERSON1, owedTo: PERSON2 };
     mockCalcRunningBalance.mockReturnValue(expectedBalance);
@@ -161,7 +159,7 @@ describe("fetchRunningBalance", () => {
   it("excludes viewedBreakdown when viewed month is not in open list", async () => {
     const viewedBreakdown: SettlementBreakdown = {
       ...emptyBreakdown,
-      person1Total: 9999,
+      person1OwesPerson2: 9999,
     };
 
     mockFind.mockReturnValue(mockLean([]));
@@ -181,7 +179,7 @@ describe("fetchRunningBalance", () => {
     );
 
     const breakdowns = mockCalcRunningBalance.mock.calls[0][0] as SettlementBreakdown[];
-    expect(breakdowns.every((b) => b.person1Total !== 9999)).toBe(true);
+    expect(breakdowns.every((b) => b.person1OwesPerson2 !== 9999)).toBe(true);
   });
 
   it("maps raw expenses to SettlementExpenseRow format", async () => {

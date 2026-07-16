@@ -4,7 +4,7 @@ import { RecurringTemplate } from "@/lib/models/recurring-template";
 import { recurringTemplateApiSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
-import { serializeTemplate, validateTemplateTagIds } from "@/lib/recurring-template-utils";
+import { serializeTemplate, validateTemplateTagIds, normalizeTemplateItemTagIds } from "@/lib/recurring-template-utils";
 
 export const GET = withAuth(async (_req, session) => {
   await connectToDatabase();
@@ -30,13 +30,13 @@ export const POST = withAuth(async (req, session) => {
 
   await connectToDatabase();
 
-  const tagError = await validateTemplateTagIds(items);
-  if (tagError) return tagError;
+  const tagResult = await validateTemplateTagIds(items);
+  if (tagResult.error) return tagResult.error;
 
   const template = await RecurringTemplate.create({
     name,
     createdBy: session.user.id,
-    items,
+    items: normalizeTemplateItemTagIds(items, tagResult.pathById),
   });
 
   return NextResponse.json(

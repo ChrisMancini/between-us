@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { Tag } from "./models/tag";
+import { collapseToMostSpecific } from "./tag-hierarchy";
 import type {
   IRecurringTemplateItem,
   SerializedRecurringTemplateItem,
@@ -23,14 +24,16 @@ function serializeTemplateItem(
 
 export async function validateTemplateTagIds(
   items: Array<{ tagIds: string[] }>
-): Promise<NextResponse | null> {
+): Promise<{ error: NextResponse } | { error: null; pathById: Map<string, string> }> {
   for (const item of items) {
     for (const tagId of item.tagIds) {
       if (!mongoose.isValidObjectId(tagId)) {
-        return NextResponse.json(
-          { error: `Invalid tag ID: ${tagId}` },
-          { status: 400 }
-        );
+        return {
+          error: NextResponse.json(
+            { error: `Invalid tag ID: ${tagId}` },
+            { status: 400 }
+          ),
+        };
       }
     }
   }
@@ -38,13 +41,26 @@ export async function validateTemplateTagIds(
   const allTagIds = [...new Set(items.flatMap((i) => i.tagIds))];
   const existingTags = await Tag.find({ _id: { $in: allTagIds } }).lean();
   if (existingTags.length !== allTagIds.length) {
-    return NextResponse.json(
-      { error: "One or more tags not found" },
-      { status: 422 }
-    );
+    return {
+      error: NextResponse.json(
+        { error: "One or more tags not found" },
+        { status: 422 }
+      ),
+    };
   }
 
-  return null;
+  const pathById = new Map(existingTags.map((t) => [String(t._id), t.path as string]));
+  return { error: null, pathById };
+}
+
+export function normalizeTemplateItemTagIds<T extends { tagIds: string[] }>(
+  items: T[],
+  pathById: Map<string, string>
+): T[] {
+  return items.map((item) => ({
+    ...item,
+    tagIds: collapseToMostSpecific(item.tagIds, pathById),
+  }));
 }
 
 export function serializeTemplate(

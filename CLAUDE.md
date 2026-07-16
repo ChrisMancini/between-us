@@ -153,6 +153,20 @@ npm run fallow       # Run all fallow analyses (dead-code, dupes, health)
 npm run fallow:audit # Audit working changes against base branch
 ```
 
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues (`ChrisMancini/between-us`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (five canonical roles, unchanged). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout — `CONTEXT.md` at root, ADRs in `docs/adr/`. See `docs/agents/domain.md`.
+
 ## Docker
 
 The app runs as a Docker container on a NAS alongside an existing MongoDB instance.

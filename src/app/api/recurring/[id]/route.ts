@@ -4,7 +4,7 @@ import { RecurringTemplate } from "@/lib/models/recurring-template";
 import { recurringTemplateApiSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError, invalidId } from "@/lib/api-utils";
-import { serializeTemplate, validateTemplateTagIds } from "@/lib/recurring-template-utils";
+import { serializeTemplate, validateTemplateTagIds, normalizeTemplateItemTagIds } from "@/lib/recurring-template-utils";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -24,12 +24,12 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
 
   await connectToDatabase();
 
-  const tagError = await validateTemplateTagIds(items);
-  if (tagError) return tagError;
+  const tagResult = await validateTemplateTagIds(items);
+  if (tagResult.error) return tagResult.error;
 
   const updated = await RecurringTemplate.findOneAndUpdate(
     { _id: id, createdBy: session.user.id },
-    { name, items },
+    { name, items: normalizeTemplateItemTagIds(items, tagResult.pathById) },
     { returnDocument: "after" },
   ).lean();
 

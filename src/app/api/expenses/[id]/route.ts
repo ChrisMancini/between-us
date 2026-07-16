@@ -5,6 +5,7 @@ import { Expense, type IExpense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
 import { expenseUpdateApiSchema } from "@/lib/validations/expense";
 import { serializeTag } from "@/lib/tag-utils";
+import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import { withAuth, canModifyExpense } from "@/lib/auth-guard";
 import { validationError, invalidId } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
@@ -122,9 +123,12 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
     return NextResponse.json({ error: "One or more tags not found" }, { status: 422 });
   }
 
+  const pathById = new Map(existingTags.map((t) => [String(t._id), t.path as string]));
+  const normalizedTagIds = collapseToMostSpecific(tagIds, pathById);
+
   const updated = await Expense.findByIdAndUpdate(
     id,
-    { date: new Date(date), tags: tagIds, amount, where, notes, splitType, settlementType },
+    { date: new Date(date), tags: normalizedTagIds, amount, where, notes, splitType, settlementType },
     { returnDocument: "after" },
   ).populate("tags");
 
@@ -140,7 +144,7 @@ export const PUT = withAuth<RouteContext>(async (req, session, context) => {
 
   await resetReadinessForMonths(session.user.paidByKey, [existing.date, date]);
 
-  const changes = detectChanges(existing, { date, tagIds, amount, where, notes, splitType, settlementType });
+  const changes = detectChanges(existing, { date, tagIds: normalizedTagIds, amount, where, notes, splitType, settlementType });
   const changedLabel = changes.length > 0 ? ` (${changes.join(", ")})` : "";
   const tagNames = tags.map((t) => t.path).join(", ");
 

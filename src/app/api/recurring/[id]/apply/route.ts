@@ -10,6 +10,7 @@ import { assertMonthsOpen } from "@/lib/settlement-guard";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
+import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -65,11 +66,13 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
     );
   }
 
+  const pathById = new Map(existingTags.map((t) => [String(t._id), t.path as string]));
+
   const expenses = await Expense.insertMany(
     template.items.map((item: IRecurringTemplateItem, i: number) => ({
       paidBy: item.paidBy,
       date: new Date(date),
-      tags: item.tagIds,
+      tags: collapseToMostSpecific(item.tagIds.map((id) => id.toString()), pathById),
       amount: overrides[i].amount,
       where: item.where,
       notes: item.notes,
