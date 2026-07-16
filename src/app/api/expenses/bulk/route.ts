@@ -12,20 +12,22 @@ import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
 import { handleExpenseChange, handleExpenseDelete, getOtherPersonKey } from "@/lib/action-lifecycle";
 import type { BulkEditResult, BulkDeleteResult } from "@/types/bulk-expense";
+import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import { monthKey, validateExpenseIds, validateTagIds, fetchExpensesAndClosedMonths } from "./helpers";
 
 function computeTagUpdate(
   expense: IExpense,
   tags: { mode: "replace" | "add" | "remove"; tagIds: string[] },
+  tagPathById: Map<string, string>,
 ): string[] | null {
   const existingTagIds = expense.tags.map((t: mongoose.Types.ObjectId) => t.toString());
   let newTagIds: string[];
 
   if (tags.mode === "replace") {
-    newTagIds = tags.tagIds;
+    newTagIds = collapseToMostSpecific(tags.tagIds, tagPathById);
   } else if (tags.mode === "add") {
     const toAdd = tags.tagIds.filter((id) => !existingTagIds.includes(id));
-    newTagIds = [...existingTagIds, ...toAdd];
+    newTagIds = collapseToMostSpecific([...existingTagIds, ...toAdd], tagPathById);
   } else {
     const removeSet = new Set(tags.tagIds);
     newTagIds = existingTagIds.filter((id: string) => !removeSet.has(id));
@@ -42,12 +44,13 @@ function buildUpdate(
   expense: IExpense,
   parsed: { tags?: { mode: "replace" | "add" | "remove"; tagIds: string[] }; splitType?: string; settlementType?: string },
   canEditSplitSettlement: boolean,
+  tagPathById: Map<string, string>,
 ): { update: Record<string, unknown>; changes: string[] } {
   const update: Record<string, unknown> = {};
   const changes: string[] = [];
 
   if (parsed.tags) {
-    const newTagIds = computeTagUpdate(expense, parsed.tags);
+    const newTagIds = computeTagUpdate(expense, parsed.tags, tagPathById);
     if (newTagIds) {
       update.tags = newTagIds;
       changes.push("tags");
@@ -142,6 +145,16 @@ export const PATCH = withAuth(async (req, session) => {
 
   const { expenses, closedMonths } = await fetchExpensesAndClosedMonths(expenseIds);
 
+  let tagPathById = new Map<string, string>();
+  if (tags) {
+    const relevantTagIds = new Set<string>(tags.tagIds);
+    for (const expense of expenses) {
+      for (const t of expense.tags) relevantTagIds.add((t as mongoose.Types.ObjectId).toString());
+    }
+    const tagDocs = await Tag.find({ _id: { $in: [...relevantTagIds] } }).lean();
+    tagPathById = new Map(tagDocs.map((t) => [String(t._id), t.path as string]));
+  }
+
   const results: BulkEditResult[] = [];
   const readinessResetDates: Date[] = [];
 
@@ -149,7 +162,7 @@ export const PATCH = withAuth(async (req, session) => {
     const isSettled = closedMonths.has(monthKey(expense.date));
     const canEditSplitSettlement = !isSettled && canModifyExpense(session, expense.paidBy);
 
-    const { update, changes } = buildUpdate(expense, { tags, splitType, settlementType }, canEditSplitSettlement);
+    const { update, changes } = buildUpdate(expense, { tags, splitType, settlementType }, canEditSplitSettlement, tagPathById);
 
     if (changes.length === 0) {
       results.push({

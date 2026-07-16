@@ -21,7 +21,7 @@
 - [x] Expand "where" search to also match notes field
 - [x] Quick-entry mode — minimal form for rapid logging (amount + where only, with smart defaults)
 - [x] Possible bug. I entered an expense that had a date in which no other expenses had been entered. There wasn't an expense at all for that month. I received a possible duplicate expense notification.
-- [ ] Tag validation — decide whether to forbid tagging an expense with both a parent and one of its descendants (e.g., `Bills` and `Bills/Electric`). Prevents double-counting within parent rollups in reports. Cross-cutting: would apply at the manual expense form, quick-entry, bulk edit, recurring templates, and CSV import. Note: a going-forward rule does not retroactively clean historical data, so rollup reports must still handle co-tagging gracefully. (Surfaced while planning the month-over-month comparison feature.)
+- [x] Tag validation — decide whether to forbid tagging an expense with both a parent and one of its descendants (e.g., `Bills` and `Bills/Electric`). Prevents double-counting within parent rollups in reports. Cross-cutting: would apply at the manual expense form, quick-entry, bulk edit, recurring templates, and CSV import. Note: a going-forward rule does not retroactively clean historical data, so rollup reports must still handle co-tagging gracefully. (Surfaced while planning the month-over-month comparison feature.)
 
 ## Activity Feed
 

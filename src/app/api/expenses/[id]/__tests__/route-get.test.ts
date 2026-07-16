@@ -23,6 +23,7 @@ import {
   makeSession,
   asMock,
   makeIdContext,
+  makeGetRequest,
   makeExpense,
   VALID_ID,
   VALID_ID_2,
@@ -54,7 +55,7 @@ describe("GET /api/expenses/[id]", () => {
     });
     mockFindById.mockReturnValue({ populate: mockPopulate } as unknown);
 
-    const response = await GET({} as unknown, makeIdContext(VALID_ID));
+    const response = await GET(makeGetRequest("/api/expenses/" + VALID_ID), makeIdContext(VALID_ID));
 
     expect(response.status).toBe(200);
     const json = await response.json();
@@ -72,13 +73,13 @@ describe("GET /api/expenses/[id]", () => {
     });
     mockFindById.mockReturnValue({ populate: mockPopulate } as unknown);
 
-    const response = await GET({} as unknown, makeIdContext(VALID_ID));
+    const response = await GET(makeGetRequest("/api/expenses/" + VALID_ID), makeIdContext(VALID_ID));
 
     expectStatus(response, 404);
   });
 
   it("returns 400 for invalid ID format", async () => {
-    const response = await GET({} as unknown, makeIdContext("invalid-id"));
+    const response = await GET(makeGetRequest("/api/expenses/invalid-id"), makeIdContext("invalid-id"));
 
     expectStatus(response, 400);
   });
@@ -86,7 +87,7 @@ describe("GET /api/expenses/[id]", () => {
   it("populates tags on the expense", async () => {
     const expense = makeExpense({
       _id: VALID_ID,
-      tags: [{ _id: VALID_ID_2, path: "Groceries", sortOrder: 1 }] as unknown,
+      tags: [{ _id: VALID_ID_2, path: "Groceries", sortOrder: 1 }] as unknown[],
     });
 
     const mockPopulate = jest.fn().mockReturnValue({
@@ -94,7 +95,7 @@ describe("GET /api/expenses/[id]", () => {
     });
     mockFindById.mockReturnValue({ populate: mockPopulate } as unknown);
 
-    const response = await GET({} as unknown, makeIdContext(VALID_ID));
+    const response = await GET(makeGetRequest("/api/expenses/" + VALID_ID), makeIdContext(VALID_ID));
 
     expect(response.status).toBe(200);
     expect(mockPopulate).toHaveBeenCalledWith("tags");
@@ -102,7 +103,7 @@ describe("GET /api/expenses/[id]", () => {
 
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
-    const response = await GET({} as unknown, makeIdContext(VALID_ID));
+    const response = await GET(makeGetRequest("/api/expenses/" + VALID_ID), makeIdContext(VALID_ID));
 
     expectStatus(response, 401);
   });
@@ -121,7 +122,7 @@ describe("GET /api/expenses/[id]", () => {
     mockFindById.mockReturnValue({ populate: mockPopulate } as unknown);
 
     mockAuth.mockResolvedValue(makeSession("user", "john"));
-    const response = await GET({} as unknown, makeIdContext(VALID_ID));
+    const response = await GET(makeGetRequest("/api/expenses/" + VALID_ID), makeIdContext(VALID_ID));
 
     expect(response.status).toBe(200);
     const json = await response.json();
@@ -142,7 +143,7 @@ describe("GET /api/expenses/[id]", () => {
     mockFindById.mockReturnValue({ populate: mockPopulate } as unknown);
 
     mockAuth.mockResolvedValue(makeSession("user", "john"));
-    const response = await GET({} as unknown, makeIdContext(VALID_ID));
+    const response = await GET(makeGetRequest("/api/expenses/" + VALID_ID), makeIdContext(VALID_ID));
 
     expect(response.status).toBe(200);
     const json = await response.json();

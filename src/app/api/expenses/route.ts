@@ -5,6 +5,7 @@ import { Expense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
 import { expenseApiSchema } from "@/lib/validations/expense";
 import { serializeTag } from "@/lib/tag-utils";
+import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
@@ -71,10 +72,13 @@ export const POST = withAuth(async (req, session) => {
     return NextResponse.json({ error: "One or more tags not found" }, { status: 422 });
   }
 
+  const pathById = new Map(existingTags.map((t) => [String(t._id), t.path as string]));
+  const normalizedTagIds = collapseToMostSpecific(tagIds, pathById);
+
   const expense = await Expense.create({
     paidBy,
     date: new Date(date),
-    tags: tagIds,
+    tags: normalizedTagIds,
     amount,
     where,
     notes,
@@ -84,7 +88,7 @@ export const POST = withAuth(async (req, session) => {
 
   await resetReadinessForMonths(session.user.paidByKey, [date]);
 
-  const tagNames = existingTags.map((t) => t.path).join(", ");
+  const tagNames = normalizedTagIds.map((id) => pathById.get(id)).join(", ");
   await logActivity(session.user.paidByKey, "expense_create", `added ${formatCurrency(amount)} at ${where}`, {
     expenseId: expense._id.toString(),
     amount,

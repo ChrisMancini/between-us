@@ -6,6 +6,7 @@ import { csvImportApiSchema } from "@/lib/validations/csv-import";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import { logActivity } from "@/lib/activity-logger";
 import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
@@ -36,10 +37,12 @@ export const POST = withAuth(async (req, session) => {
   const settlementError = await assertMonthsOpen(expenses.map((e) => e.date));
   if (settlementError) return settlementError;
 
+  const pathById = new Map(existingTags.map((t) => [String(t._id), t.path as string]));
+
   const docs = expenses.map((e) => ({
     paidBy: e.paidBy,
     date: new Date(e.date),
-    tags: e.tagIds,
+    tags: collapseToMostSpecific(e.tagIds, pathById),
     amount: e.amount,
     where: e.where,
     notes: e.notes,

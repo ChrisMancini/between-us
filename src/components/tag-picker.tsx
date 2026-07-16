@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { X, Plus, Tags, ChevronDown } from "lucide-react";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { X, Plus, Tags, ChevronDown, Link2 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import type { SerializedTag } from "@/lib/models/tag";
 
 interface TagPickerProps {
@@ -32,6 +34,32 @@ export function TagPicker({
 
   const selectedTags = tags.filter((t) => selectedTagIds.includes(t._id));
 
+  const pathById = useMemo(
+    () => new Map(tags.map((t) => [t._id, t.path])),
+    [tags]
+  );
+
+  // A tag that isn't selected but is an ancestor of a selected tag is still
+  // considered associated with the expense — surface which descendant(s) imply it.
+  const impliedByNames = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const tag of tags) {
+      if (selectedTagIds.includes(tag._id)) continue;
+      const causes = tags.filter(
+        (t) => selectedTagIds.includes(t._id) && t.path.startsWith(`${tag.path}/`)
+      );
+      // Show the path relative to this tag (e.g. "June/Bills"), not just the
+      // leaf name, so two descendants that share a leaf name stay distinct.
+      if (causes.length > 0) {
+        map.set(
+          tag._id,
+          causes.map((c) => c.path.slice(tag.path.length + 1))
+        );
+      }
+    }
+    return map;
+  }, [tags, selectedTagIds]);
+
   const filteredTags = search.trim()
     ? tags.filter((t) =>
         t.path.toLowerCase().includes(search.toLowerCase())
@@ -53,10 +81,14 @@ export function TagPicker({
       if (selectedTagIds.includes(tagId)) {
         onSelectedChange(selectedTagIds.filter((id) => id !== tagId));
       } else {
-        onSelectedChange([...selectedTagIds, tagId]);
+        // Selecting a tag implies its ancestors, so a parent and one of its
+        // own descendants can never be selected at the same time.
+        onSelectedChange(
+          collapseToMostSpecific([...selectedTagIds, tagId], pathById)
+        );
       }
     },
-    [selectedTagIds, onSelectedChange]
+    [selectedTagIds, onSelectedChange, pathById]
   );
 
   const removeTag = useCallback(
@@ -78,13 +110,16 @@ export function TagPicker({
       const data = await res.json();
       if (data.tag) {
         onTagCreated?.(data.tag);
-        onSelectedChange([...selectedTagIds, data.tag._id]);
+        const nextPathById = new Map(pathById).set(data.tag._id, data.tag.path);
+        onSelectedChange(
+          collapseToMostSpecific([...selectedTagIds, data.tag._id], nextPathById)
+        );
         setSearch("");
       }
     } finally {
       setCreating(false);
     }
-  }, [canCreate, creating, search, selectedTagIds, onSelectedChange, onTagCreated]);
+  }, [canCreate, creating, search, selectedTagIds, onSelectedChange, onTagCreated, pathById]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && canCreate) {
@@ -155,17 +190,22 @@ export function TagPicker({
 
             {sortedTags.map((tag) => {
               const checked = selectedTagIds.includes(tag._id);
+              const impliedVia = impliedByNames.get(tag._id);
+              const impliedViaLabel = impliedVia?.join(", ");
               return (
                 <label
                   key={tag._id}
                   className={cn(
-                    "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer",
-                    "hover:bg-accent hover:text-accent-foreground",
+                    "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
+                    impliedVia
+                      ? "cursor-not-allowed"
+                      : "cursor-pointer hover:bg-accent hover:text-accent-foreground",
                     checked && "bg-accent/50"
                   )}
                 >
                   <Checkbox
                     checked={checked}
+                    disabled={!!impliedVia}
                     onCheckedChange={() => toggleTag(tag._id)}
                   />
                   <span
@@ -179,6 +219,22 @@ export function TagPicker({
                     )}
                     {tag.name}
                   </span>
+                  {impliedViaLabel && (
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <span
+                            className="inline-flex shrink-0 items-center"
+                            tabIndex={0}
+                            aria-label={`Included via ${impliedViaLabel}`}
+                          />
+                        }
+                      >
+                        <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>Included via {impliedViaLabel}</TooltipContent>
+                    </Tooltip>
+                  )}
                 </label>
               );
             })}

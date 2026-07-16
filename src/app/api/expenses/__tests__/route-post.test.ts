@@ -155,4 +155,48 @@ describe("POST /api/expenses", () => {
       expect.objectContaining({ amount: 5000, where: "Publix" })
     );
   });
+
+  it("silently drops a parent tag when a descendant is also submitted", async () => {
+    mockAuth.mockResolvedValue(makeSession());
+    mockSafeParse.mockReturnValue(
+      makeParsedSuccess({ ...validData, tagIds: [VALID_ID, VALID_ID_2] })
+    );
+    mockAssertMonthsOpen.mockResolvedValue(null);
+    asMock(Tag.find).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([
+        { _id: VALID_ID, path: "Bills" },
+        { _id: VALID_ID_2, path: "Bills/Electric" },
+      ]),
+    });
+
+    const created = {
+      _id: VALID_ID,
+      paidBy: "john",
+      date: new Date(Date.UTC(2026, 3, 15)),
+      amount: 5000,
+      where: "Publix",
+      notes: "Groceries",
+      splitType: "split",
+      settlementType: "deferred",
+      populate: jest.fn().mockResolvedValue({
+        _id: VALID_ID,
+        paidBy: "john",
+        date: new Date(Date.UTC(2026, 3, 15)),
+        amount: 5000,
+        where: "Publix",
+        notes: "Groceries",
+        splitType: "split",
+        settlementType: "deferred",
+        tags: [{ _id: VALID_ID_2, path: "Bills/Electric", sortOrder: 2 }],
+      }),
+    };
+    asMock(Expense.create).mockResolvedValue(created);
+
+    const res = await POST(makeJsonRequest("/api/expenses", {}));
+    await expectStatus(res, 201);
+
+    expect(Expense.create).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: [VALID_ID_2] })
+    );
+  });
 });
