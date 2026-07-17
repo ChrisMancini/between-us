@@ -7,6 +7,8 @@ const ACTIVITY_ACTIONS = [
   "settlement_close",
   "settlement_reopen",
   "recurring_apply",
+  "recurring_auto_apply",
+  "recurring_auto_apply_alert",
   "csv_import",
   "expenses_done",
   "expenses_undone",

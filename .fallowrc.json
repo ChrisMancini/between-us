@@ -5,7 +5,8 @@
     "scripts/**/*.ts"
   ],
   "ignorePatterns": [
-    "src/components/ui/**"
+    "src/components/ui/**",
+    "src/test/empty-module.js"
   ],
   "health": {
     "maxCrap": 300

@@ -2,60 +2,18 @@
 
 import { useState, useCallback } from "react";
 import { formatActivityDate } from "@/lib/utils";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  Circle,
-  RotateCcw,
-  Repeat,
-  FileUp,
-  ArrowRight,
-  Loader2,
-  CircleDollarSign,
-  Send,
-  CheckCheck,
-  XCircle,
-} from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { PersonBadge } from "@/components/person-badge";
 import { ActivityLink } from "@/components/activity-link";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
+import {
+  ACTION_COLORS,
+  ACTION_ICONS,
+  activityGlyphLabel,
+} from "@/lib/activity-glyph";
 import type { SerializedActivity } from "@/lib/models/activity";
 import type { SerializedPerson } from "@/types/person";
-
-const ACTION_ICONS: Record<string, typeof Plus> = {
-  expense_create: Plus,
-  expense_edit: Pencil,
-  expense_delete: Trash2,
-  settlement_close: CheckCircle2,
-  settlement_reopen: RotateCcw,
-  recurring_apply: Repeat,
-  csv_import: FileUp,
-  expenses_done: CheckCircle2,
-  expenses_undone: Circle,
-  action_created: CircleDollarSign,
-  action_paid: Send,
-  action_confirmed: CheckCheck,
-  action_cancelled: XCircle,
-};
-
-const ACTION_COLORS: Record<string, string> = {
-  expense_create: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
-  expense_edit: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
-  expense_delete: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40",
-  settlement_close: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40",
-  settlement_reopen: "text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40",
-  recurring_apply: "text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/40",
-  csv_import: "text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/40",
-  expenses_done: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
-  expenses_undone: "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40",
-  action_created: "text-teal-600 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/40",
-  action_paid: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
-  action_confirmed: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
-  action_cancelled: "text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/40",
-};
 
 interface ActivityFeedProps {
   initialItems: SerializedActivity[];
@@ -172,15 +130,19 @@ function ActivityItem({
   item: SerializedActivity;
   personMap: Map<string, SerializedPerson>;
 }) {
-  const Icon = ACTION_ICONS[item.action] ?? Plus;
-  const colorClass = ACTION_COLORS[item.action] ?? "";
+  const Icon = ACTION_ICONS[item.action];
+  const { text, bg } = ACTION_COLORS[item.action];
+  const glyphLabel = activityGlyphLabel(item.action);
   const { timeAgo, fullDate } = formatActivityDate(item.createdAt, true);
 
   return (
     <ActivityLink activity={item}>
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className={`flex-shrink-0 rounded-lg p-2 ${colorClass}`}>
-          <Icon className="h-4 w-4" />
+        <div
+          className={`flex-shrink-0 rounded-lg p-2 ${text} ${bg}`}
+          title={glyphLabel}
+        >
+          <Icon className="h-4 w-4" aria-label={glyphLabel} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm">

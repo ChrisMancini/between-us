@@ -8,6 +8,7 @@ const adminNavItems = [
   { href: "/admin/tags", label: "Tags" },
   { href: "/admin/csv-formats", label: "CSV Formats" },
   { href: "/admin/people", label: "People" },
+  { href: "/admin/scheduler", label: "Scheduler" },
   { href: "/admin/auth", label: "Auth" },
 ];
 

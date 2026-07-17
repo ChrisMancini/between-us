@@ -4,6 +4,7 @@ import { Tag } from "./models/tag";
 import { collapseToMostSpecific } from "./tag-hierarchy";
 import type {
   IRecurringTemplateItem,
+  RecurringSchedule,
   SerializedRecurringTemplateItem,
   SerializedRecurringTemplate,
 } from "./models/recurring-template";
@@ -68,6 +69,9 @@ export function serializeTemplate(
     _id: unknown;
     name: string;
     items: IRecurringTemplateItem[];
+    autoApplyEnabled?: boolean;
+    autoApplyEnabledAt?: Date | null;
+    schedule?: RecurringSchedule | null;
     lastAppliedAt: Date | null;
     applyCount: number;
     createdAt: Date;
@@ -78,6 +82,11 @@ export function serializeTemplate(
     _id: String(t._id),
     name: t.name,
     items: t.items.map(serializeTemplateItem),
+    autoApplyEnabled: t.autoApplyEnabled ?? false,
+    autoApplyEnabledAt: t.autoApplyEnabledAt
+      ? t.autoApplyEnabledAt.toISOString()
+      : null,
+    schedule: t.schedule ?? null,
     lastAppliedAt: t.lastAppliedAt ? t.lastAppliedAt.toISOString() : null,
     applyCount: t.applyCount,
     createdAt: t.createdAt.toISOString(),
