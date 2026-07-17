@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { Settlement } from "@/lib/models/settlement";
 import { formatMonthYear } from "@/lib/utils";
 
-export async function assertMonthsOpen(
+async function findSettledMonths(
   dates: (Date | string)[]
-): Promise<NextResponse | null> {
+): Promise<{ month: number; year: number }[]> {
   const seen = new Set<string>();
   const monthYearPairs: { month: number; year: number }[] = [];
 
@@ -26,6 +26,25 @@ export async function assertMonthsOpen(
       status: { $ne: "open" },
     })),
   }).lean();
+
+  return closedSettlements.map((s) => ({ month: s.month, year: s.year }));
+}
+
+/**
+ * Plain predicate for callers that have no HTTP response to return (e.g. the
+ * background auto-apply runner): true if any of the given dates falls in a settled
+ * month.
+ */
+export async function areMonthsSettled(
+  dates: (Date | string)[]
+): Promise<boolean> {
+  return (await findSettledMonths(dates)).length > 0;
+}
+
+export async function assertMonthsOpen(
+  dates: (Date | string)[]
+): Promise<NextResponse | null> {
+  const closedSettlements = await findSettledMonths(dates);
 
   if (closedSettlements.length === 0) return null;
 

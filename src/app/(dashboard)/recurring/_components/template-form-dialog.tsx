@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  useForm,
-  useFieldArray,
-  Controller,
-} from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -30,29 +25,13 @@ import { SettlementTypeSelect } from "@/components/settlement-type-select";
 import { usePersons } from "@/components/persons-context";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { SerializedRecurringTemplate } from "@/lib/models/recurring-template";
-
-const itemSchema = z.object({
-  paidBy: z.string().min(1),
-  tagIds: z.array(z.string()).min(1, "At least one tag is required"),
-  amount: z
-    .string()
-    .min(1, "Required")
-    .refine(
-      (v) => /^\d+(\.\d{1,2})?$/.test(v) && parseFloat(v) > 0,
-      "Enter a valid amount"
-    ),
-  where: z.string().min(1, "Required").max(100),
-  notes: z.string().max(500).optional(),
-  splitType: z.enum(["split", "full"]),
-  settlementType: z.enum(["immediate", "deferred"]),
-});
-
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
-  items: z.array(itemSchema).min(1, "Add at least one item"),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { ScheduleConfigFields } from "./schedule-config-fields";
+import {
+  buildSchedulePayload,
+  formSchema,
+  scheduleToFormDefaults,
+  type FormValues,
+} from "./template-form-schema";
 
 interface TemplateFormDialogProps {
   tags: SerializedTag[];
@@ -72,6 +51,9 @@ export function TemplateFormDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [tags, setTags] = useState(initialTags);
+
+  const defaultAutoApplyEnabled = template?.autoApplyEnabled ?? false;
+  const defaultScheduleFields = scheduleToFormDefaults(template?.schedule);
 
   const defaultItems: FormValues["items"] = template
     ? template.items.map((i) => ({
@@ -106,6 +88,8 @@ export function TemplateFormDialog({
     defaultValues: {
       name: template?.name ?? "",
       items: defaultItems,
+      autoApplyEnabled: defaultAutoApplyEnabled,
+      ...defaultScheduleFields,
     },
   });
 
@@ -119,6 +103,8 @@ export function TemplateFormDialog({
       reset({
         name: template?.name ?? "",
         items: defaultItems,
+        autoApplyEnabled: defaultAutoApplyEnabled,
+        ...defaultScheduleFields,
       });
     }
     setOpen(next);
@@ -136,6 +122,8 @@ export function TemplateFormDialog({
         splitType: item.splitType,
         settlementType: item.settlementType,
       })),
+      autoApplyEnabled: values.autoApplyEnabled,
+      schedule: buildSchedulePayload(values),
     };
 
     const url = isEdit ? `/api/recurring/${template!._id}` : "/api/recurring";
@@ -148,8 +136,10 @@ export function TemplateFormDialog({
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      toast.error(err.error ?? "Failed to save template");
+      // A 500 may have an empty body — don't let res.json() throw an unhandled
+      // rejection; fall back to a generic message.
+      const err = await res.json().catch(() => null);
+      toast.error(err?.error ?? "Failed to save template");
       return;
     }
 
@@ -245,7 +235,7 @@ export function TemplateFormDialog({
 
                   {/* Where + Amount */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <Label htmlFor={`items.${index}.where`}>Where</Label>
                       <Input
                         id={`items.${index}.where`}
@@ -256,7 +246,7 @@ export function TemplateFormDialog({
                         )}
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <Label htmlFor={`items.${index}.amount`}>Amount</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -279,7 +269,7 @@ export function TemplateFormDialog({
 
                   {/* Tags + Paid By */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <Label>Tags</Label>
                       <Controller
                         control={control}
@@ -297,7 +287,7 @@ export function TemplateFormDialog({
                         )}
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <Label>Paid By</Label>
                       <Input
                         value={personMap.get(paidBy)?.displayName ?? paidBy}
@@ -308,7 +298,7 @@ export function TemplateFormDialog({
                   </div>
 
                   {/* Settlement Type */}
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <Label>Settlement Type</Label>
                     <Controller
                       control={control}
@@ -324,7 +314,7 @@ export function TemplateFormDialog({
 
                   {/* Notes + Split */}
                   <div className="flex items-end gap-3">
-                    <div className="flex-1 space-y-1">
+                    <div className="flex-1 space-y-1.5">
                       <Label htmlFor={`items.${index}.notes`}>
                         Notes{" "}
                         <span className="text-muted-foreground font-normal">
@@ -363,6 +353,12 @@ export function TemplateFormDialog({
               ))}
             </div>
           </div>
+
+          <ScheduleConfigFields
+            control={control}
+            register={register}
+            errors={errors}
+          />
 
           <DialogFooter>
             <Button

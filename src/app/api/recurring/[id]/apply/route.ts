@@ -2,15 +2,11 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { RecurringTemplate, type IRecurringTemplateItem } from "@/lib/models/recurring-template";
 import { Tag } from "@/lib/models/tag";
-import { Expense, type IExpense } from "@/lib/models/expense";
 import { applyTemplateSchema } from "@/lib/validations/recurring-template";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError, invalidId } from "@/lib/api-utils";
 import { assertMonthsOpen } from "@/lib/settlement-guard";
-import { logActivity } from "@/lib/activity-logger";
-import { resetReadinessForMonths } from "@/lib/readiness-reset";
-import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
-import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
+import { applyTemplateCore } from "@/lib/recurring-apply-core";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -68,41 +64,15 @@ export const POST = withAuth<RouteContext>(async (req, session, context) => {
 
   const pathById = new Map(existingTags.map((t) => [String(t._id), t.path as string]));
 
-  const expenses = await Expense.insertMany(
-    template.items.map((item: IRecurringTemplateItem, i: number) => ({
-      paidBy: item.paidBy,
-      date: new Date(date),
-      tags: collapseToMostSpecific(item.tagIds.map((id) => id.toString()), pathById),
-      amount: overrides[i].amount,
-      where: item.where,
-      notes: item.notes,
-      splitType: item.splitType,
-      settlementType: item.settlementType,
-    })),
-  );
-
-  await RecurringTemplate.updateOne(
-    { _id: id },
-    { $set: { lastAppliedAt: new Date() }, $inc: { applyCount: 1 } }
-  );
-
-  await resetReadinessForMonths(session.user.paidByKey, [date]);
-
-  const immediateExpenses = expenses.filter((e) => e.settlementType === "immediate");
-  for (const expense of immediateExpenses) {
-    const otherPersonKey = await getOtherPersonKey(expense.paidBy);
-    await createActionForExpense(expense as IExpense, otherPersonKey, session.user.paidByKey);
-  }
-
-  await logActivity(session.user.paidByKey, "recurring_apply", `applied "${template.name}" (${expenses.length} expenses)`, {
-    templateName: template.name,
+  const { count } = await applyTemplateCore({
     templateId: id,
-    count: expenses.length,
-    date,
+    templateName: template.name,
+    items: template.items,
+    amounts: template.items.map((_: IRecurringTemplateItem, i: number) => overrides[i].amount),
+    pathById,
+    date: new Date(date),
+    actorKey: session.user.paidByKey,
   });
 
-  return NextResponse.json(
-    { count: expenses.length },
-    { status: 201 },
-  );
+  return NextResponse.json({ count }, { status: 201 });
 });

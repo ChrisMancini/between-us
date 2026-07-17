@@ -26,7 +26,7 @@ export const POST = withAuth(async (req, session) => {
 
   if (!parsed.success) return validationError(parsed);
 
-  const { name, items } = parsed.data;
+  const { name, items, autoApplyEnabled, schedule } = parsed.data;
 
   await connectToDatabase();
 
@@ -37,6 +37,9 @@ export const POST = withAuth(async (req, session) => {
     name,
     createdBy: session.user.id,
     items: normalizeTemplateItemTagIds(items, tagResult.pathById),
+    autoApplyEnabled,
+    autoApplyEnabledAt: autoApplyEnabled ? new Date() : null,
+    schedule: autoApplyEnabled ? (schedule ?? null) : null,
   });
 
   return NextResponse.json(

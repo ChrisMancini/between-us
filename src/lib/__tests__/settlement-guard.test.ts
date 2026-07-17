@@ -5,7 +5,7 @@ jest.mock("@/lib/models/settlement", () => ({
 }));
 
 import { Settlement } from "@/lib/models/settlement";
-import { assertMonthsOpen } from "@/lib/settlement-guard";
+import { assertMonthsOpen, areMonthsSettled } from "@/lib/settlement-guard";
 
 const mockFind = Settlement.find as jest.Mock;
 
@@ -61,5 +61,21 @@ describe("assertMonthsOpen", () => {
     const queryArg = mockFind.mock.calls[0][0];
     expect(queryArg.$or).toHaveLength(1);
     expect(queryArg.$or[0]).toMatchObject({ month: 1, year: 2025 });
+  });
+});
+
+describe("areMonthsSettled", () => {
+  beforeEach(() => {
+    mockFind.mockReset();
+  });
+
+  it("returns false when no month is settled", async () => {
+    mockClosedSettlements([]);
+    expect(await areMonthsSettled(["2025-01-15"])).toBe(false);
+  });
+
+  it("returns true when a month is settled", async () => {
+    mockClosedSettlements([{ month: 1, year: 2025 }]);
+    expect(await areMonthsSettled(["2025-01-15"])).toBe(true);
   });
 });

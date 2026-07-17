@@ -1,12 +1,21 @@
 "use client";
 
 import { useState, useRef, useLayoutEffect } from "react";
-import { TrendingDown, TrendingUp, CalendarDays } from "lucide-react";
+import {
+  TrendingDown,
+  TrendingUp,
+  CalendarDays,
+  CalendarClock,
+  Repeat,
+  Copy,
+  AlertTriangle,
+} from "lucide-react";
 import { ExpenseDetailContent } from "@/components/expense-detail-popover";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
 import { formatCurrency, formatMonthYear, formatShortDate } from "@/lib/utils";
+import { parseApplySummary } from "@/lib/activity-apply-summary";
 import type { SerializedActivity } from "@/lib/models/activity";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedSettlement } from "@/lib/models/settlement";
@@ -34,7 +43,14 @@ interface ActivityLinkProps {
   activity: SerializedActivity;
 }
 
-const LINKABLE_ACTIONS = ["expense_create", "expense_edit", "settlement_close", "settlement_reopen"] as const;
+const LINKABLE_ACTIONS = [
+  "expense_create",
+  "expense_edit",
+  "settlement_close",
+  "settlement_reopen",
+  "recurring_apply",
+  "recurring_auto_apply",
+] as const;
 
 interface FetchConfig {
   dataUrl: string;
@@ -82,80 +98,61 @@ export function ActivityLink({ children, activity }: ActivityLinkProps) {
     return <ActivitySettlementPopover activity={activity}>{children}</ActivitySettlementPopover>;
   }
 
+  if (activity.action === "recurring_apply" || activity.action === "recurring_auto_apply") {
+    return <ActivityApplyPopover activity={activity}>{children}</ActivityApplyPopover>;
+  }
+
   return <>{children}</>;
 }
 
-function ActivityExpensePopover({
+/** A centered status line (loading / error) for the fetch-backed popovers. */
+function PopoverMessage({ message, loading }: { message: string; loading?: boolean }) {
+  return (
+    <div className={`px-4 ${loading ? "py-8" : "py-4"} text-center`}>
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
+/**
+ * Shared chrome for every activity popover: a full-width trigger button, a
+ * click-anchored, viewport-clamped panel, and a click-away overlay. `onOpen` runs
+ * when it opens (used by the fetch-backed popovers to load their data); `renderBody`
+ * supplies the panel contents. The panel re-clamps whenever its size changes (e.g.
+ * a loading state resolving to loaded content).
+ */
+function PositionedActivityPopover({
   children,
-  activity,
+  onOpen,
+  renderBody,
 }: {
   children: React.ReactNode;
-  activity: SerializedActivity;
+  onOpen?: () => void;
+  renderBody: () => React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [expenseData, setExpenseData] = useState<SerializedExpense | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  const config = extractFetchConfig(activity.action, activity.metadata);
-
   useLayoutEffect(() => {
-    if (isOpen && popoverRef.current) {
-      clampToViewport(popoverRef.current, position.x, position.y);
-    }
-  }, [isOpen, position, isLoading, expenseData, error]);
+    const el = popoverRef.current;
+    if (!isOpen || !el) return;
+    clampToViewport(el, position.x, position.y);
+    const observer = new ResizeObserver(() =>
+      clampToViewport(el, position.x, position.y)
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isOpen, position]);
 
-  if (!config) return <>{children}</>;
-
-  const handleClick = async (e: React.MouseEvent) => {
-    setPosition({
-      x: e.clientX,
-      y: e.clientY,
-    });
-
+  const handleClick = (e: React.MouseEvent) => {
+    setPosition({ x: e.clientX, y: e.clientY });
     setIsOpen(true);
-    setIsLoading(true);
-    setError(null);
-    setExpenseData(null);
-
-    try {
-      const res = await fetch(config.dataUrl);
-
-      if (res.status === 404) {
-        setError("Expense not found");
-        setIsLoading(false);
-        return;
-      }
-
-      if (res.status === 403) {
-        setError("You don't have access to this expense");
-        setIsLoading(false);
-        return;
-      }
-
-      if (!res.ok) {
-        setError("Unable to load expense details");
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      if ("expense" in data) {
-        setExpenseData(data.expense);
-      }
-    } catch (err) {
-      console.error("[ActivityLink] Error loading expense:", err);
-      setError("Unable to load expense details");
-    } finally {
-      setIsLoading(false);
-    }
+    onOpen?.();
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div className="relative">
       <button
         onClick={handleClick}
         className="w-full text-left hover:bg-muted/60 transition-colors cursor-pointer"
@@ -169,21 +166,71 @@ function ActivityExpensePopover({
             ref={popoverRef}
             className="fixed z-50 w-[300px] bg-popover border border-popover-border rounded-md shadow-md"
           >
-            {isLoading ? (
-              <div className="px-4 py-8 text-center">
-                <p className="text-sm text-muted-foreground">Loading details...</p>
-              </div>
-            ) : error ? (
-              <div className="px-4 py-4 text-center">
-                <p className="text-sm text-muted-foreground">{error}</p>
-              </div>
-            ) : expenseData ? (
-              <ExpenseDetailInPopover expense={expenseData} />
-            ) : null}
+            {renderBody()}
           </div>
         </>
       )}
     </div>
+  );
+}
+
+function ActivityExpensePopover({
+  children,
+  activity,
+}: {
+  children: React.ReactNode;
+  activity: SerializedActivity;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [expenseData, setExpenseData] = useState<SerializedExpense | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const config = extractFetchConfig(activity.action, activity.metadata);
+  if (!config) return <>{children}</>;
+
+  const load = async () => {
+    setIsLoading(true);
+    setError(null);
+    setExpenseData(null);
+    try {
+      const res = await fetch(config.dataUrl);
+      if (res.status === 404) {
+        setError("Expense not found");
+        return;
+      }
+      if (res.status === 403) {
+        setError("You don't have access to this expense");
+        return;
+      }
+      if (!res.ok) {
+        setError("Unable to load expense details");
+        return;
+      }
+      const data = await res.json();
+      if ("expense" in data) setExpenseData(data.expense);
+    } catch (err) {
+      console.error("[ActivityLink] Error loading expense:", err);
+      setError("Unable to load expense details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <PositionedActivityPopover
+      onOpen={load}
+      renderBody={() =>
+        isLoading ? (
+          <PopoverMessage message="Loading details..." loading />
+        ) : error ? (
+          <PopoverMessage message={error} />
+        ) : expenseData ? (
+          <ExpenseDetailInPopover expense={expenseData} />
+        ) : null
+      }
+    >
+      {children}
+    </PositionedActivityPopover>
   );
 }
 
@@ -194,56 +241,31 @@ function ActivitySettlementPopover({
   children: React.ReactNode;
   activity: SerializedActivity;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [settlementData, setSettlementData] = useState<SerializedSettlement | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
 
   const config = extractFetchConfig(activity.action, activity.metadata);
-
-  useLayoutEffect(() => {
-    if (isOpen && popoverRef.current) {
-      clampToViewport(popoverRef.current, position.x, position.y);
-    }
-  }, [isOpen, position, isLoading, settlementData, error]);
-
   if (!config) return <>{children}</>;
 
-  const handleClick = async (e: React.MouseEvent) => {
-    setPosition({
-      x: e.clientX,
-      y: e.clientY,
-    });
-
-    setIsOpen(true);
+  const load = async () => {
     setIsLoading(true);
     setError(null);
     setSettlementData(null);
-
     try {
       const res = await fetch(config.dataUrl);
-
       if (res.status === 404) {
         setError("Settlement not found");
-        setIsLoading(false);
         return;
       }
-
       if (res.status === 403) {
         setError("You don't have access to this settlement");
-        setIsLoading(false);
         return;
       }
-
       if (!res.ok) {
         setError("Unable to load settlement details");
-        setIsLoading(false);
         return;
       }
-
       const month = activity.metadata.month as number;
       const year = activity.metadata.year as number;
       const settlementRes = await fetch(`/api/settlement?month=${month}&year=${year}`);
@@ -262,35 +284,132 @@ function ActivitySettlementPopover({
   };
 
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        onClick={handleClick}
-        className="w-full text-left hover:bg-muted/60 transition-colors cursor-pointer"
-      >
-        {children}
-      </button>
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div
-            ref={popoverRef}
-            className="fixed z-50 w-[300px] bg-popover border border-popover-border rounded-md shadow-md"
-          >
-            {isLoading ? (
-              <div className="px-4 py-8 text-center">
-                <p className="text-sm text-muted-foreground">Loading details...</p>
-              </div>
-            ) : error ? (
-              <div className="px-4 py-4 text-center">
-                <p className="text-sm text-muted-foreground">{error}</p>
-              </div>
-            ) : settlementData ? (
-              <SettlementDetailContent settlement={settlementData} activity={activity} />
-            ) : null}
-          </div>
-        </>
+    <PositionedActivityPopover
+      onOpen={load}
+      renderBody={() =>
+        isLoading ? (
+          <PopoverMessage message="Loading details..." loading />
+        ) : error ? (
+          <PopoverMessage message={error} />
+        ) : settlementData ? (
+          <SettlementDetailContent settlement={settlementData} activity={activity} />
+        ) : null
+      }
+    >
+      {children}
+    </PositionedActivityPopover>
+  );
+}
+
+/**
+ * Popover for a template-apply entry (manual or scheduled). Unlike the expense and
+ * settlement popovers this needs no fetch — the run's consolidated summary already
+ * lives in the activity metadata, so it renders straight from `activity`.
+ */
+function ActivityApplyPopover({
+  children,
+  activity,
+}: {
+  children: React.ReactNode;
+  activity: SerializedActivity;
+}) {
+  return (
+    <PositionedActivityPopover
+      renderBody={() => <ApplyDetailContent activity={activity} />}
+    >
+      {children}
+    </PositionedActivityPopover>
+  );
+}
+
+function formatApplyDate(iso: string) {
+  if (!iso) return "";
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function ApplyDetailContent({ activity }: { activity: SerializedActivity }) {
+  const { personMap } = usePersons();
+  const { templateName, date, addedCount, duplicates, flagged } =
+    parseApplySummary(activity.metadata);
+  const isAuto = activity.action === "recurring_auto_apply";
+  const ModeIcon = isAuto ? CalendarClock : Repeat;
+
+  return (
+    <>
+      {/* Header */}
+      <div className="border-b border-primary/10 bg-primary/5 px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-foreground truncate">
+            {templateName}
+          </p>
+          <p className="shrink-0 text-sm font-bold tabular-nums text-foreground">
+            {addedCount} added
+          </p>
+        </div>
+        <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <CalendarDays className="h-3 w-3" />
+              {formatApplyDate(date)}
+            </span>
+            <span className="flex items-center gap-1">
+              <ModeIcon className="h-3 w-3" />
+              {isAuto ? "Automatic" : "Manual"}
+            </span>
+          </span>
+          <PersonBadge {...badgeProps(activity.actorKey, personMap)} />
+        </div>
+      </div>
+
+      {/* Skipped as duplicates of a manual entry */}
+      {duplicates.length > 0 && (
+        <div className="border-b border-primary/10 px-4 py-3">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
+            <Copy className="h-3 w-3" />
+            Skipped — already logged
+          </p>
+          <ul className="space-y-0.5">
+            {duplicates.map((where, i) => (
+              <li key={i} className="text-sm text-foreground">
+                {where || "—"}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-    </div>
+
+      {/* Flagged because a tag was deleted — needs the owner's attention */}
+      {flagged.length > 0 && (
+        <div className="border-b border-primary/10 px-4 py-3">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="h-3 w-3" />
+            Flagged — tag deleted
+          </p>
+          <ul className="space-y-0.5">
+            {flagged.map((where, i) => (
+              <li key={i} className="text-sm text-foreground">
+                {where || "—"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {duplicates.length === 0 && flagged.length === 0 && (
+        <div className="px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            {addedCount === 0
+              ? "No expenses were added."
+              : "All items added — nothing skipped."}
+          </p>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Pencil, Trash2 } from "lucide-react";
+import { Play, Pencil, Trash2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
@@ -11,6 +11,11 @@ import type { SerializedRecurringTemplate } from "@/lib/models/recurring-templat
 import { TemplateFormDialog } from "./template-form-dialog";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { ApplyTemplateDialog } from "./apply-template-dialog";
+import {
+  describeSchedule,
+  nextOccurrenceOrNull,
+} from "@/lib/recurring-schedule";
+import { activityGlyphLabel } from "@/lib/activity-glyph";
 import { formatCurrency, formatShortDate } from "@/lib/utils";
 
 interface TemplateListProps {
@@ -73,6 +78,11 @@ function TemplateCard({
   const [applyOpen, setApplyOpen] = useState(false);
 
   const total = template.items.reduce((s, i) => s + i.amount, 0);
+  // The schedule that is actively auto-applying, or null when auto-apply is off.
+  const activeSchedule = template.autoApplyEnabled ? template.schedule : null;
+  const scheduleNext = activeSchedule
+    ? nextOccurrenceOrNull(activeSchedule, new Date())
+    : null;
 
   return (
     <>
@@ -94,6 +104,28 @@ function TemplateCard({
             </p>
           </div>
         </div>
+
+        {/* Auto-apply schedule */}
+        {activeSchedule && (
+          <div className="flex items-center gap-2 border-b border-primary/10 bg-indigo-50/60 dark:bg-indigo-950/20 px-5 py-2">
+            <span
+              className="flex shrink-0 items-center gap-1 rounded-md bg-indigo-100 dark:bg-indigo-900/40 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300"
+              title={activityGlyphLabel("recurring_auto_apply")}
+            >
+              <CalendarClock className="h-3 w-3" aria-hidden />
+              Auto
+            </span>
+            <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+              {describeSchedule(activeSchedule)}
+              {scheduleNext && (
+                <span className="text-foreground">
+                  {" · Next "}
+                  {formatShortDate(scheduleNext, { omitCurrentYear: true })}
+                </span>
+              )}
+            </p>
+          </div>
+        )}
 
         {/* Items list */}
         <div className="flex-1 divide-y divide-border">

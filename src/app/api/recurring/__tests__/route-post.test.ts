@@ -113,4 +113,36 @@ describe("POST /api/recurring", () => {
     const body = await expectStatus(res, 201);
     expect(body.template.name).toBe("Monthly Bills");
   });
+
+  it("stamps autoApplyEnabledAt when created with auto-apply enabled", async () => {
+    mockAuth.mockResolvedValue(makeSession());
+    mockSafeParse.mockReturnValue(
+      makeParsedSuccess({
+        ...validData,
+        autoApplyEnabled: true,
+        schedule: { type: "day_of_month", day: 10 },
+      })
+    );
+    asMock(Tag.find).mockReturnValue({
+      lean: jest.fn().mockResolvedValue([{ _id: VALID_ID_2 }]),
+    });
+    asMock(RecurringTemplate.create).mockResolvedValue({
+      _id: VALID_ID,
+      name: "Monthly Bills",
+      items: validData.items,
+      autoApplyEnabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await POST(makeJsonRequest("/api/recurring", {}));
+
+    expect(RecurringTemplate.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        autoApplyEnabled: true,
+        autoApplyEnabledAt: expect.any(Date),
+        schedule: { type: "day_of_month", day: 10 },
+      })
+    );
+  });
 });
