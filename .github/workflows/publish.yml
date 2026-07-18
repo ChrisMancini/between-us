@@ -3,14 +3,6 @@ name: Publish Docker Image
 on:
   push:
     branches: [master]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'Dockerfile'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'next.config.*'
-      - 'tsconfig.json'
 
 permissions:
   contents: write
@@ -30,13 +22,27 @@ jobs:
         id: version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: Check if version needs publishing
+        id: should_publish
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "publish=false" >> $GITHUB_OUTPUT
+            echo "Version v${VERSION} already published"
+          else
+            echo "publish=true" >> $GITHUB_OUTPUT
+            echo "Version v${VERSION} needs publishing"
+          fi
+
       - name: Create GitHub Release
+        if: steps.should_publish.outputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           generate_release_notes: true
 
       - name: Log in to ghcr.io
+        if: steps.should_publish.outputs.publish == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -44,9 +50,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
+        if: steps.should_publish.outputs.publish == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push
+        if: steps.should_publish.outputs.publish == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
