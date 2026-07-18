@@ -11,6 +11,8 @@
   # Next.js requires these at build time; real values are provided at runtime via docker run --env-file
   ARG MONGODB_URI=mongodb://placeholder:27017/placeholder
   ARG AUTH_SECRET=build-placeholder
+  ARG GIT_SHA=dev
+  ENV GIT_SHA=$GIT_SHA
   RUN pnpm run build
   
 
