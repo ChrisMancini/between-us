@@ -62,3 +62,5 @@ jobs:
           tags: |
             ghcr.io/chrismancini/between-us:v${{ steps.version.outputs.version }}
             ghcr.io/chrismancini/between-us:latest
+          build-args: |
+            GIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
