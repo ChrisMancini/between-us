@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { Controller, useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { DatePickerField } from "@/components/date-picker-field";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
@@ -159,13 +160,16 @@ export function ApplyTemplateDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Date */}
           <div className="space-y-1.5">
-            <Label htmlFor="apply-date">Date</Label>
-            <Input
-              id="apply-date"
-              type="date"
-              {...register("date")}
-              className={cn(
-                (errors.date || dateIsSettled) && "border-destructive"
+            <Label>Date</Label>
+            <Controller
+              control={control}
+              name="date"
+              render={({ field }) => (
+                <DatePickerField
+                  value={field.value}
+                  onChange={field.onChange}
+                  hasError={!!errors.date || dateIsSettled}
+                />
               )}
             />
             {errors.date && (
