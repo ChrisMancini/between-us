@@ -2,19 +2,45 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
 import { Activity, type IActivity } from "@/lib/models/activity";
+import {
+  ACTIVITY_GROUP_SLUGS,
+  type ActivityGroupSlug,
+} from "@/lib/activity-groups";
+import { buildActivityQuery } from "@/lib/activity-query";
 import { ActivityFeed } from "./_components/activity-feed";
 
 export const dynamic = "force-dynamic";
 
-export default async function ActivityPage() {
+interface PageProps {
+  searchParams: Promise<{
+    filter?: string;
+    action?: string;
+  }>;
+}
+
+export default async function ActivityPage({ searchParams }: PageProps) {
   const session = await auth();
   if (!session) redirect("/login");
 
+  // Degrade each filter independently: a bad `action` in a hand-edited URL must
+  // not also discard a valid `filter`, and vice versa.
+  const sp = await searchParams;
+  const filter: "partner" | "all" = sp.filter === "all" ? "all" : "partner";
+  const action: ActivityGroupSlug | null = (
+    ACTIVITY_GROUP_SLUGS as readonly string[]
+  ).includes(sp.action ?? "")
+    ? (sp.action as ActivityGroupSlug)
+    : null;
+
   await connectToDatabase();
 
-  const results = await Activity.find({
-    actorKey: { $ne: session.user.paidByKey },
-  })
+  const query = buildActivityQuery({
+    filter,
+    action,
+    currentUserKey: session.user.paidByKey,
+  });
+
+  const results = await Activity.find(query)
     .sort({ createdAt: -1 })
     .limit(21)
     .lean<IActivity[]>();
@@ -44,7 +70,12 @@ export default async function ActivityPage() {
         </p>
       </div>
 
-      <ActivityFeed initialItems={activities} initialCursor={nextCursor} />
+      <ActivityFeed
+        initialItems={activities}
+        initialCursor={nextCursor}
+        filter={filter}
+        action={action}
+      />
     </div>
   );
 }

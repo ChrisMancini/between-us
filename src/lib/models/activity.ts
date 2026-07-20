@@ -54,6 +54,7 @@ const ActivitySchema = new Schema<IActivity>(
 
 ActivitySchema.index({ createdAt: -1 });
 ActivitySchema.index({ actorKey: 1, createdAt: -1 });
+ActivitySchema.index({ action: 1, createdAt: -1 });
 
 export const Activity =
   mongoose.models.Activity ??

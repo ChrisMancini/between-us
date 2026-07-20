@@ -85,6 +85,52 @@ describe("GET /api/activity", () => {
     expect(findArg.actorKey).toBeUndefined();
   });
 
+  it("filters by action group when action is provided", async () => {
+    mockAuth.mockResolvedValue(makeSession("user", "chris"));
+    asMock(Activity.find).mockReturnValue(mockChain([]));
+
+    await GET(makeGetRequest("/api/activity", { action: "expenses" }));
+
+    const findArg = asMock(Activity.find).mock.calls[0][0];
+    expect(findArg.action).toEqual({
+      $in: ["expense_create", "expense_edit", "expense_delete"],
+    });
+  });
+
+  it("composes the action filter with the partner filter", async () => {
+    mockAuth.mockResolvedValue(makeSession("user", "chris"));
+    asMock(Activity.find).mockReturnValue(mockChain([]));
+
+    await GET(
+      makeGetRequest("/api/activity", { action: "settlements", filter: "partner" })
+    );
+
+    const findArg = asMock(Activity.find).mock.calls[0][0];
+    expect(findArg.actorKey).toEqual({ $ne: "chris" });
+    expect(findArg.action).toEqual({
+      $in: ["settlement_close", "settlement_reopen"],
+    });
+  });
+
+  it("does not constrain action when none is provided", async () => {
+    mockAuth.mockResolvedValue(makeSession("user", "chris"));
+    asMock(Activity.find).mockReturnValue(mockChain([]));
+
+    await GET(makeGetRequest("/api/activity"));
+
+    const findArg = asMock(Activity.find).mock.calls[0][0];
+    expect(findArg.action).toBeUndefined();
+  });
+
+  it("returns 400 for an unknown action group", async () => {
+    mockAuth.mockResolvedValue(makeSession("user", "chris"));
+
+    const res = await GET(
+      makeGetRequest("/api/activity", { action: "bogus" })
+    );
+    await expectStatus(res, 400);
+  });
+
   it("uses cursor for pagination", async () => {
     mockAuth.mockResolvedValue(makeSession("user", "chris"));
     const cursor = "2026-05-01T12:00:00.000Z";

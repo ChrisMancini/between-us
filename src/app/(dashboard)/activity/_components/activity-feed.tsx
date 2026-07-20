@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { formatActivityDate } from "@/lib/utils";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { PersonBadge } from "@/components/person-badge";
@@ -12,82 +12,74 @@ import {
   ACTION_ICONS,
   activityGlyphLabel,
 } from "@/lib/activity-glyph";
+import { ACTIVITY_GROUPS, type ActivityGroupSlug } from "@/lib/activity-groups";
 import type { SerializedActivity } from "@/lib/models/activity";
 import type { SerializedPerson } from "@/types/person";
+import { ActivityFilters } from "./activity-filters";
 
 interface ActivityFeedProps {
   initialItems: SerializedActivity[];
   initialCursor: string | null;
+  filter: "partner" | "all";
+  action: ActivityGroupSlug | null;
 }
 
-export function ActivityFeed({ initialItems, initialCursor }: ActivityFeedProps) {
+export function ActivityFeed({
+  initialItems,
+  initialCursor,
+  filter,
+  action,
+}: ActivityFeedProps) {
   const { personMap } = usePersons();
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(initialCursor);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<"partner" | "all">("partner");
 
-  const fetchPage = useCallback(
-    async (newFilter: "partner" | "all", pageCursor: string | null, append: boolean) => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({ filter: newFilter, limit: "20" });
-        if (pageCursor) params.set("cursor", pageCursor);
-        const res = await fetch(`/api/activity?${params}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        setItems((prev) => (append ? [...prev, ...data.activities] : data.activities));
-        setCursor(data.nextCursor);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+  // The URL is the source of truth for the filters, so the server hands us a
+  // fresh first page whenever they change. Re-seed the list (and reset
+  // pagination) on any filter change; appended "Load More" pages survive
+  // in-between because the key only changes when a filter actually changes.
+  const filterKey = `${filter}:${action ?? ""}`;
+  useEffect(() => {
+    setItems(initialItems);
+    setCursor(initialCursor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterKey]);
 
-  const handleFilterChange = (newFilter: "partner" | "all") => {
-    if (newFilter === filter) return;
-    setFilter(newFilter);
-    fetchPage(newFilter, null, false);
-  };
+  const groupLabel = action
+    ? ACTIVITY_GROUPS.find((g) => g.slug === action)?.label
+    : null;
+  const emptyMessage = groupLabel
+    ? `No ${groupLabel.toLowerCase()} activity yet.`
+    : filter === "partner"
+    ? "No partner activity yet."
+    : "No activity yet.";
 
-  const loadMore = () => {
-    if (cursor) fetchPage(filter, cursor, true);
+  const loadMore = async () => {
+    if (!cursor) return;
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ filter, limit: "20", cursor });
+      if (action) params.set("action", action);
+      const res = await fetch(`/api/activity?${params}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setItems((prev) => [...prev, ...data.activities]);
+      setCursor(data.nextCursor);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-4">
-      {/* Filter toggle */}
-      <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit">
-        <button
-          onClick={() => handleFilterChange("partner")}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            filter === "partner"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Partner
-        </button>
-        <button
-          onClick={() => handleFilterChange("all")}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            filter === "all"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          All
-        </button>
-      </div>
+      <ActivityFilters filter={filter} action={action} />
 
       {/* Activity list */}
       <div className="rounded-xl border border-primary/10 bg-card shadow-sm overflow-hidden">
         {items.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              {filter === "partner" ? "No partner activity yet." : "No activity yet."}
-            </p>
+            <p className="text-sm text-muted-foreground">{emptyMessage}</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
