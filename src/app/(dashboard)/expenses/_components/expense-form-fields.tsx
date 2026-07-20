@@ -1,20 +1,12 @@
 "use client";
 
-import { type RefObject, useState } from "react";
+import { type RefObject } from "react";
 import { type Control, type FieldErrors, Controller, type UseFormRegister } from "react-hook-form";
-import { addDays, format, parse } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { cn, formatMonthYear } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { DatePickerField } from "@/components/date-picker-field";
 import { TagPicker } from "@/components/tag-picker";
 import { SettlementTypeSelect } from "@/components/settlement-type-select";
 import type { SerializedTag } from "@/lib/models/tag";
@@ -52,8 +44,6 @@ export function ExpenseFormFields({
   autoFocusDate,
   enableDateArrowKeys,
 }: ExpenseFormFieldsProps) {
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-
   return (
     <>
       {/* Date + Tags */}
@@ -63,61 +53,16 @@ export function ExpenseFormFields({
           <Controller
             control={control}
             name="date"
-            render={({ field }) => {
-              const dateValue = field.value
-                ? parse(field.value, "yyyy-MM-dd", new Date())
-                : undefined;
-              return (
-                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen} modal="trap-focus">
-                  <PopoverTrigger
-                    render={
-                      <Button
-                        ref={dateTriggerRef}
-                        variant="outline"
-                        autoFocus={autoFocusDate}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !field.value && "text-muted-foreground",
-                          (errors.date || dateIsSettled) && "border-destructive"
-                        )}
-                        onKeyDown={
-                          enableDateArrowKeys && dateValue
-                            ? (e) => {
-                                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                                  e.preventDefault();
-                                  const delta = e.key === "ArrowUp" ? 1 : -1;
-                                  field.onChange(
-                                    format(addDays(dateValue, delta), "yyyy-MM-dd")
-                                  );
-                                }
-                              }
-                            : undefined
-                        }
-                      />
-                    }
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value
-                      ? format(dateValue!, "MMMM d, yyyy")
-                      : "Pick a date"}
-                  </PopoverTrigger>
-                  <PopoverContent align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateValue}
-                      onSelect={(date) => {
-                        if (date) {
-                          field.onChange(format(date, "yyyy-MM-dd"));
-                        }
-                        setDatePickerOpen(false);
-                      }}
-                      defaultMonth={dateValue}
-                      autoFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              );
-            }}
+            render={({ field }) => (
+              <DatePickerField
+                value={field.value}
+                onChange={field.onChange}
+                hasError={!!errors.date || dateIsSettled}
+                triggerRef={dateTriggerRef}
+                autoFocus={autoFocusDate}
+                enableArrowKeys={enableDateArrowKeys}
+              />
+            )}
           />
           {errors.date && (
             <p className="text-xs text-destructive">{errors.date.message}</p>

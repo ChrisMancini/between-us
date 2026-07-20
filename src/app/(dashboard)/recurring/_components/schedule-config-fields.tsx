@@ -12,6 +12,7 @@ import { cn, formatShortDate } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePickerField } from "@/components/date-picker-field";
 import {
   Select,
   SelectContent,
@@ -136,7 +137,13 @@ function FamilyParams({
     case "semi_monthly":
       return <SemiMonthlyParams register={register} errors={errors} />;
     case "every_n_weeks":
-      return <EveryNWeeksParams register={register} errors={errors} />;
+      return (
+        <EveryNWeeksParams
+          control={control}
+          register={register}
+          errors={errors}
+        />
+      );
     case "last_day_of_month":
       return null;
   }
@@ -234,9 +241,10 @@ function SemiMonthlyParams({
 }
 
 function EveryNWeeksParams({
+  control,
   register,
   errors,
-}: Pick<FieldProps, "register" | "errors">) {
+}: Pick<FieldProps, "control" | "register" | "errors">) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <FieldBlock label="Every … weeks" error={errors.everyInterval?.message}>
@@ -253,10 +261,16 @@ function EveryNWeeksParams({
         hint="The cadence is anchored to this date."
         error={errors.everyAnchorDate?.message}
       >
-        <Input
-          type="date"
-          className={cn(errors.everyAnchorDate && "border-destructive")}
-          {...register("everyAnchorDate")}
+        <Controller
+          control={control}
+          name="everyAnchorDate"
+          render={({ field }) => (
+            <DatePickerField
+              value={field.value}
+              onChange={field.onChange}
+              hasError={!!errors.everyAnchorDate}
+            />
+          )}
         />
       </FieldBlock>
     </div>
