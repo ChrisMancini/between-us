@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { Activity, type IActivity } from "@/lib/models/activity";
 import { activityQuerySchema } from "@/lib/validations/activity";
+import { buildActivityQuery } from "@/lib/activity-query";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
 
@@ -11,23 +12,21 @@ export const GET = withAuth(async (req, session) => {
     limit: searchParams.get("limit") ?? undefined,
     cursor: searchParams.get("cursor") ?? undefined,
     filter: searchParams.get("filter") ?? undefined,
+    action: searchParams.get("action") ?? undefined,
   });
 
   if (!parsed.success) return validationError(parsed);
 
-  const { limit, cursor, filter } = parsed.data;
+  const { limit, cursor, filter, action } = parsed.data;
 
   await connectToDatabase();
 
-  const query: Record<string, unknown> = {};
-
-  if (filter === "partner") {
-    query.actorKey = { $ne: session.user.paidByKey };
-  }
-
-  if (cursor) {
-    query.createdAt = { $lt: new Date(cursor) };
-  }
+  const query = buildActivityQuery({
+    filter,
+    action: action ?? null,
+    currentUserKey: session.user.paidByKey,
+    cursor,
+  });
 
   const results = await Activity.find(query)
     .sort({ createdAt: -1 })
