@@ -142,6 +142,47 @@ describe("GET /api/activity", () => {
     expect(findArg.createdAt).toEqual({ $lt: new Date(cursor) });
   });
 
+  it("applies a from/to date range", async () => {
+    mockAuth.mockResolvedValue(makeSession("user", "chris"));
+    const from = "2026-05-01T00:00:00.000Z";
+    const to = "2026-05-31T23:59:59.999Z";
+    asMock(Activity.find).mockReturnValue(mockChain([]));
+
+    await GET(makeGetRequest("/api/activity", { from, to }));
+
+    const findArg = asMock(Activity.find).mock.calls[0][0];
+    expect(findArg.createdAt).toEqual({
+      $gte: new Date(from),
+      $lte: new Date(to),
+    });
+  });
+
+  it("composes the date range with cursor pagination", async () => {
+    mockAuth.mockResolvedValue(makeSession("user", "chris"));
+    const from = "2026-05-01T00:00:00.000Z";
+    const to = "2026-05-31T23:59:59.999Z";
+    const cursor = "2026-05-15T12:00:00.000Z";
+    asMock(Activity.find).mockReturnValue(mockChain([]));
+
+    await GET(makeGetRequest("/api/activity", { from, to, cursor }));
+
+    const findArg = asMock(Activity.find).mock.calls[0][0];
+    expect(findArg.createdAt).toEqual({
+      $gte: new Date(from),
+      $lte: new Date(to),
+      $lt: new Date(cursor),
+    });
+  });
+
+  it("returns 400 for a malformed date range value", async () => {
+    mockAuth.mockResolvedValue(makeSession("user", "chris"));
+
+    const res = await GET(
+      makeGetRequest("/api/activity", { from: "not-a-date" })
+    );
+    await expectStatus(res, 400);
+  });
+
   it("returns nextCursor when more items exist", async () => {
     mockAuth.mockResolvedValue(makeSession("user", "chris"));
     const docs = Array.from({ length: 21 }, (_, i) =>

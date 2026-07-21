@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { endOfDay, startOfDay } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import {
   Select,
   SelectContent,
@@ -8,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRangePicker } from "@/components/date-range-picker";
 import {
   ACTIVITY_GROUPS,
   type ActivityGroupSlug,
@@ -18,6 +21,9 @@ const ALL_ACTIONS = "__all__";
 interface ActivityFiltersProps {
   filter: "partner" | "all";
   action: ActivityGroupSlug | null;
+  /** Inclusive range bounds as ISO datetimes, or `null` for "all time". */
+  from: string | null;
+  to: string | null;
 }
 
 /**
@@ -26,7 +32,12 @@ interface ActivityFiltersProps {
  * new query string, and the server re-renders the feed's first page — so the
  * current selection always lives in the URL and is shareable.
  */
-export function ActivityFilters({ filter, action }: ActivityFiltersProps) {
+export function ActivityFilters({
+  filter,
+  action,
+  from,
+  to,
+}: ActivityFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -40,6 +51,23 @@ export function ActivityFilters({ filter, action }: ActivityFiltersProps) {
       }
     }
     router.push(`/activity?${params.toString()}`);
+  }
+
+  const dateRange: DateRange | undefined = from
+    ? { from: new Date(from), to: to ? new Date(to) : undefined }
+    : undefined;
+
+  function handleRangeChange(range: DateRange | undefined) {
+    if (!range?.from) {
+      pushParams({ from: null, to: null });
+      return;
+    }
+    // Snap to whole days in local time so the window is inclusive on both ends,
+    // regardless of the times the calendar reports for the picked days.
+    pushParams({
+      from: startOfDay(range.from).toISOString(),
+      to: endOfDay(range.to ?? range.from).toISOString(),
+    });
   }
 
   return (
@@ -91,6 +119,9 @@ export function ActivityFilters({ filter, action }: ActivityFiltersProps) {
           ))}
         </SelectContent>
       </Select>
+
+      {/* Date range filter */}
+      <DateRangePicker value={dateRange} onChange={handleRangeChange} />
     </div>
   );
 }

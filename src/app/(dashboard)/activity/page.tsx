@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
 import { Activity, type IActivity } from "@/lib/models/activity";
@@ -15,7 +16,15 @@ interface PageProps {
   searchParams: Promise<{
     filter?: string;
     action?: string;
+    from?: string;
+    to?: string;
   }>;
+}
+
+/** A valid ISO datetime, or `null` for absent/malformed values (degrade quietly). */
+function parseDateParam(value: string | undefined): string | null {
+  if (!value) return null;
+  return z.string().datetime().safeParse(value).success ? value : null;
 }
 
 export default async function ActivityPage({ searchParams }: PageProps) {
@@ -31,6 +40,8 @@ export default async function ActivityPage({ searchParams }: PageProps) {
   ).includes(sp.action ?? "")
     ? (sp.action as ActivityGroupSlug)
     : null;
+  const from = parseDateParam(sp.from);
+  const to = parseDateParam(sp.to);
 
   await connectToDatabase();
 
@@ -38,6 +49,8 @@ export default async function ActivityPage({ searchParams }: PageProps) {
     filter,
     action,
     currentUserKey: session.user.paidByKey,
+    from,
+    to,
   });
 
   const results = await Activity.find(query)
@@ -75,6 +88,8 @@ export default async function ActivityPage({ searchParams }: PageProps) {
         initialCursor={nextCursor}
         filter={filter}
         action={action}
+        from={from}
+        to={to}
       />
     </div>
   );

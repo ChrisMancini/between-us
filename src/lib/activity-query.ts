@@ -11,8 +11,10 @@ export function buildActivityQuery(opts: {
   action: ActivityGroupSlug | null;
   currentUserKey: string;
   cursor?: string | null;
+  from?: string | null;
+  to?: string | null;
 }): Record<string, unknown> {
-  const { filter, action, currentUserKey, cursor } = opts;
+  const { filter, action, currentUserKey, cursor, from, to } = opts;
   const query: Record<string, unknown> = {};
 
   if (filter === "partner") {
@@ -24,8 +26,16 @@ export function buildActivityQuery(opts: {
     if (actions) query.action = { $in: actions };
   }
 
-  if (cursor) {
-    query.createdAt = { $lt: new Date(cursor) };
+  // `from`/`to` (inclusive range) and `cursor` (forward pagination) all constrain
+  // `createdAt`, so they merge into one operator object. `$lt` from the cursor and
+  // `$lte` from `to` coexist: whichever is earlier wins, keeping paged results
+  // bounded by the range.
+  const createdAt: Record<string, Date> = {};
+  if (from) createdAt.$gte = new Date(from);
+  if (to) createdAt.$lte = new Date(to);
+  if (cursor) createdAt.$lt = new Date(cursor);
+  if (Object.keys(createdAt).length > 0) {
+    query.createdAt = createdAt;
   }
 
   return query;
