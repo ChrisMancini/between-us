@@ -1,40 +1,22 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
-import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedTag } from "@/lib/models/tag";
+import type { SettlementExpenseRow } from "@/lib/settlement-calc";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PersonBadge } from "@/components/person-badge";
 import { badgeProps } from "@/lib/person-utils";
-import { EditExpenseDialog } from "./edit-expense-dialog";
-import { ExpenseDetailPopover } from "@/components/expense-detail-popover";
+import { formatCurrency, formatShortDate } from "@/lib/utils";
+import { ExpenseActions } from "./expense-actions";
 import type { SerializedPerson } from "@/types/person";
 
-function formatAmount(cents: number) {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-  });
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 interface ExpenseRowProps {
-  expense: SerializedExpense;
+  expense: SettlementExpenseRow;
   isSettled: boolean;
   bulkEditMode: boolean;
   isSelected: boolean;
   onToggleSelection: (id: string) => void;
-  onDelete: (expense: SerializedExpense) => void;
+  onDelete: (expense: SettlementExpenseRow) => void;
   currentUserKey?: string;
   tags?: SerializedTag[];
   closedMonthsList?: string[];
@@ -69,7 +51,7 @@ export function ExpenseRow({
         </td>
       )}
       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-        {formatDate(e.date)}
+        {formatShortDate(e.date)}
       </td>
       <td className="px-4 py-3 font-medium text-foreground">
         <span className="flex items-center gap-2">
@@ -94,47 +76,19 @@ export function ExpenseRow({
         {e.splitType === "split" ? "50 / 50" : "Full"}
       </td>
       <td className="px-4 py-3 text-right font-semibold tabular-nums text-foreground">
-        {formatAmount(e.amount)}
+        {formatCurrency(e.amount)}
       </td>
       {!bulkEditMode && (
         <td className="px-2 py-3">
           <div className="flex items-center gap-0.5">
-            <ExpenseDetailPopover
-              date={e.date}
-              where={e.where}
-              paidBy={e.paidBy}
-              amount={e.amount}
-              tags={e.tags.map((t) => t.path).join(", ")}
-              splitType={e.splitType}
-              settlementType={e.settlementType}
-              notes={e.notes}
+            <ExpenseActions
+              expense={e}
+              isSettled={isSettled}
+              currentUserKey={currentUserKey}
+              tags={tags}
+              closedMonthsList={closedMonthsList}
+              onDelete={onDelete}
             />
-            {!isSettled && currentUserKey && e.paidBy === currentUserKey && (
-              <>
-                <EditExpenseDialog
-                  expense={e}
-                  tags={tags!}
-                  closedMonths={closedMonthsList!}
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-muted-foreground"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  }
-                />
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => onDelete(e)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </>
-            )}
           </div>
         </td>
       )}

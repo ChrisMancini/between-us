@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedTag } from "@/lib/models/tag";
+import type { SettlementExpenseRow } from "@/lib/settlement-calc";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePersons } from "@/components/persons-context";
@@ -11,6 +12,7 @@ import { BulkEditBar } from "./bulk-edit-bar";
 import { BulkEditConfirmDialog } from "./bulk-edit-confirm-dialog";
 import { BulkDeleteConfirmDialog } from "./bulk-delete-confirm-dialog";
 import { ExpenseRow } from "./expense-row";
+import { ExpenseCard } from "./expense-card";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 
 interface ExpenseListProps {
@@ -33,7 +35,16 @@ export function ExpenseList({
   closedMonthsList,
 }: ExpenseListProps) {
   const { personMap } = usePersons();
-  const [deleteTarget, setDeleteTarget] = useState<SerializedExpense | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SettlementExpenseRow | null>(null);
+
+  const settledById = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (const e of expenses) {
+      const d = new Date(e.date);
+      map.set(e._id, closedMonths.has(`${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`));
+    }
+    return map;
+  }, [expenses, closedMonths]);
 
   const {
     bulkEditMode,
@@ -112,7 +123,8 @@ export function ExpenseList({
         />
       )}
 
-      <table className="w-full text-sm">
+      {/* Desktop table — hidden below sm */}
+      <table className="hidden sm:table w-full text-sm">
         <thead>
           <tr className="border-b border-border">
             {bulkEditMode && (
@@ -135,29 +147,53 @@ export function ExpenseList({
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {expenses.map((e) => {
-            const d = new Date(e.date);
-            const isSettled = closedMonths.has(
-              `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`
-            );
-            return (
-              <ExpenseRow
-                key={e._id}
-                expense={e}
-                isSettled={isSettled}
-                bulkEditMode={bulkEditMode}
-                isSelected={selectedIds.has(e._id)}
-                onToggleSelection={toggleSelection}
-                onDelete={setDeleteTarget}
-                currentUserKey={currentUserKey}
-                tags={tags}
-                closedMonthsList={closedMonthsList}
-                personMap={personMap}
-              />
-            );
-          })}
+          {expenses.map((e) => (
+            <ExpenseRow
+              key={e._id}
+              expense={e}
+              isSettled={settledById.get(e._id) ?? false}
+              bulkEditMode={bulkEditMode}
+              isSelected={selectedIds.has(e._id)}
+              onToggleSelection={toggleSelection}
+              onDelete={setDeleteTarget}
+              currentUserKey={currentUserKey}
+              tags={tags}
+              closedMonthsList={closedMonthsList}
+              personMap={personMap}
+            />
+          ))}
         </tbody>
       </table>
+
+      {/* Mobile cards — hidden at sm and above */}
+      <div className="sm:hidden divide-y divide-border">
+        {bulkEditMode && (
+          <div className="px-4 py-2.5 flex items-center gap-2">
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected}
+              onCheckedChange={toggleSelectAll}
+              aria-label="Select all expenses"
+            />
+            <span className="text-xs text-muted-foreground">Select all</span>
+          </div>
+        )}
+        {expenses.map((e) => (
+          <ExpenseCard
+            key={e._id}
+            expense={e}
+            isSettled={settledById.get(e._id) ?? false}
+            bulkEditMode={bulkEditMode}
+            isSelected={selectedIds.has(e._id)}
+            onToggleSelection={toggleSelection}
+            onDelete={setDeleteTarget}
+            currentUserKey={currentUserKey}
+            tags={tags}
+            closedMonthsList={closedMonthsList}
+            personMap={personMap}
+          />
+        ))}
+      </div>
 
       {deleteTarget && (
         <DeleteDialog

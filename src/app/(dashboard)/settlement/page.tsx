@@ -130,7 +130,6 @@ export default async function SettlementPage({ searchParams }: PageProps) {
           expenses={breakdown.deferredExpenses}
           title="Settled Monthly"
           description="These expenses are included in the settlement calculation."
-          personMap={personMap}
         />
       ) : (
         <div className="rounded-xl border border-dashed border-primary/20 bg-card py-12 text-center">
@@ -147,7 +146,6 @@ export default async function SettlementPage({ searchParams }: PageProps) {
           title="Settled Immediately"
           description="These expenses are paid directly and excluded from the monthly settlement."
           muted
-          personMap={personMap}
         />
       )}
     </div>

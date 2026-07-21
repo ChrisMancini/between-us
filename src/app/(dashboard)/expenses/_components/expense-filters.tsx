@@ -75,7 +75,7 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Search input */}
-      <div className="relative flex-1 min-w-[200px]">
+      <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search expenses..."
@@ -108,7 +108,7 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
           pushParams({ paidBy: val === "__all__" ? null : val })
         }
       >
-        <SelectTrigger className="w-[120px] h-8">
+        <SelectTrigger className="w-full sm:w-[120px] h-8">
           <SelectValue>
             {filters.paidBy
               ? personMap.get(filters.paidBy)?.displayName ?? filters.paidBy
@@ -259,7 +259,7 @@ function TagFilterCombobox({
       <div className="relative flex items-center">
         <PopoverTrigger
           className={cn(
-            "flex h-8 w-[150px] items-center justify-between rounded-md border border-input bg-transparent px-2.5 text-sm transition-colors",
+            "flex h-8 w-full sm:w-[150px] items-center justify-between rounded-md border border-input bg-transparent px-2.5 text-sm transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
             "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             value && "pr-7",
