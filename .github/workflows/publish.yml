@@ -53,6 +53,11 @@ jobs:
         if: steps.should_publish.outputs.publish == 'true'
         uses: docker/setup-buildx-action@v3
 
+      - name: Compute short SHA
+        if: steps.should_publish.outputs.publish == 'true'
+        id: sha
+        run: echo "short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
       - name: Build and push
         if: steps.should_publish.outputs.publish == 'true'
         uses: docker/build-push-action@v6
@@ -63,4 +68,4 @@ jobs:
             ghcr.io/chrismancini/between-us:v${{ steps.version.outputs.version }}
             ghcr.io/chrismancini/between-us:latest
           build-args: |
-            GIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            GIT_SHA=${{ steps.sha.outputs.short }}
