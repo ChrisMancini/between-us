@@ -2,6 +2,9 @@ import { getMonthDateRange } from "@/lib/utils";
 import { escapeRegex } from "@/lib/escape-regex";
 import { serializeTag } from "@/lib/tag-utils";
 import type { SerializedExpense } from "@/lib/models/expense";
+import { EXPENSE_PAGE_SIZE } from "./constants";
+
+export { EXPENSE_PAGE_SIZE };
 
 interface ExpenseFilters {
   month: number | null;

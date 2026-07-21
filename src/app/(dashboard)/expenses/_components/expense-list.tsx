@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
+import { Loader2 } from "lucide-react";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { SettlementExpenseRow } from "@/lib/settlement-calc";
+import { EXPENSE_PAGE_SIZE } from "../_lib/constants";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePersons } from "@/components/persons-context";
@@ -14,37 +16,78 @@ import { BulkDeleteConfirmDialog } from "./bulk-delete-confirm-dialog";
 import { ExpenseRow } from "./expense-row";
 import { ExpenseCard } from "./expense-card";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 
 interface ExpenseListProps {
   expenses: SerializedExpense[];
+  totalCount: number;
   closedMonths: Set<string>;
   isFiltered?: boolean;
   currentUserKey?: string;
   isAdmin?: boolean;
   tags?: SerializedTag[];
   closedMonthsList?: string[];
+  filters: {
+    month: number | null;
+    year: number;
+    q: string;
+    tag: string;
+    paidBy: string;
+  };
 }
 
 export function ExpenseList({
   expenses,
+  totalCount,
   closedMonths,
   isFiltered = false,
   currentUserKey,
   isAdmin = false,
   tags,
   closedMonthsList,
+  filters,
 }: ExpenseListProps) {
   const { personMap } = usePersons();
   const [deleteTarget, setDeleteTarget] = useState<SettlementExpenseRow | null>(null);
+  const [items, setItems] = useState(expenses);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(expenses.length < totalCount);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const loadMore = useCallback(async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filters.month !== null) params.set("month", String(filters.month));
+      else params.set("month", "all");
+      params.set("year", String(filters.year));
+      if (filters.q) params.set("q", filters.q);
+      if (filters.tag) params.set("tag", filters.tag);
+      if (filters.paidBy) params.set("paidBy", filters.paidBy);
+      params.set("offset", String(items.length));
+      params.set("limit", String(EXPENSE_PAGE_SIZE));
+
+      const res = await fetch(`/api/expenses?${params}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setItems((prev) => [...prev, ...data.expenses]);
+      setHasMore(data.hasMore);
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, items.length, filters]);
+
+  useInfiniteScroll(sentinelRef, loadMore, hasMore && !loading);
 
   const settledById = useMemo(() => {
     const map = new Map<string, boolean>();
-    for (const e of expenses) {
+    for (const e of items) {
       const d = new Date(e.date);
       map.set(e._id, closedMonths.has(`${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`));
     }
     return map;
-  }, [expenses, closedMonths]);
+  }, [items, closedMonths]);
 
   const {
     bulkEditMode,
@@ -60,7 +103,7 @@ export function ExpenseList({
     selectedExpenses,
     allSelected,
     someSelected,
-  } = useBulkSelection(expenses);
+  } = useBulkSelection(items);
 
   if (expenses.length === 0) {
     return (
@@ -98,7 +141,9 @@ export function ExpenseList({
             </p>
             <div className="flex items-center gap-2">
               <p className="text-xs text-muted-foreground">
-                {expenses.length} {expenses.length === 1 ? "expense" : "expenses"}
+                {items.length === totalCount
+                  ? `${totalCount} ${totalCount === 1 ? "expense" : "expenses"}`
+                  : `Showing ${items.length} of ${totalCount}`}
               </p>
               <Button
                 variant="outline"
@@ -147,7 +192,7 @@ export function ExpenseList({
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {expenses.map((e) => (
+          {items.map((e) => (
             <ExpenseRow
               key={e._id}
               expense={e}
@@ -178,7 +223,7 @@ export function ExpenseList({
             <span className="text-xs text-muted-foreground">Select all</span>
           </div>
         )}
-        {expenses.map((e) => (
+        {items.map((e) => (
           <ExpenseCard
             key={e._id}
             expense={e}
@@ -194,6 +239,18 @@ export function ExpenseList({
           />
         ))}
       </div>
+
+      {/* Infinite scroll sentinel + loading indicator */}
+      {hasMore && (
+        <div ref={sentinelRef} className="border-t border-border px-4 py-3 flex items-center justify-center">
+          {loading && (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Loading more...
+            </span>
+          )}
+        </div>
+      )}
 
       {deleteTarget && (
         <DeleteDialog

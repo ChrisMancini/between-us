@@ -75,14 +75,18 @@ export function makeParsedFailure() {
 }
 
 export function mockChain(result: unknown) {
+  const populateLean = {
+    populate: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(result),
+    }),
+  };
   return {
     sort: jest.fn().mockReturnValue({
       lean: jest.fn().mockResolvedValue(result),
-      limit: jest.fn().mockReturnValue({
-        populate: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(result),
-        }),
+      skip: jest.fn().mockReturnValue({
+        limit: jest.fn().mockReturnValue(populateLean),
       }),
+      limit: jest.fn().mockReturnValue(populateLean),
     }),
     lean: jest.fn().mockResolvedValue(result),
     populate: jest.fn().mockReturnValue({

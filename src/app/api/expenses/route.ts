@@ -5,6 +5,7 @@ import { Expense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
 import { expenseApiSchema } from "@/lib/validations/expense";
 import { serializeTag } from "@/lib/tag-utils";
+import { buildExpenseQuery } from "@/app/(dashboard)/expenses/_lib/expense-queries";
 import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
@@ -14,14 +15,43 @@ import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
 import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (req) => {
+  const { searchParams } = new URL(req.url);
+
+  const monthParam = searchParams.get("month");
+  const month =
+    monthParam === null || monthParam === "all"
+      ? null
+      : parseInt(monthParam, 10);
+  const year = searchParams.get("year")
+    ? parseInt(searchParams.get("year")!, 10)
+    : new Date().getFullYear();
+  const q = searchParams.get("q")?.trim() ?? "";
+  const tagFilter = searchParams.get("tag") ?? "";
+  const paidByFilter = searchParams.get("paidBy") ?? "";
+  const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0", 10) || 0);
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "30", 10) || 30));
+
   await connectToDatabase();
 
-  const expenses = await Expense.find()
-    .sort({ date: -1, createdAt: -1 })
-    .limit(30)
-    .populate("tags")
-    .lean();
+  const rawTags = tagFilter
+    ? await Tag.find().sort({ sortOrder: 1 }).lean<Array<{ _id: mongoose.Types.ObjectId; path: string; sortOrder: number }>>()
+    : [];
+
+  const query = buildExpenseQuery(
+    { month, year, q, tagFilter, paidByFilter },
+    rawTags as Array<{ _id: { toString(): string }; path: string; sortOrder: number }>,
+  );
+
+  const [expenses, total] = await Promise.all([
+    Expense.find(query)
+      .sort({ date: -1, createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .populate("tags")
+      .lean(),
+    Expense.countDocuments(query),
+  ]);
 
   return NextResponse.json({
     expenses: expenses.map((e) => {
@@ -44,6 +74,8 @@ export const GET = withAuth(async () => {
         updatedAt: (e.updatedAt as Date).toISOString(),
       };
     }),
+    total,
+    hasMore: offset + expenses.length < total,
   });
 });
 

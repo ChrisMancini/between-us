@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { formatActivityDate } from "@/lib/utils";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { PersonBadge } from "@/components/person-badge";
 import { ActivityLink } from "@/components/activity-link";
 import { usePersons } from "@/components/persons-context";
@@ -16,10 +16,12 @@ import { ACTIVITY_GROUPS, type ActivityGroupSlug } from "@/lib/activity-groups";
 import type { SerializedActivity } from "@/lib/models/activity";
 import type { SerializedPerson } from "@/types/person";
 import { ActivityFilters } from "./activity-filters";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 
 interface ActivityFeedProps {
   initialItems: SerializedActivity[];
   initialCursor: string | null;
+  totalCount: number;
   filter: "partner" | "all";
   action: ActivityGroupSlug | null;
   from: string | null;
@@ -29,6 +31,7 @@ interface ActivityFeedProps {
 export function ActivityFeed({
   initialItems,
   initialCursor,
+  totalCount,
   filter,
   action,
   from,
@@ -38,11 +41,8 @@ export function ActivityFeed({
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(initialCursor);
   const [loading, setLoading] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // The URL is the source of truth for the filters, so the server hands us a
-  // fresh first page whenever they change. Re-seed the list (and reset
-  // pagination) on any filter change; appended "Load More" pages survive
-  // in-between because the key only changes when a filter actually changes.
   const filterKey = `${filter}:${action ?? ""}:${from ?? ""}:${to ?? ""}`;
   useEffect(() => {
     setItems(initialItems);
@@ -59,8 +59,8 @@ export function ActivityFeed({
     ? "No partner activity yet."
     : "No activity yet.";
 
-  const loadMore = async () => {
-    if (!cursor) return;
+  const loadMore = useCallback(async () => {
+    if (!cursor || loading) return;
     setLoading(true);
     try {
       const params = new URLSearchParams({ filter, limit: "20", cursor });
@@ -75,7 +75,9 @@ export function ActivityFeed({
     } finally {
       setLoading(false);
     }
-  };
+  }, [cursor, loading, filter, action, from, to]);
+
+  useInfiniteScroll(sentinelRef, loadMore, !!cursor && !loading);
 
   return (
     <div className="space-y-4">
@@ -88,32 +90,30 @@ export function ActivityFeed({
             <p className="text-sm text-muted-foreground">{emptyMessage}</p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
-            {items.map((item) => (
-              <ActivityItem key={item._id} item={item} personMap={personMap} />
-            ))}
-          </div>
+          <>
+            <div className="border-b border-primary/10 bg-primary/5 px-4 py-2.5">
+              <p className="text-xs text-muted-foreground">
+                {items.length === totalCount
+                  ? `${totalCount} ${totalCount === 1 ? "activity" : "activities"}`
+                  : `Showing ${items.length} of ${totalCount}`}
+              </p>
+            </div>
+            <div className="divide-y divide-border">
+              {items.map((item) => (
+                <ActivityItem key={item._id} item={item} personMap={personMap} />
+              ))}
+            </div>
+          </>
         )}
 
         {cursor && (
-          <div className="border-t border-border px-4 py-3">
-            <button
-              onClick={loadMore}
-              disabled={loading}
-              className="flex items-center justify-center gap-1.5 w-full text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  Load more
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </>
-              )}
-            </button>
+          <div ref={sentinelRef} className="border-t border-border px-4 py-3 flex items-center justify-center">
+            {loading && (
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Loading more...
+              </span>
+            )}
           </div>
         )}
       </div>

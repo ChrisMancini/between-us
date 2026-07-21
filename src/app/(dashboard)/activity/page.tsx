@@ -53,10 +53,13 @@ export default async function ActivityPage({ searchParams }: PageProps) {
     to,
   });
 
-  const results = await Activity.find(query)
-    .sort({ createdAt: -1 })
-    .limit(21)
-    .lean<IActivity[]>();
+  const [results, totalCount] = await Promise.all([
+    Activity.find(query)
+      .sort({ createdAt: -1 })
+      .limit(21)
+      .lean<IActivity[]>(),
+    Activity.countDocuments(query),
+  ]);
 
   const hasMore = results.length > 20;
   const items = results.slice(0, 20);
@@ -86,6 +89,7 @@ export default async function ActivityPage({ searchParams }: PageProps) {
       <ActivityFeed
         initialItems={activities}
         initialCursor={nextCursor}
+        totalCount={totalCount}
         filter={filter}
         action={action}
         from={from}
