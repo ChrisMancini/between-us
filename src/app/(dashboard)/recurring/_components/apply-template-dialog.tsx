@@ -185,7 +185,8 @@ export function ApplyTemplateDialog({
 
           {/* Items table */}
           <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[26rem]">
               <thead>
                 <tr className="border-b border-border bg-muted/60">
                   <th className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
@@ -249,6 +250,7 @@ export function ApplyTemplateDialog({
                 </tr>
               </tfoot>
             </table>
+            </div>
           </div>
 
           <DialogFooter>

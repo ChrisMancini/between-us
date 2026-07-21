@@ -92,7 +92,7 @@ export function CsvFormatTagMappings({
               type="button"
               variant="ghost"
               size="icon-xs"
-              className="mt-1 text-muted-foreground hover:text-destructive"
+              className="mt-1 size-11 sm:size-6 text-muted-foreground hover:text-destructive"
               onClick={() => remove(index)}
             >
               <X className="h-3.5 w-3.5" />

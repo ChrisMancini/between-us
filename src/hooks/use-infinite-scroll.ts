@@ -8,7 +8,10 @@ export function useInfiniteScroll(
   enabled: boolean,
 ) {
   const callbackRef = useRef(onLoadMore);
-  callbackRef.current = onLoadMore;
+  // Keep the ref current without writing to it during render (react-hooks/refs).
+  useEffect(() => {
+    callbackRef.current = onLoadMore;
+  });
 
   useEffect(() => {
     const sentinel = sentinelRef.current;

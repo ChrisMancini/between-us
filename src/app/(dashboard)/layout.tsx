@@ -3,6 +3,7 @@ import { Receipt } from "lucide-react";
 import { auth, signOut } from "@/auth";
 import { AppFooter } from "@/components/app-footer";
 import { NavLinks } from "@/components/nav-links";
+import { MobileNav } from "@/components/mobile-nav";
 import { ActivityPoller } from "@/components/activity-poller";
 import { HotkeyHandler } from "@/components/hotkey-handler";
 import { QuickEntryFab } from "@/components/quick-entry/quick-entry-fab";
@@ -41,7 +42,10 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col bg-muted/50">
       <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75 shadow-sm shadow-border/50">
-        <div className="flex h-14 items-center gap-6 px-6 max-w-screen-xl mx-auto">
+        <div className="flex h-14 items-center gap-2 px-3 sm:gap-4 sm:px-6 lg:gap-6 max-w-screen-xl mx-auto">
+
+          {/* Mobile drawer trigger — hidden at lg where inline NavLinks show */}
+          <MobileNav isAdmin={isAdmin} />
 
           {/* Brand mark */}
           <div className="flex items-center gap-2.5 shrink-0">
@@ -53,7 +57,7 @@ export default async function DashboardLayout({
 
           <NavLinks isAdmin={isAdmin} />
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
             <span className="text-sm text-muted-foreground hidden sm:block">
               {session.user.name?.split(" ")[0]}
@@ -64,7 +68,7 @@ export default async function DashboardLayout({
                 await signOut({ redirectTo: "/login" });
               }}
             >
-              <Button type="submit" variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Button type="submit" variant="ghost" size="sm" className="h-11 sm:h-7 text-muted-foreground hover:text-foreground">
                 Sign out
               </Button>
             </form>

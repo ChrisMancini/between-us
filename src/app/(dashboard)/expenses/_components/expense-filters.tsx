@@ -81,13 +81,14 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
           placeholder="Search expenses..."
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
-          className="pl-8 h-8"
+          className="pl-8 h-11 sm:h-8"
         />
         {searchValue && (
           <button
             type="button"
             onClick={() => setSearchValue("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Clear search"
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-11 w-11 sm:h-6 sm:w-6 items-center justify-center text-muted-foreground hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -108,7 +109,7 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
           pushParams({ paidBy: val === "__all__" ? null : val })
         }
       >
-        <SelectTrigger className="w-full sm:w-[120px] h-8">
+        <SelectTrigger className="w-full sm:w-[120px] h-11 sm:h-8">
           <SelectValue>
             {filters.paidBy
               ? personMap.get(filters.paidBy)?.displayName ?? filters.paidBy
@@ -259,7 +260,7 @@ function TagFilterCombobox({
       <div className="relative flex items-center">
         <PopoverTrigger
           className={cn(
-            "flex h-8 w-full sm:w-[150px] items-center justify-between rounded-md border border-input bg-transparent px-2.5 text-sm transition-colors",
+            "flex h-11 sm:h-8 w-full sm:w-[150px] items-center justify-between rounded-md border border-input bg-transparent px-2.5 text-sm transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
             "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             value && "pr-7",
@@ -278,7 +279,8 @@ function TagFilterCombobox({
           <button
             type="button"
             onClick={() => onChange("")}
-            className="absolute right-1.5 shrink-0 rounded-full hover:bg-foreground/10 p-0.5"
+            aria-label="Clear tag filter"
+            className="absolute right-1 flex h-11 w-11 sm:h-5 sm:w-5 shrink-0 items-center justify-center rounded-full hover:bg-foreground/10"
           >
             <X className="h-3 w-3" />
           </button>

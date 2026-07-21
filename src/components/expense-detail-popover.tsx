@@ -36,7 +36,7 @@ export function ExpenseDetailPopover({
           <Button
             variant="ghost"
             size="icon-xs"
-            className="text-muted-foreground"
+            className="size-11 sm:size-6 text-muted-foreground"
             aria-label="Expense details"
           />
         }

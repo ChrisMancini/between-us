@@ -4,16 +4,14 @@ import { useState, useMemo } from "react";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { SettlementExpenseRow } from "@/lib/settlement-calc";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollSentinel } from "@/components/scroll-sentinel";
 import { usePersons } from "@/components/persons-context";
-import { DeleteDialog } from "@/components/delete-dialog";
 import { BulkEditBar } from "./bulk-edit-bar";
-import { BulkEditConfirmDialog } from "./bulk-edit-confirm-dialog";
-import { BulkDeleteConfirmDialog } from "./bulk-delete-confirm-dialog";
 import { ExpenseRow } from "./expense-row";
 import { ExpenseCard } from "./expense-card";
+import { ExpenseListHeader } from "./expense-list-header";
+import { ExpenseListDialogs } from "./expense-list-dialogs";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { useExpensePagination } from "@/hooks/use-expense-pagination";
@@ -93,44 +91,14 @@ export function ExpenseList({
 
   return (
     <div className="rounded-xl border border-primary/10 bg-card overflow-hidden shadow-sm">
-      <div className="border-b border-primary/10 bg-primary/5 px-4 py-2.5 flex items-center justify-between">
-        {bulkEditMode ? (
-          <>
-            <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
-              {selectedIds.size} selected
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-xs"
-              onClick={exitBulkEdit}
-            >
-              Cancel
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className="text-xs font-semibold uppercase tracking-wide text-primary/70">
-              Expenses
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                {items.length === totalCount
-                  ? `${totalCount} ${totalCount === 1 ? "expense" : "expenses"}`
-                  : `Showing 1–${items.length} of ${totalCount}`}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 text-xs"
-                onClick={() => setBulkEditMode(true)}
-              >
-                Bulk Edit
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
+      <ExpenseListHeader
+        bulkEditMode={bulkEditMode}
+        selectedCount={selectedIds.size}
+        itemCount={items.length}
+        totalCount={totalCount}
+        onEnterBulkEdit={() => setBulkEditMode(true)}
+        onExitBulkEdit={exitBulkEdit}
+      />
 
       {bulkEditMode && selectedIds.size > 0 && tags && (
         <BulkEditBar
@@ -216,47 +184,20 @@ export function ExpenseList({
 
       {hasMore && <ScrollSentinel ref={sentinelRef} loading={loading} />}
 
-      {deleteTarget && (
-        <DeleteDialog
-          endpoint={`/api/expenses/${deleteTarget._id}`}
-          itemType="expense"
-          itemLabel={deleteTarget.where}
-          open={!!deleteTarget}
-          onOpenChange={(open) => {
-            if (!open) setDeleteTarget(null);
-          }}
-        />
-      )}
-
-      {confirmValues && tags && currentUserKey && (
-        <BulkEditConfirmDialog
-          open={!!confirmValues}
-          onOpenChange={(open) => {
-            if (!open) setConfirmValues(null);
-          }}
-          selectedExpenses={selectedExpenses}
-          closedMonths={closedMonths}
-          currentUserKey={currentUserKey}
-          isAdmin={isAdmin}
-          values={confirmValues}
-          tags={tags}
-          onDone={exitBulkEdit}
-        />
-      )}
-
-      {showDeleteConfirm && currentUserKey && (
-        <BulkDeleteConfirmDialog
-          open={showDeleteConfirm}
-          onOpenChange={(open) => {
-            if (!open) setShowDeleteConfirm(false);
-          }}
-          selectedExpenses={selectedExpenses}
-          closedMonths={closedMonths}
-          currentUserKey={currentUserKey}
-          isAdmin={isAdmin}
-          onDone={exitBulkEdit}
-        />
-      )}
+      <ExpenseListDialogs
+        deleteTarget={deleteTarget}
+        onCloseDeleteTarget={() => setDeleteTarget(null)}
+        confirmValues={confirmValues}
+        onCloseConfirmValues={() => setConfirmValues(null)}
+        showDeleteConfirm={showDeleteConfirm}
+        onCloseDeleteConfirm={() => setShowDeleteConfirm(false)}
+        selectedExpenses={selectedExpenses}
+        closedMonths={closedMonths}
+        currentUserKey={currentUserKey}
+        isAdmin={isAdmin}
+        tags={tags}
+        onBulkDone={exitBulkEdit}
+      />
     </div>
   );
 }

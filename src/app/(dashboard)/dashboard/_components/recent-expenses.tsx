@@ -39,7 +39,7 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
           <p className="text-sm text-muted-foreground">No expenses yet.</p>
         </div>
       ) : (
-        <table className="w-full text-sm">
+        <table className="hidden sm:table w-full text-sm">
           <thead>
             <tr className="border-b border-border">
               <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
@@ -98,6 +98,53 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
             ))}
           </tbody>
         </table>
+      )}
+
+      {/* Mobile cards — shown below sm */}
+      {expenses.length > 0 && (
+        <div className="sm:hidden divide-y divide-border">
+          {expenses.map((e, i) => (
+            <div key={i} className="flex items-start gap-2 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium text-foreground">
+                    {e.where}
+                  </span>
+                  <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                    {formatCurrency(e.amount)}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(e.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      timeZone: "UTC",
+                    })}
+                  </span>
+                  <PersonBadge {...badgeProps(e.paidBy, personMap)} />
+                </div>
+                {e.tagNames && (
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {e.tagNames}
+                  </p>
+                )}
+              </div>
+              <div className="shrink-0">
+                <ExpenseDetailPopover
+                  date={e.date}
+                  where={e.where}
+                  paidBy={e.paidBy}
+                  amount={e.amount}
+                  tags={e.tagNames}
+                  splitType={e.splitType}
+                  settlementType={e.settlementType}
+                  notes={e.notes}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       <div className="border-t border-border px-4 py-2.5">

@@ -21,7 +21,7 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon-sm"
-      className="text-muted-foreground hover:text-foreground"
+      className="size-11 sm:size-7 text-muted-foreground hover:text-foreground"
       onClick={toggle}
     >
       <Sun className="h-4 w-4 block dark:hidden" />

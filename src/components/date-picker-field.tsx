@@ -50,7 +50,7 @@ export function DatePickerField({
             variant="outline"
             autoFocus={autoFocus}
             className={cn(
-              "w-full justify-start text-left font-normal",
+              "h-11 sm:h-8 w-full justify-start text-left font-normal",
               !value && "text-muted-foreground",
               hasError && "border-destructive"
             )}

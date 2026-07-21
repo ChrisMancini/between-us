@@ -66,7 +66,7 @@ export function TagList({ tags }: TagListProps) {
                         <Button
                           variant="ghost"
                           size="icon-xs"
-                          className="text-muted-foreground"
+                          className="size-11 sm:size-6 text-muted-foreground"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -75,7 +75,7 @@ export function TagList({ tags }: TagListProps) {
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      className="text-muted-foreground hover:text-destructive"
+                      className="size-11 sm:size-6 text-muted-foreground hover:text-destructive"
                       onClick={() => setDeleteTarget(tag)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

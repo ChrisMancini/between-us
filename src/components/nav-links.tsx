@@ -4,25 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useActionCount } from "@/hooks/use-action-count";
-
-const baseNavItems = [
-  { href: "/dashboard",  label: "Dashboard"  },
-  { href: "/expenses",   label: "Expenses"   },
-  { href: "/reports",    label: "Reports"    },
-  { href: "/settlement", label: "Settlement" },
-  { href: "/activity",   label: "Activity"   },
-  { href: "/recurring",  label: "Recurring"  },
-];
+import { buildNavItems } from "@/components/nav-items";
 
 export function NavLinks({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const { count: actionCount } = useActionCount();
-  const items = isAdmin
-    ? [...baseNavItems, { href: "/admin", label: "Admin" }]
-    : baseNavItems;
+  const items = buildNavItems(isAdmin);
 
   return (
-    <nav className="flex items-center">
+    // Desktop-only inline nav; the mobile drawer (MobileNav) covers < lg.
+    <nav className="hidden lg:flex items-center">
       {items.map((item) => {
         const isActive = pathname.startsWith(item.href);
         return (

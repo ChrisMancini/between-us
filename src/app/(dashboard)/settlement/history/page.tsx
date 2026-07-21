@@ -7,6 +7,7 @@ import { Settlement } from "@/lib/models/settlement";
 import { formatCurrency, formatMonthYear } from "@/lib/utils";
 import { PersonBadge } from "@/components/person-badge";
 import { getPersons, buildPersonMap, badgeProps } from "@/lib/persons";
+import { SettlementRowCard } from "@/components/settlement-row-card";
 import { TruncatedNote } from "./_components/truncated-note";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,8 @@ export default async function SettlementHistoryPage() {
             </p>
           </div>
 
-          <table className="w-full text-sm">
+          {/* Desktop table — hidden below sm */}
+          <table className="hidden sm:table w-full text-sm">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
@@ -125,6 +127,32 @@ export default async function SettlementHistoryPage() {
               ))}
             </tbody>
           </table>
+
+          {/* Mobile cards — shown below sm */}
+          <div className="sm:hidden divide-y divide-border">
+            {settlements.map((s) => (
+              <SettlementRowCard
+                key={`${s.year}-${s.month}`}
+                label={formatMonthYear(s.month, s.year)}
+                href={`/settlement?month=${s.month}&year=${s.year}`}
+                amount={s.totalOwed}
+                owedBy={s.owedBy}
+                owedTo={s.owedTo}
+                personMap={personMap}
+                meta={new Date(s.closedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              >
+                {s.note && (
+                  <div className="mt-1.5 text-xs text-muted-foreground">
+                    <TruncatedNote text={s.note} />
+                  </div>
+                )}
+              </SettlementRowCard>
+            ))}
+          </div>
         </div>
       )}
     </div>
