@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { formatActivityDate } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
 import { PersonBadge } from "@/components/person-badge";
 import { ActivityLink } from "@/components/activity-link";
+import { ScrollSentinel } from "@/components/scroll-sentinel";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
 import {
@@ -95,7 +95,7 @@ export function ActivityFeed({
               <p className="text-xs text-muted-foreground">
                 {items.length === totalCount
                   ? `${totalCount} ${totalCount === 1 ? "activity" : "activities"}`
-                  : `Showing ${items.length} of ${totalCount}`}
+                  : `Showing 1–${items.length} of ${totalCount}`}
               </p>
             </div>
             <div className="divide-y divide-border">
@@ -106,16 +106,7 @@ export function ActivityFeed({
           </>
         )}
 
-        {cursor && (
-          <div ref={sentinelRef} className="border-t border-border px-4 py-3 flex items-center justify-center">
-            {loading && (
-              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Loading more...
-              </span>
-            )}
-          </div>
-        )}
+        {cursor && <ScrollSentinel ref={sentinelRef} loading={loading} />}
       </div>
     </div>
   );

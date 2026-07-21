@@ -3,9 +3,9 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
-import { expenseApiSchema } from "@/lib/validations/expense";
+import { expenseApiSchema, expenseQuerySchema } from "@/lib/validations/expense";
 import { serializeTag } from "@/lib/tag-utils";
-import { buildExpenseQuery } from "@/app/(dashboard)/expenses/_lib/expense-queries";
+import { buildExpenseQuery } from "@/lib/expense-query";
 import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
@@ -18,19 +18,20 @@ import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycl
 export const GET = withAuth(async (req) => {
   const { searchParams } = new URL(req.url);
 
-  const monthParam = searchParams.get("month");
-  const month =
-    monthParam === null || monthParam === "all"
-      ? null
-      : parseInt(monthParam, 10);
-  const year = searchParams.get("year")
-    ? parseInt(searchParams.get("year")!, 10)
-    : new Date().getFullYear();
-  const q = searchParams.get("q")?.trim() ?? "";
-  const tagFilter = searchParams.get("tag") ?? "";
-  const paidByFilter = searchParams.get("paidBy") ?? "";
-  const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0", 10) || 0);
-  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "30", 10) || 30));
+  const parsed = expenseQuerySchema.safeParse({
+    month: searchParams.get("month") ?? undefined,
+    year: searchParams.get("year") ?? undefined,
+    q: searchParams.get("q") ?? undefined,
+    tag: searchParams.get("tag") ?? undefined,
+    paidBy: searchParams.get("paidBy") ?? undefined,
+    offset: searchParams.get("offset") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+  });
+
+  if (!parsed.success) return validationError(parsed);
+
+  const { month, year: yearParam, q, tag: tagFilter, paidBy: paidByFilter, offset, limit } = parsed.data;
+  const year = yearParam ?? new Date().getFullYear();
 
   await connectToDatabase();
 

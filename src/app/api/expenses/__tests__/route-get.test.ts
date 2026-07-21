@@ -35,9 +35,12 @@ jest.mock("@/lib/tag-utils", () => ({
     depth: 1,
   }),
 }));
-jest.mock("@/lib/validations/expense", () => ({ expenseApiSchema: {} }));
+jest.mock("@/lib/validations/expense", () => {
+  const actual = jest.requireActual("@/lib/validations/expense");
+  return { expenseApiSchema: {}, expenseQuerySchema: actual.expenseQuerySchema };
+});
 jest.mock("@/lib/settlement-guard", () => ({ assertMonthsOpen: jest.fn() }));
-jest.mock("@/app/(dashboard)/expenses/_lib/expense-queries", () => ({
+jest.mock("@/lib/expense-query", () => ({
   buildExpenseQuery: jest.fn().mockReturnValue({}),
 }));
 

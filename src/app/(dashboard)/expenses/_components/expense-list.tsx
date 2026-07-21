@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
 import type { SerializedExpense } from "@/lib/models/expense";
 import type { SerializedTag } from "@/lib/models/tag";
 import type { SettlementExpenseRow } from "@/lib/settlement-calc";
-import { EXPENSE_PAGE_SIZE } from "../_lib/constants";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollSentinel } from "@/components/scroll-sentinel";
 import { usePersons } from "@/components/persons-context";
 import { DeleteDialog } from "@/components/delete-dialog";
 import { BulkEditBar } from "./bulk-edit-bar";
@@ -17,6 +16,7 @@ import { ExpenseRow } from "./expense-row";
 import { ExpenseCard } from "./expense-card";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
+import { useExpensePagination } from "@/hooks/use-expense-pagination";
 
 interface ExpenseListProps {
   expenses: SerializedExpense[];
@@ -49,34 +49,8 @@ export function ExpenseList({
 }: ExpenseListProps) {
   const { personMap } = usePersons();
   const [deleteTarget, setDeleteTarget] = useState<SettlementExpenseRow | null>(null);
-  const [items, setItems] = useState(expenses);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(expenses.length < totalCount);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  const loadMore = useCallback(async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filters.month !== null) params.set("month", String(filters.month));
-      else params.set("month", "all");
-      params.set("year", String(filters.year));
-      if (filters.q) params.set("q", filters.q);
-      if (filters.tag) params.set("tag", filters.tag);
-      if (filters.paidBy) params.set("paidBy", filters.paidBy);
-      params.set("offset", String(items.length));
-      params.set("limit", String(EXPENSE_PAGE_SIZE));
-
-      const res = await fetch(`/api/expenses?${params}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setItems((prev) => [...prev, ...data.expenses]);
-      setHasMore(data.hasMore);
-    } finally {
-      setLoading(false);
-    }
-  }, [loading, items.length, filters]);
+  const { items, loading, hasMore, sentinelRef, loadMore } =
+    useExpensePagination(expenses, totalCount, filters);
 
   useInfiniteScroll(sentinelRef, loadMore, hasMore && !loading);
 
@@ -143,7 +117,7 @@ export function ExpenseList({
               <p className="text-xs text-muted-foreground">
                 {items.length === totalCount
                   ? `${totalCount} ${totalCount === 1 ? "expense" : "expenses"}`
-                  : `Showing ${items.length} of ${totalCount}`}
+                  : `Showing 1–${items.length} of ${totalCount}`}
               </p>
               <Button
                 variant="outline"
@@ -240,17 +214,7 @@ export function ExpenseList({
         ))}
       </div>
 
-      {/* Infinite scroll sentinel + loading indicator */}
-      {hasMore && (
-        <div ref={sentinelRef} className="border-t border-border px-4 py-3 flex items-center justify-center">
-          {loading && (
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Loading more...
-            </span>
-          )}
-        </div>
-      )}
+      {hasMore && <ScrollSentinel ref={sentinelRef} loading={loading} />}
 
       {deleteTarget && (
         <DeleteDialog

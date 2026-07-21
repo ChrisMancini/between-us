@@ -104,7 +104,7 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
       />
 
       <ExpenseList
-        key={`${month}-${year}-${q}-${tagFilter}-${paidByFilter}-${expenses[0]?._id ?? "empty"}`}
+        key={`${month}-${year}-${q}-${tagFilter}-${paidByFilter}-${totalCount}`}
         expenses={expenses}
         totalCount={totalCount}
         closedMonths={closedMonths}

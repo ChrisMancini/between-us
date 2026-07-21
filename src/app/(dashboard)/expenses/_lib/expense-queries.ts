@@ -1,24 +1,10 @@
-import { getMonthDateRange } from "@/lib/utils";
-import { escapeRegex } from "@/lib/escape-regex";
 import { serializeTag } from "@/lib/tag-utils";
 import type { SerializedExpense } from "@/lib/models/expense";
+import type { RawTagDoc } from "@/lib/expense-query";
 import { EXPENSE_PAGE_SIZE } from "./constants";
 
+export { buildExpenseQuery } from "@/lib/expense-query";
 export { EXPENSE_PAGE_SIZE };
-
-interface ExpenseFilters {
-  month: number | null;
-  year: number;
-  q: string;
-  tagFilter: string;
-  paidByFilter: string;
-}
-
-type RawTagDoc = Record<string, unknown> & {
-  _id: { toString(): string };
-  path: string;
-  sortOrder: number;
-};
 
 interface RawSearchParams {
   q?: string;
@@ -52,48 +38,6 @@ export function parseExpenseParams(params: RawSearchParams) {
   const isFiltered = !!(q || tagFilter || paidByFilter);
 
   return { month, year, q, tagFilter, paidByFilter, prefill, isFiltered };
-}
-
-export function buildExpenseQuery(
-  filters: ExpenseFilters,
-  rawTags: RawTagDoc[]
-): Record<string, unknown> {
-  const query: Record<string, unknown> = {};
-
-  if (filters.month !== null) {
-    const { start, end } = getMonthDateRange(filters.month, filters.year);
-    query.date = { $gte: start, $lt: end };
-  }
-
-  if (filters.q) {
-    const escaped = escapeRegex(filters.q);
-    query.$or = [
-      { where: { $regex: escaped, $options: "i" } },
-      { notes: { $regex: escaped, $options: "i" } },
-    ];
-  }
-
-  if (filters.paidByFilter) {
-    query.paidBy = filters.paidByFilter;
-  }
-
-  if (filters.tagFilter) {
-    const matchingTag = rawTags.find(
-      (t) => t.path.toLowerCase() === filters.tagFilter.toLowerCase()
-    );
-    if (matchingTag) {
-      const matchingIds = rawTags
-        .filter(
-          (t) =>
-            t._id.toString() === matchingTag._id.toString() ||
-            t.path.toLowerCase().startsWith(matchingTag.path.toLowerCase() + "/")
-        )
-        .map((t) => t._id);
-      query.tags = { $in: matchingIds };
-    }
-  }
-
-  return query;
 }
 
 export function serializeExpense(e: {
