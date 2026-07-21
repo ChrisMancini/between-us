@@ -3,8 +3,9 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
 import { Tag } from "@/lib/models/tag";
-import { expenseApiSchema } from "@/lib/validations/expense";
+import { expenseApiSchema, expenseQuerySchema } from "@/lib/validations/expense";
 import { serializeTag } from "@/lib/tag-utils";
+import { buildExpenseQuery } from "@/lib/expense-query";
 import { collapseToMostSpecific } from "@/lib/tag-hierarchy";
 import { withAuth } from "@/lib/auth-guard";
 import { validationError } from "@/lib/api-utils";
@@ -14,14 +15,44 @@ import { resetReadinessForMonths } from "@/lib/readiness-reset";
 import { formatCurrency } from "@/lib/utils";
 import { createActionForExpense, getOtherPersonKey } from "@/lib/action-lifecycle";
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (req) => {
+  const { searchParams } = new URL(req.url);
+
+  const parsed = expenseQuerySchema.safeParse({
+    month: searchParams.get("month") ?? undefined,
+    year: searchParams.get("year") ?? undefined,
+    q: searchParams.get("q") ?? undefined,
+    tag: searchParams.get("tag") ?? undefined,
+    paidBy: searchParams.get("paidBy") ?? undefined,
+    offset: searchParams.get("offset") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+  });
+
+  if (!parsed.success) return validationError(parsed);
+
+  const { month, year: yearParam, q, tag: tagFilter, paidBy: paidByFilter, offset, limit } = parsed.data;
+  const year = yearParam ?? new Date().getFullYear();
+
   await connectToDatabase();
 
-  const expenses = await Expense.find()
-    .sort({ date: -1, createdAt: -1 })
-    .limit(30)
-    .populate("tags")
-    .lean();
+  const rawTags = tagFilter
+    ? await Tag.find().sort({ sortOrder: 1 }).lean<Array<{ _id: mongoose.Types.ObjectId; path: string; sortOrder: number }>>()
+    : [];
+
+  const query = buildExpenseQuery(
+    { month, year, q, tagFilter, paidByFilter },
+    rawTags as Array<{ _id: { toString(): string }; path: string; sortOrder: number }>,
+  );
+
+  const [expenses, total] = await Promise.all([
+    Expense.find(query)
+      .sort({ date: -1, createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .populate("tags")
+      .lean(),
+    Expense.countDocuments(query),
+  ]);
 
   return NextResponse.json({
     expenses: expenses.map((e) => {
@@ -44,6 +75,8 @@ export const GET = withAuth(async () => {
         updatedAt: (e.updatedAt as Date).toISOString(),
       };
     }),
+    total,
+    hasMore: offset + expenses.length < total,
   });
 });
 

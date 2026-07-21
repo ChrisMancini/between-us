@@ -164,7 +164,7 @@ function PositionedActivityPopover({
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           <div
             ref={popoverRef}
-            className="fixed z-50 w-[300px] bg-popover border border-popover-border rounded-md shadow-md"
+            className="fixed z-50 w-[300px] max-w-[calc(100vw-16px)] bg-popover border border-popover-border rounded-md shadow-md"
           >
             {renderBody()}
           </div>

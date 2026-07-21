@@ -15,3 +15,16 @@ export const expenseApiSchema = z.object({
 export type ExpenseApiInput = z.infer<typeof expenseApiSchema>;
 
 export const expenseUpdateApiSchema = expenseApiSchema.omit({ paidBy: true });
+
+export const expenseQuerySchema = z.object({
+  month: z
+    .union([z.literal("all"), z.coerce.number().int().min(1).max(12)])
+    .optional()
+    .transform((v) => (v === "all" ? null : (v ?? null))),
+  year: z.coerce.number().int().min(2000).max(2100).optional(),
+  q: z.string().max(200).optional().default(""),
+  tag: z.string().max(200).optional().default(""),
+  paidBy: z.string().max(100).optional().default(""),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(30),
+});

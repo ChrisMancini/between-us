@@ -1,23 +1,25 @@
-import { PersonBadge } from "@/components/person-badge";
-import { ExpenseDetailPopover } from "@/components/expense-detail-popover";
-import type { SerializedPerson } from "@/lib/models/person";
+"use client";
+
 import type { SettlementExpenseRow } from "@/lib/settlement-calc";
 import { formatCurrency } from "@/lib/utils";
-import { badgeProps } from "@/lib/persons";
+import { usePersons } from "@/components/persons-context";
+import { ExpenseRow } from "@/app/(dashboard)/expenses/_components/expense-row";
+import { ExpenseCard } from "@/app/(dashboard)/expenses/_components/expense-card";
+
+const noop = () => {};
 
 export function ExpenseTable({
   expenses,
   title,
   description,
   muted = false,
-  personMap,
 }: {
   expenses: SettlementExpenseRow[];
   title: string;
   description: string;
   muted?: boolean;
-  personMap: Map<string, SerializedPerson>;
 }) {
+  const { personMap } = usePersons();
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
@@ -34,7 +36,8 @@ export function ExpenseTable({
         </p>
       </div>
 
-      <table className="w-full text-sm">
+      {/* Desktop table */}
+      <table className="hidden sm:table w-full text-sm">
         <thead>
           <tr className="border-b border-border">
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Date</th>
@@ -43,46 +46,40 @@ export function ExpenseTable({
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Paid by</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Split</th>
             <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">Amount</th>
-            <th className="w-8" />
+            <th className="w-20" />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {expenses.map((e) => (
-            <tr key={e._id} className="hover:bg-muted/60 transition-colors">
-              <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap text-xs">
-                {new Date(e.date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  timeZone: "UTC",
-                })}
-              </td>
-              <td className="px-4 py-2.5 font-medium text-foreground">{e.where}</td>
-              <td className="px-4 py-2.5 text-muted-foreground">{e.tags.map((t) => t.path).join(", ")}</td>
-              <td className="px-4 py-2.5">
-                <PersonBadge {...badgeProps(e.paidBy, personMap)} />
-              </td>
-              <td className="px-4 py-2.5 text-muted-foreground text-xs">
-                {e.splitType === "split" ? "50 / 50" : "Full"}
-              </td>
-              <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
-                {formatCurrency(e.amount)}
-              </td>
-              <td className="px-2 py-2.5">
-                <ExpenseDetailPopover
-                  date={e.date}
-                  where={e.where}
-                  paidBy={e.paidBy}
-                  amount={e.amount}
-                  tags={e.tags.map((t) => t.path).join(", ")}
-                  splitType={e.splitType}
-                  settlementType={e.settlementType}
-                  notes={e.notes}
-                />
-              </td>
-            </tr>
+            <ExpenseRow
+              key={e._id}
+              expense={e}
+              isSettled
+              bulkEditMode={false}
+              isSelected={false}
+              onToggleSelection={noop}
+              onDelete={noop}
+              personMap={personMap}
+            />
           ))}
         </tbody>
       </table>
+
+      {/* Mobile cards */}
+      <div className="sm:hidden divide-y divide-border">
+        {expenses.map((e) => (
+          <ExpenseCard
+            key={e._id}
+            expense={e}
+            isSettled
+            bulkEditMode={false}
+            isSelected={false}
+            onToggleSelection={noop}
+            onDelete={noop}
+            personMap={personMap}
+          />
+        ))}
+      </div>
     </div>
   );
 }

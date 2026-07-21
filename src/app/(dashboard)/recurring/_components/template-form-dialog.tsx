@@ -225,7 +225,7 @@ export function TemplateFormDialog({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        className="text-muted-foreground hover:text-destructive"
+                        className="size-11 sm:size-7 text-muted-foreground hover:text-destructive"
                         onClick={() => remove(index)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

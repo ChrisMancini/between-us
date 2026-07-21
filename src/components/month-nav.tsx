@@ -37,7 +37,7 @@ export function MonthNav({ month, year, basePath }: MonthNavProps) {
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+        className="h-11 w-11 sm:h-8 sm:w-8 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
         onClick={() => go(-1)}
         aria-label="Previous month"
       >
@@ -51,7 +51,7 @@ export function MonthNav({ month, year, basePath }: MonthNavProps) {
       <Button
         variant="outline"
         size="icon"
-        className="h-8 w-8 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
+        className="h-11 w-11 sm:h-8 sm:w-8 border-primary/20 hover:border-primary/40 hover:bg-primary/5"
         onClick={() => go(1)}
         disabled={isCurrentOrFuture}
         aria-label="Next month"

@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/utils";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
+import { SettlementRowCard } from "@/components/settlement-row-card";
 
 export interface SettlementRow {
   month: number;
@@ -70,7 +71,8 @@ export function AnnualSettlementSummary({
         </p>
       </div>
 
-      <table className="w-full text-sm">
+      {/* Desktop table — hidden below sm */}
+      <table className="hidden sm:table w-full text-sm">
         <thead>
           <tr className="border-b border-border">
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60">
@@ -126,6 +128,35 @@ export function AnnualSettlementSummary({
           </tr>
         </tfoot>
       </table>
+
+      {/* Mobile cards — shown below sm */}
+      <div className="sm:hidden divide-y divide-border">
+        {settlements.map((s) => (
+          <SettlementRowCard
+            key={`${s.year}-${s.month}`}
+            label={monthLabel(s.month)}
+            amount={s.totalOwed}
+            owedBy={s.owedBy}
+            owedTo={s.owedTo}
+            personMap={personMap}
+          />
+        ))}
+        <div className="flex items-center justify-between gap-2 border-t-2 border-border bg-muted/50 px-4 py-3">
+          {netAmount === 0 ? (
+            <span className="font-semibold">Even</span>
+          ) : (
+            <span className="flex flex-wrap items-center gap-1.5 font-semibold">
+              Overall:
+              <PersonBadge {...badgeProps(netPersonKey, personMap)} />
+              owes
+              <PersonBadge {...badgeProps(owedToKey, personMap)} />
+            </span>
+          )}
+          <span className="font-bold tabular-nums">
+            {netAmount === 0 ? "—" : formatCurrency(netAmount)}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

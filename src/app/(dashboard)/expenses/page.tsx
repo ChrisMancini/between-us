@@ -7,7 +7,7 @@ import { Expense } from "@/lib/models/expense";
 import { Settlement } from "@/lib/models/settlement";
 import { serializeTag } from "@/lib/tag-utils";
 import type { SerializedTag } from "@/lib/models/tag";
-import { parseExpenseParams, buildExpenseQuery, serializeExpense } from "./_lib/expense-queries";
+import { parseExpenseParams, buildExpenseQuery, serializeExpense, EXPENSE_PAGE_SIZE } from "./_lib/expense-queries";
 import { ExpenseForm } from "./_components/expense-form";
 import { ExpenseList } from "./_components/expense-list";
 import { ExpenseFilters } from "./_components/expense-filters";
@@ -47,11 +47,14 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
     rawTags
   );
 
-  const rawExpenses = await Expense.find(query)
-    .sort({ date: -1, createdAt: -1 })
-    .limit(month === null ? 200 : 0)
-    .populate("tags")
-    .lean();
+  const [rawExpenses, totalCount] = await Promise.all([
+    Expense.find(query)
+      .sort({ date: -1, createdAt: -1 })
+      .limit(EXPENSE_PAGE_SIZE)
+      .populate("tags")
+      .lean(),
+    Expense.countDocuments(query),
+  ]);
 
   const closedMonths = new Set(
     closedSettlements.map((s) => `${s.year}-${s.month}`)
@@ -101,13 +104,16 @@ export default async function ExpensesPage({ searchParams }: PageProps) {
       />
 
       <ExpenseList
+        key={`${month}-${year}-${q}-${tagFilter}-${paidByFilter}-${totalCount}`}
         expenses={expenses}
+        totalCount={totalCount}
         closedMonths={closedMonths}
         isFiltered={isFiltered}
         currentUserKey={paidBy}
         isAdmin={session?.user?.role === "admin"}
         tags={tags}
         closedMonthsList={[...closedMonths]}
+        filters={{ month, year, q, tag: tagFilter, paidBy: paidByFilter }}
       />
     </div>
   );

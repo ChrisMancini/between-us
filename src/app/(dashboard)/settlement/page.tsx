@@ -47,7 +47,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Settlement</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -61,7 +61,7 @@ export default async function SettlementPage({ searchParams }: PageProps) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           {isClosed ? (
             <ReopenMonthDialog
               month={month}
@@ -130,7 +130,6 @@ export default async function SettlementPage({ searchParams }: PageProps) {
           expenses={breakdown.deferredExpenses}
           title="Settled Monthly"
           description="These expenses are included in the settlement calculation."
-          personMap={personMap}
         />
       ) : (
         <div className="rounded-xl border border-dashed border-primary/20 bg-card py-12 text-center">
@@ -147,7 +146,6 @@ export default async function SettlementPage({ searchParams }: PageProps) {
           title="Settled Immediately"
           description="These expenses are paid directly and excluded from the monthly settlement."
           muted
-          personMap={personMap}
         />
       )}
     </div>

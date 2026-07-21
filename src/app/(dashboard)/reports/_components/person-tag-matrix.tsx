@@ -72,7 +72,8 @@ function MatrixTable({
         </div>
       </div>
 
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[36rem]">
         <thead>
           <tr className="border-b border-border">
             <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground/60 w-6" />
@@ -121,7 +122,8 @@ function MatrixTable({
             </td>
           </tr>
         </tfoot>
-      </table>
+        </table>
+      </div>
     </div>
   );
 }

@@ -29,7 +29,7 @@ export function SettlementTypeSelect({
           {value === "immediate" ? "Immediate" : "Deferred"}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="w-auto">
+      <SelectContent className="w-auto max-w-[calc(100vw-2rem)]">
         <SelectItem value="deferred">Deferred — settled monthly</SelectItem>
         <SelectItem value="immediate">
           Immediate — settled at time of expense

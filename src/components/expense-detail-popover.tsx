@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatShortDate } from "@/lib/utils";
 
 interface ExpenseDetailPopoverProps {
   date: string;
@@ -17,15 +17,6 @@ interface ExpenseDetailPopoverProps {
   splitType: "split" | "full";
   settlementType: "immediate" | "deferred";
   notes?: string;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }
 
 export function ExpenseDetailPopover({
@@ -45,7 +36,7 @@ export function ExpenseDetailPopover({
           <Button
             variant="ghost"
             size="icon-xs"
-            className="text-muted-foreground"
+            className="size-11 sm:size-6 text-muted-foreground"
             aria-label="Expense details"
           />
         }
@@ -93,7 +84,7 @@ export function ExpenseDetailContent({
         <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <CalendarDays className="h-3 w-3" />
-            {formatDate(date)}
+            {formatShortDate(date)}
           </span>
           <PersonBadge {...badgeProps(paidBy, personMap)} />
         </div>

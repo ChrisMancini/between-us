@@ -47,7 +47,7 @@ export function ExpenseFormFields({
   return (
     <>
       {/* Date + Tags */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Date</Label>
           <Controller
@@ -96,7 +96,7 @@ export function ExpenseFormFields({
       </div>
 
       {/* Amount + Where */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}amount`}>Amount</Label>
           <div className="relative">
