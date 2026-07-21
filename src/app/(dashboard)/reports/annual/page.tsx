@@ -143,7 +143,7 @@ export default async function AnnualReportPage({ searchParams }: PageProps) {
       </Link>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Year in Review</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
