@@ -22,6 +22,8 @@ interface ActivityFeedProps {
   initialCursor: string | null;
   filter: "partner" | "all";
   action: ActivityGroupSlug | null;
+  from: string | null;
+  to: string | null;
 }
 
 export function ActivityFeed({
@@ -29,6 +31,8 @@ export function ActivityFeed({
   initialCursor,
   filter,
   action,
+  from,
+  to,
 }: ActivityFeedProps) {
   const { personMap } = usePersons();
   const [items, setItems] = useState(initialItems);
@@ -39,7 +43,7 @@ export function ActivityFeed({
   // fresh first page whenever they change. Re-seed the list (and reset
   // pagination) on any filter change; appended "Load More" pages survive
   // in-between because the key only changes when a filter actually changes.
-  const filterKey = `${filter}:${action ?? ""}`;
+  const filterKey = `${filter}:${action ?? ""}:${from ?? ""}:${to ?? ""}`;
   useEffect(() => {
     setItems(initialItems);
     setCursor(initialCursor);
@@ -61,6 +65,8 @@ export function ActivityFeed({
     try {
       const params = new URLSearchParams({ filter, limit: "20", cursor });
       if (action) params.set("action", action);
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
       const res = await fetch(`/api/activity?${params}`);
       if (!res.ok) return;
       const data = await res.json();
@@ -73,7 +79,7 @@ export function ActivityFeed({
 
   return (
     <div className="space-y-4">
-      <ActivityFilters filter={filter} action={action} />
+      <ActivityFilters filter={filter} action={action} from={from} to={to} />
 
       {/* Activity list */}
       <div className="rounded-xl border border-primary/10 bg-card shadow-sm overflow-hidden">

@@ -13,11 +13,13 @@ export const GET = withAuth(async (req, session) => {
     cursor: searchParams.get("cursor") ?? undefined,
     filter: searchParams.get("filter") ?? undefined,
     action: searchParams.get("action") ?? undefined,
+    from: searchParams.get("from") ?? undefined,
+    to: searchParams.get("to") ?? undefined,
   });
 
   if (!parsed.success) return validationError(parsed);
 
-  const { limit, cursor, filter, action } = parsed.data;
+  const { limit, cursor, filter, action, from, to } = parsed.data;
 
   await connectToDatabase();
 
@@ -26,6 +28,8 @@ export const GET = withAuth(async (req, session) => {
     action: action ?? null,
     currentUserKey: session.user.paidByKey,
     cursor,
+    from,
+    to,
   });
 
   const results = await Activity.find(query)
