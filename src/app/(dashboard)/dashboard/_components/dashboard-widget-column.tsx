@@ -9,6 +9,8 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type Announcements,
+  type ScreenReaderInstructions,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
@@ -130,6 +132,42 @@ export function DashboardWidgetColumn({
     (w) => WIDGET_TITLES[w.widgetId] !== undefined
   );
 
+  const widgetTitle = (id: string | number) =>
+    id === "settlement-status"
+      ? `Settlement — ${settlementProps.monthLabel}`
+      : WIDGET_TITLES[String(id)] ?? String(id);
+
+  const positionOf = (id: string | number) => {
+    const index = visibleWidgets.findIndex((w) => w.widgetId === id);
+    return index >= 0 ? `position ${index + 1} of ${visibleWidgets.length}` : "";
+  };
+
+  const screenReaderInstructions: ScreenReaderInstructions = {
+    draggable:
+      "To reorder a widget, press Space or Enter to pick it up, use the arrow keys to move it, then press Space or Enter to drop it in its new position, or Escape to cancel.",
+  };
+
+  const announcements: Announcements = {
+    onDragStart({ active }) {
+      return `Picked up the ${widgetTitle(active.id)} widget.`;
+    },
+    onDragOver({ active, over }) {
+      if (over) {
+        return `${widgetTitle(active.id)} widget moved to ${positionOf(over.id)}.`;
+      }
+      return `${widgetTitle(active.id)} widget is no longer over a drop position.`;
+    },
+    onDragEnd({ active, over }) {
+      if (over) {
+        return `${widgetTitle(active.id)} widget dropped at ${positionOf(over.id)}.`;
+      }
+      return `${widgetTitle(active.id)} widget dropped.`;
+    },
+    onDragCancel({ active }) {
+      return `Reordering cancelled. The ${widgetTitle(active.id)} widget returned to its original position.`;
+    },
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -138,6 +176,7 @@ export function DashboardWidgetColumn({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setIsDragActive(false)}
+      accessibility={{ announcements, screenReaderInstructions }}
     >
       <SortableContext
         items={visibleWidgets.map((w) => w.widgetId)}
@@ -145,10 +184,7 @@ export function DashboardWidgetColumn({
       >
         <div className="space-y-6">
           {visibleWidgets.map((widget) => {
-            const title =
-              widget.widgetId === "settlement-status"
-                ? `Settlement — ${settlementProps.monthLabel}`
-                : WIDGET_TITLES[widget.widgetId];
+            const title = widgetTitle(widget.widgetId);
 
             return (
               <DashboardWidget

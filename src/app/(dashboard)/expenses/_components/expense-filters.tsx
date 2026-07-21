@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X, Tags, ChevronDown, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -73,11 +73,19 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
     filters.q || filters.tag || filters.paidBy || filters.month === null;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div
+      role="search"
+      aria-label="Filter expenses"
+      className="flex flex-wrap items-center gap-3"
+    >
       {/* Search input */}
       <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+          aria-hidden="true"
+        />
         <Input
+          aria-label="Search expenses"
           placeholder="Search expenses..."
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
@@ -109,7 +117,10 @@ export function ExpenseFilters({ tags, filters }: ExpenseFiltersProps) {
           pushParams({ paidBy: val === "__all__" ? null : val })
         }
       >
-        <SelectTrigger className="w-full sm:w-[120px] h-11 sm:h-8">
+        <SelectTrigger
+          aria-label="Filter by who paid"
+          className="w-full sm:w-[120px] h-11 sm:h-8"
+        >
           <SelectValue>
             {filters.paidBy
               ? personMap.get(filters.paidBy)?.displayName ?? filters.paidBy
@@ -196,6 +207,8 @@ function TagFilterCombobox({
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
 
   const filtered = search.trim()
     ? tags.filter((t) =>
@@ -259,6 +272,7 @@ function TagFilterCombobox({
     >
       <div className="relative flex items-center">
         <PopoverTrigger
+          aria-label={value ? `Filter by tag: ${value}` : "Filter by tag"}
           className={cn(
             "flex h-11 sm:h-8 w-full sm:w-[150px] items-center justify-between rounded-md border border-input bg-transparent px-2.5 text-sm transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
@@ -268,11 +282,14 @@ function TagFilterCombobox({
           )}
         >
           <span className="flex items-center gap-1.5 truncate">
-            <Tags className="h-3.5 w-3.5 shrink-0" />
+            <Tags className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="truncate">{value || "All tags"}</span>
           </span>
           {!value && (
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+            <ChevronDown
+              className="h-3.5 w-3.5 shrink-0 opacity-50"
+              aria-hidden="true"
+            />
           )}
         </PopoverTrigger>
         {value && (
@@ -290,6 +307,16 @@ function TagFilterCombobox({
         <div className="p-2 border-b">
           <Input
             ref={inputRef}
+            role="combobox"
+            aria-label="Search tags"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            aria-activedescendant={
+              highlightIndex >= 0 && highlightIndex < sorted.length
+                ? optionId(highlightIndex)
+                : undefined
+            }
             placeholder="Search tags..."
             value={search}
             onChange={(e) => {
@@ -300,19 +327,24 @@ function TagFilterCombobox({
             className="h-8"
           />
         </div>
-        <div ref={listRef} className="max-h-[240px] overflow-y-auto p-1">
+        <div className="max-h-[240px] overflow-y-auto p-1">
           {sorted.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
               No matching tags
             </p>
           )}
-          {sorted.map((tag, index) => {
+          <div ref={listRef} role="listbox" id={listboxId} aria-label="Tags">
+            {sorted.map((tag, index) => {
             const isSelected = value === tag.path;
             const isHighlighted = index === highlightIndex;
             return (
               <button
                 key={tag._id}
                 type="button"
+                role="option"
+                id={optionId(index)}
+                aria-selected={isSelected}
+                tabIndex={-1}
                 onClick={() => select(tag.path)}
                 onMouseEnter={() => setHighlightIndex(index)}
                 className={cn(
@@ -333,10 +365,13 @@ function TagFilterCombobox({
                   )}
                   {tag.name}
                 </span>
-                {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                {isSelected && (
+                  <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                )}
               </button>
             );
-          })}
+            })}
+          </div>
         </div>
       </PopoverContent>
     </Popover>
