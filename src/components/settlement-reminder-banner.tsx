@@ -13,10 +13,10 @@ interface SettlementReminderBannerProps {
 
 function getBannerText(months: MonthYear[]): string {
   if (months.length === 1) {
-    return `You haven’t marked ${formatMonthYear(months[0].month, months[0].year, { omitCurrentYear: true })} as done yet.`;
+    return `You haven’t marked ${formatMonthYear(months[0].month, months[0].year)} as done yet.`;
   }
   if (months.length === 2) {
-    return `You haven’t marked ${formatMonthYear(months[0].month, months[0].year, { omitCurrentYear: true })} and ${formatMonthYear(months[1].month, months[1].year, { omitCurrentYear: true })} as done yet.`;
+    return `You haven’t marked ${formatMonthYear(months[0].month, months[0].year)} and ${formatMonthYear(months[1].month, months[1].year)} as done yet.`;
   }
   return `You have ${months.length} months waiting to be closed.`;
 }

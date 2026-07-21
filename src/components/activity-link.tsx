@@ -448,7 +448,7 @@ function SettlementDetailContent({
       {/* Header */}
       <div className="border-b border-primary/10 bg-primary/5 px-4 py-3">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-foreground">{formatMonthYear(month, year)}</p>
+          <p className="text-sm font-semibold text-foreground">{formatMonthYear(month, year, { omitCurrentYear: false })}</p>
           <p className="text-lg font-bold tabular-nums text-foreground">
             {formatCurrency(totalOwed)}
           </p>

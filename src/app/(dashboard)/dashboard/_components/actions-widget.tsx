@@ -107,7 +107,7 @@ function UnsettledMonthItem({ month }: { month: MonthYear }) {
         />
         <div className="flex-1 min-w-0">
           <p className={cn("text-sm font-medium", styles ? styles.text : "text-foreground")}>
-            Mark {formatMonthYear(month.month, month.year, { omitCurrentYear: true })} as done
+            Mark {formatMonthYear(month.month, month.year)} as done
           </p>
         </div>
         <Link

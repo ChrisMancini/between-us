@@ -27,43 +27,33 @@ describe("formatCurrency", () => {
 });
 
 describe("formatMonthYear", () => {
-  it("formats a standard month", () => {
-    expect(formatMonthYear(6, 2026)).toBe("June 2026");
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(Date.UTC(2026, 5, 15)));
   });
 
-  it("formats January", () => {
-    expect(formatMonthYear(1, 2026)).toBe("January 2026");
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
-  it("formats December", () => {
+  it("omits year for current-year months by default", () => {
+    expect(formatMonthYear(6, 2026)).toBe("June");
+  });
+
+  it("includes year for past-year months by default", () => {
     expect(formatMonthYear(12, 2025)).toBe("December 2025");
   });
 
-  describe("omitCurrentYear", () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date(Date.UTC(2026, 5, 15)));
-    });
+  it("includes year when omitCurrentYear is false", () => {
+    expect(formatMonthYear(5, 2026, { omitCurrentYear: false })).toBe("May 2026");
+  });
 
-    afterEach(() => {
-      jest.useRealTimers();
-    });
+  it("omits year when omitCurrentYear is true", () => {
+    expect(formatMonthYear(5, 2026, { omitCurrentYear: true })).toBe("May");
+  });
 
-    it("omits year when it matches the current year", () => {
-      expect(formatMonthYear(5, 2026, { omitCurrentYear: true })).toBe("May");
-    });
-
-    it("includes year when it differs from the current year", () => {
-      expect(formatMonthYear(12, 2025, { omitCurrentYear: true })).toBe("December 2025");
-    });
-
-    it("always includes year when omitCurrentYear is false", () => {
-      expect(formatMonthYear(5, 2026, { omitCurrentYear: false })).toBe("May 2026");
-    });
-
-    it("always includes year when options are omitted", () => {
-      expect(formatMonthYear(5, 2026)).toBe("May 2026");
-    });
+  it("includes year for past-year months even with omitCurrentYear true", () => {
+    expect(formatMonthYear(12, 2025, { omitCurrentYear: true })).toBe("December 2025");
   });
 });
 

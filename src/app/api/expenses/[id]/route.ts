@@ -201,7 +201,7 @@ export const DELETE = withAuth<RouteContext>(async (_req, session, context) => {
   const year = expDate.getUTCFullYear();
   const closed = await Settlement.findOne({ month, year, status: { $ne: "open" } }).lean();
   if (closed) {
-    const label = formatMonthYear(month, year);
+    const label = formatMonthYear(month, year, { omitCurrentYear: false });
     return NextResponse.json(
       { error: `${label} has already been settled. Reopen the month first.` },
       { status: 422 },

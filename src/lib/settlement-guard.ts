@@ -49,7 +49,7 @@ export async function assertMonthsOpen(
   if (closedSettlements.length === 0) return null;
 
   const labels = closedSettlements.map((s) =>
-    formatMonthYear(s.month, s.year)
+    formatMonthYear(s.month, s.year, { omitCurrentYear: false })
   );
 
   const error =

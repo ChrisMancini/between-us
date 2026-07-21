@@ -248,7 +248,7 @@ async function logSettledMonthAlert(
   await logActivity(
     ownerKey,
     "recurring_auto_apply_alert",
-    `couldn't auto-apply "${template.name}" — ${formatMonthYear(month, year)} is already settled. Reopen the month and apply this template by hand to add it.`,
+    `couldn't auto-apply "${template.name}" — ${formatMonthYear(month, year, { omitCurrentYear: false })} is already settled. Reopen the month and apply this template by hand to add it.`,
     {
       templateId: String(template._id),
       templateName: template.name,
