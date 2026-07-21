@@ -97,7 +97,7 @@ export default async function SettlementHistoryPage() {
                       href={`/settlement?month=${s.month}&year=${s.year}`}
                       className="text-primary hover:underline underline-offset-2"
                     >
-                      {formatMonthYear(s.month, s.year)}
+                      {formatMonthYear(s.month, s.year, { omitCurrentYear: false })}
                     </Link>
                   </td>
                   <td className="px-4 py-2.5">
@@ -133,7 +133,7 @@ export default async function SettlementHistoryPage() {
             {settlements.map((s) => (
               <SettlementRowCard
                 key={`${s.year}-${s.month}`}
-                label={formatMonthYear(s.month, s.year)}
+                label={formatMonthYear(s.month, s.year, { omitCurrentYear: false })}
                 href={`/settlement?month=${s.month}&year=${s.year}`}
                 amount={s.totalOwed}
                 owedBy={s.owedBy}

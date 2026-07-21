@@ -61,7 +61,7 @@ export async function createActionForSettlement(
 ): Promise<IAction | null> {
   if (settlement.totalOwed <= 0) return null;
 
-  const description = `${formatMonthYear(settlement.month, settlement.year)} settlement`;
+  const description = `${formatMonthYear(settlement.month, settlement.year, { omitCurrentYear: false })} settlement`;
   const action = await Action.create({
     sourceType: "settlement",
     sourceId: settlement._id,

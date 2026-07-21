@@ -14,7 +14,8 @@ export function formatCurrency(cents: number) {
 }
 
 export function formatMonthYear(month: number, year: number, options?: { omitCurrentYear?: boolean }): string {
-  if (options?.omitCurrentYear && year === new Date().getUTCFullYear()) {
+  const omit = options?.omitCurrentYear ?? true;
+  if (omit && year === new Date().getUTCFullYear()) {
     return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("en-US", {
       month: "long",
       timeZone: "UTC",
