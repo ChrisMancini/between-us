@@ -155,7 +155,7 @@ function PositionedActivityPopover({
     <div className="relative">
       <button
         onClick={handleClick}
-        className="w-full text-left hover:bg-muted/60 transition-colors cursor-pointer"
+        className="focus-ring-inset w-full text-left hover:bg-muted/60 transition-colors cursor-pointer"
       >
         {children}
       </button>

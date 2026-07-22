@@ -148,7 +148,7 @@ export function AuthSettingsForm({
           type="button"
           onClick={() => setAuthMethod("basic")}
           className={cn(
-            "flex flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all cursor-pointer",
+            "focus-ring flex flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all cursor-pointer",
             authMethod === "basic"
               ? "border-primary bg-primary/5 shadow-sm"
               : "border-border hover:border-muted-foreground/30 hover:bg-muted/60"
@@ -174,7 +174,7 @@ export function AuthSettingsForm({
           }}
           disabled={!hasProviders}
           className={cn(
-            "flex flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all cursor-pointer",
+            "focus-ring flex flex-col items-start gap-3 rounded-xl border-2 p-5 text-left transition-all cursor-pointer",
             !hasProviders && "opacity-50 !cursor-not-allowed",
             authMethod === "oauth"
               ? "border-primary bg-primary/5 shadow-sm"
@@ -204,7 +204,7 @@ export function AuthSettingsForm({
                 type="button"
                 onClick={() => setOauthProvider(p.key)}
                 className={cn(
-                  "flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer",
+                  "focus-ring flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all cursor-pointer",
                   oauthProvider === p.key
                     ? "border-primary bg-primary/5 text-primary"
                     : "border-border text-muted-foreground hover:border-muted-foreground/30"

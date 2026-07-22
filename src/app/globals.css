@@ -117,6 +117,31 @@
   --sidebar-ring: oklch(0.585 0.201 264.376);
 }
 
+/*
+ * Shared keyboard-focus indicators. Custom (non-ShadCN) interactive elements
+ * should use these instead of re-inventing a focus style, so focus reads
+ * consistently across the app and matches the ShadCN `ui/` primitives exactly.
+ *
+ * `focus-ring` mirrors the ShadCN standard: the border color shifts to `--ring`
+ * and a flush (no-offset) 3px ring is drawn. The thick ring plus the border
+ * shift is a *non-color* cue, so focus stays perceptible even when the ring hue
+ * can't be distinguished (one user is partially color blind).
+ *
+ * `focus-ring-inset` is for elements where an outset ring is unreliable or
+ * clips — notably table rows (`<tr>`), where box-shadow rings don't render
+ * consistently. It draws a solid inset outline instead.
+ */
+@utility focus-ring {
+  @apply outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50;
+}
+
+@utility focus-ring-inset {
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

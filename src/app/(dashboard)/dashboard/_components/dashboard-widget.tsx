@@ -57,7 +57,7 @@ export function DashboardWidget({
       <div className="flex items-center border-b border-primary/10 bg-primary/5 px-5 py-3">
         <button
           type="button"
-          className="hidden lg:flex -ml-1 mr-2 cursor-grab touch-none items-center text-muted-foreground hover:text-foreground"
+          className="focus-ring hidden lg:flex -ml-1 mr-2 cursor-grab touch-none items-center rounded-md text-muted-foreground hover:text-foreground"
           {...attributes}
           {...listeners}
           aria-label={`Reorder ${title}`}
@@ -88,7 +88,7 @@ export function DashboardWidget({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="ml-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="focus-ring ml-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
           aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
           aria-expanded={!collapsed}
           aria-controls={contentId}

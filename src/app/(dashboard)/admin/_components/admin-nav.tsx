@@ -24,7 +24,7 @@ export function AdminNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+              "focus-ring relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
               isActive
                 ? "text-primary"
                 : "text-muted-foreground hover:text-foreground"

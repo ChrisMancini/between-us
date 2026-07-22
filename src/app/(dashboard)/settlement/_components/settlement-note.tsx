@@ -89,7 +89,7 @@ export function SettlementNote({ month, year, note, isClosed }: SettlementNotePr
         <p className="text-sm text-muted-foreground italic">{note}</p>
         <button
           onClick={() => setEditing(true)}
-          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
+          className="focus-ring opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-0.5 rounded hover:bg-muted"
           aria-label="Edit note"
         >
           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
@@ -101,7 +101,7 @@ export function SettlementNote({ month, year, note, isClosed }: SettlementNotePr
   return (
     <button
       onClick={() => setEditing(true)}
-      className="mt-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      className="focus-ring mt-2 inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground hover:text-foreground transition-colors"
     >
       <Plus className="h-3.5 w-3.5" />
       Add payment note

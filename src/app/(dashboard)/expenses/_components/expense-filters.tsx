@@ -276,7 +276,7 @@ function TagFilterCombobox({
           className={cn(
             "flex h-11 sm:h-8 w-full sm:w-[150px] items-center justify-between rounded-md border border-input bg-transparent px-2.5 text-sm transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
-            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            "focus-ring",
             value && "pr-7",
             !value && "text-muted-foreground"
           )}
@@ -350,7 +350,8 @@ function TagFilterCombobox({
                 className={cn(
                   "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer",
                   "hover:bg-accent hover:text-accent-foreground",
-                  isHighlighted && "bg-accent text-accent-foreground",
+                  isHighlighted &&
+                    "bg-accent text-accent-foreground ring-2 ring-inset ring-ring",
                   isSelected && !isHighlighted && "bg-accent/50"
                 )}
               >

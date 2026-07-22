@@ -38,6 +38,8 @@ export function ExpenseCard({
   return (
     <div
       className={`px-4 py-3 transition-colors ${
+        bulkEditMode ? "focus-ring-inset" : ""
+      } ${
         bulkEditMode && isSelected
           ? "bg-primary/5"
           : bulkEditMode

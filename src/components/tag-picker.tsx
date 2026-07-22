@@ -139,7 +139,8 @@ export function TagPicker({
       <Popover open={open} onOpenChange={setOpen}>
         <div
           className={cn(
-            "flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors",
+            "flex min-h-9 w-full flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors",
+            "focus-within:ring-3 focus-within:ring-ring/50",
             error && "border-destructive"
           )}
         >
@@ -154,7 +155,7 @@ export function TagPicker({
                 type="button"
                 aria-label={`Remove ${tag.path}`}
                 onClick={() => removeTag(tag._id)}
-                className="inline-flex items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="focus-ring inline-flex items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="h-3 w-3" aria-hidden="true" />
               </button>
@@ -163,7 +164,7 @@ export function TagPicker({
           <PopoverTrigger
             aria-label="Select tags"
             className={cn(
-              "flex min-w-12 flex-1 items-center justify-between gap-1 rounded-sm text-left outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "flex min-w-12 flex-1 items-center justify-between gap-1 rounded-sm text-left outline-none",
               selectedTags.length === 0 && "text-muted-foreground"
             )}
           >

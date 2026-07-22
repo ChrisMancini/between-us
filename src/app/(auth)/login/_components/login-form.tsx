@@ -96,7 +96,7 @@ export function LoginForm({ persons, authMethod, oauthProvider, oauthProviderNam
                         type="button"
                         onClick={() => setSelected(p.key)}
                         className={cn(
-                          "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all cursor-pointer",
+                          "focus-ring flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all cursor-pointer",
                           isSelected
                             ? `${colors.border} ${colors.selectedBg} shadow-sm`
                             : "border-border hover:border-muted-foreground/30 hover:bg-muted/60"

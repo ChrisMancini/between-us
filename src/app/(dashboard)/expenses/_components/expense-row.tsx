@@ -37,9 +37,21 @@ export function ExpenseRow({
 }: ExpenseRowProps) {
   return (
     <tr
-      className={`hover:bg-primary/5 transition-colors ${bulkEditMode && isSelected ? "bg-primary/5" : ""}`}
+      className={`transition-colors hover:bg-primary/5 ${
+        bulkEditMode ? "cursor-pointer focus-ring-inset" : ""
+      } ${bulkEditMode && isSelected ? "bg-primary/5" : ""}`}
       onClick={bulkEditMode ? () => onToggleSelection(e._id) : undefined}
-      style={bulkEditMode ? { cursor: "pointer" } : undefined}
+      tabIndex={bulkEditMode ? 0 : undefined}
+      onKeyDown={
+        bulkEditMode
+          ? (ev) => {
+              if (ev.key === "Enter" || ev.key === " ") {
+                ev.preventDefault();
+                onToggleSelection(e._id);
+              }
+            }
+          : undefined
+      }
     >
       {bulkEditMode && (
         <td className="px-4 py-3" onClick={(ev) => ev.stopPropagation()}>
