@@ -262,7 +262,7 @@ export function ApplyTemplateDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || dateIsSettled}>
+            <Button type="submit" disabled={loading || dateIsSettled} aria-busy={loading}>
               {loading
                 ? "Creating…"
                 : `Create ${template.items.length} Expense${template.items.length === 1 ? "" : "s"}`}

@@ -242,6 +242,7 @@ export function SetupWizard({ availableProviders }: SetupWizardProps) {
               <Button
                 onClick={handleSubmit}
                 disabled={submitting}
+                aria-busy={submitting}
                 className="gap-1.5"
               >
                 {submitting ? "Setting up..." : "Complete Setup"}

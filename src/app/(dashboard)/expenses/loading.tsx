@@ -1,9 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { TablePanelSkeleton } from "@/components/skeletons/page-skeletons";
+import { LiveRegion } from "@/components/a11y/live-region";
 
 export default function ExpensesLoading() {
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-8" aria-busy="true">
+      <LiveRegion>Loading expenses…</LiveRegion>
+
       {/* Header + import button */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">

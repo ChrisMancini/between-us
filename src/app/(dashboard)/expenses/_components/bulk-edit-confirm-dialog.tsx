@@ -152,6 +152,7 @@ export function BulkEditConfirmDialog({
                   })
                 }
                 disabled={loading}
+                aria-busy={loading}
               >
                 {loading ? "Applying…" : "Apply Changes"}
               </Button>

@@ -121,6 +121,7 @@ export function LoginForm({ persons, authMethod, oauthProvider, oauthProviderNam
               <Button
                 onClick={handleCredentialsLogin}
                 disabled={!selected || loading}
+                aria-busy={loading}
                 className="w-full h-11 font-medium"
               >
                 {loading ? "Signing in..." : "Continue"}
@@ -136,6 +137,7 @@ export function LoginForm({ persons, authMethod, oauthProvider, oauthProviderNam
                 <Button
                   onClick={handleOAuthLogin}
                   disabled={loading || !oauthProvider}
+                  aria-busy={loading}
                   className="w-full h-11 font-medium gap-2"
                 >
                   {oauthProvider && <ProviderIcon providerKey={oauthProvider} className="w-4 h-4" />}

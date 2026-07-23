@@ -248,7 +248,7 @@ export function AuthSettingsForm({
 
       {/* Save */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving || !hasChanges}>
+        <Button onClick={handleSave} disabled={saving || !hasChanges} aria-busy={saving}>
           {saving ? "Saving..." : "Save Changes"}
         </Button>
       </div>

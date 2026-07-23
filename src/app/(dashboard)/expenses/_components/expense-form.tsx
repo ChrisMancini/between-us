@@ -173,7 +173,12 @@ export function ExpenseForm({ tags: initialTags, paidBy, closedMonths, prefill }
         enableDateArrowKeys
       />
 
-      <Button type="submit" disabled={isSubmitting || saving || dateIsSettled} className="w-full">
+      <Button
+        type="submit"
+        disabled={isSubmitting || saving || dateIsSettled}
+        aria-busy={isSubmitting || saving}
+        className="w-full"
+      >
         {isSubmitting || saving ? "Saving…" : "Add Expense"}
       </Button>
 

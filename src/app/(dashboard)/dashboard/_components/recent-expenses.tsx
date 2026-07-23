@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { LiveRegion } from "@/components/a11y/live-region";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
@@ -36,7 +37,7 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
 
       {expenses.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="text-sm text-muted-foreground">No expenses yet.</p>
+          <LiveRegion visible className="text-sm text-muted-foreground">No expenses yet.</LiveRegion>
         </div>
       ) : (
         <table className="hidden sm:table w-full text-sm">

@@ -81,6 +81,7 @@ export function DeleteDialog({
             variant="destructive"
             onClick={handleDelete}
             disabled={loading}
+            aria-busy={loading}
           >
             {loading ? "Deleting…" : "Delete"}
           </Button>

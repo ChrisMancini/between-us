@@ -69,7 +69,7 @@ export function DuplicateWarningDialog({
           >
             Cancel
           </Button>
-          <Button onClick={onConfirm} disabled={loading}>
+          <Button onClick={onConfirm} disabled={loading} aria-busy={loading}>
             {loading ? "Saving…" : "Save Anyway"}
           </Button>
         </DialogFooter>

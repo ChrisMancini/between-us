@@ -3,10 +3,13 @@ import {
   SummaryCardSkeleton,
   TablePanelSkeleton,
 } from "@/components/skeletons/page-skeletons";
+import { LiveRegion } from "@/components/a11y/live-region";
 
 export default function ReportsLoading() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy="true">
+      <LiveRegion>Loading reports…</LiveRegion>
+
       <PageHeaderSkeleton withAction />
 
       <SummaryCardSkeleton />

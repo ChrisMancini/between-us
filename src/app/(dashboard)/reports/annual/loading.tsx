@@ -4,10 +4,13 @@ import {
   SummaryCardSkeleton,
   TablePanelSkeleton,
 } from "@/components/skeletons/page-skeletons";
+import { LiveRegion } from "@/components/a11y/live-region";
 
 export default function AnnualReportLoading() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy="true">
+      <LiveRegion>Loading annual report…</LiveRegion>
+
       {/* Back to Reports link */}
       <Skeleton className="h-4 w-32" />
 

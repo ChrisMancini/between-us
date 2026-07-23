@@ -222,7 +222,7 @@ export function QuickEntryForm({
       </div>
 
       <div className="flex gap-2 pt-1">
-        <Button type="submit" disabled={saving} className="flex-1">
+        <Button type="submit" disabled={saving} aria-busy={saving} className="flex-1">
           {saving ? "Saving…" : "Save"}
         </Button>
         <Button

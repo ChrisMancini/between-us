@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Upload, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { LiveRegion } from "@/components/a11y/live-region";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -135,9 +136,12 @@ export function PreviewTable({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Selected</p>
-              <p className="text-lg font-semibold tabular-nums text-green-700 dark:text-green-400">
+              <LiveRegion
+                visible
+                className="text-lg font-semibold tabular-nums text-green-700 dark:text-green-400"
+              >
                 {selectedCount} of {rows.length}
-              </p>
+              </LiveRegion>
             </div>
             <div>
               <p className="text-muted-foreground">Skipped</p>
@@ -377,9 +381,10 @@ export function PreviewTable({
         <Button
           onClick={handleImportClick}
           disabled={importing || selectedCount === 0}
+          aria-busy={importing}
           className="gap-2"
         >
-          <Upload className="h-4 w-4" />
+          <Upload className="h-4 w-4" aria-hidden="true" />
           {importing
             ? "Importing…"
             : `Import ${selectedCount} Expense${selectedCount !== 1 ? "s" : ""}`}

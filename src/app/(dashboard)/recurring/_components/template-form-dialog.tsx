@@ -369,7 +369,7 @@ export function TemplateFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
               {isSubmitting
                 ? "Saving…"
                 : isEdit

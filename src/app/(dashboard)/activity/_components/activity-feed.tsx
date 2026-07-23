@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { formatActivityDate } from "@/lib/utils";
+import { LiveRegion } from "@/components/a11y/live-region";
 import { PersonBadge } from "@/components/person-badge";
 import { ActivityLink } from "@/components/activity-link";
 import { ScrollSentinel } from "@/components/scroll-sentinel";
@@ -87,16 +88,16 @@ export function ActivityFeed({
       <div className="rounded-xl border border-primary/10 bg-card shadow-sm overflow-hidden">
         {items.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+            <LiveRegion visible className="text-sm text-muted-foreground">{emptyMessage}</LiveRegion>
           </div>
         ) : (
           <>
             <div className="border-b border-primary/10 bg-primary/5 px-4 py-2.5">
-              <p className="text-xs text-muted-foreground">
+              <LiveRegion visible className="text-xs text-muted-foreground">
                 {items.length === totalCount
                   ? `${totalCount} ${totalCount === 1 ? "activity" : "activities"}`
                   : `Showing 1–${items.length} of ${totalCount}`}
-              </p>
+              </LiveRegion>
             </div>
             <div className="divide-y divide-border">
               {items.map((item) => (
