@@ -5,10 +5,13 @@ import {
   SummaryCardSkeleton,
   TablePanelSkeleton,
 } from "@/components/skeletons/page-skeletons";
+import { LiveRegion } from "@/components/a11y/live-region";
 
 export default function DashboardLoading() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy="true">
+      <LiveRegion>Loading dashboard…</LiveRegion>
+
       <PageHeaderSkeleton />
 
       {/* Two-column grid — mirrors DashboardPage */}

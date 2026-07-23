@@ -62,9 +62,3 @@
 - [ ] Consistent try/catch error handling across all API routes (wrap database operations, return structured errors)
 - [ ] Client-side retry with exponential backoff for transient network failures on form submissions
 - [ ] Optimistic UI updates for common actions (mark action as paid, delete expense)
-
-## Accessibility
-
-- [ ] Audit and add ARIA roles to custom composite components (tag picker, filter bar, widget grid)
-- [ ] Visible focus ring styling pass — ensure all interactive elements have clear focus indicators
-- [ ] Screen reader announcements for toast notifications and async state changes

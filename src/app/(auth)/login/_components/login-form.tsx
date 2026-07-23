@@ -96,7 +96,7 @@ export function LoginForm({ persons, authMethod, oauthProvider, oauthProviderNam
                         type="button"
                         onClick={() => setSelected(p.key)}
                         className={cn(
-                          "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all cursor-pointer",
+                          "focus-ring flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all cursor-pointer",
                           isSelected
                             ? `${colors.border} ${colors.selectedBg} shadow-sm`
                             : "border-border hover:border-muted-foreground/30 hover:bg-muted/60"
@@ -121,6 +121,7 @@ export function LoginForm({ persons, authMethod, oauthProvider, oauthProviderNam
               <Button
                 onClick={handleCredentialsLogin}
                 disabled={!selected || loading}
+                aria-busy={loading}
                 className="w-full h-11 font-medium"
               >
                 {loading ? "Signing in..." : "Continue"}
@@ -136,6 +137,7 @@ export function LoginForm({ persons, authMethod, oauthProvider, oauthProviderNam
                 <Button
                   onClick={handleOAuthLogin}
                   disabled={loading || !oauthProvider}
+                  aria-busy={loading}
                   className="w-full h-11 font-medium gap-2"
                 >
                   {oauthProvider && <ProviderIcon providerKey={oauthProvider} className="w-4 h-4" />}

@@ -87,7 +87,7 @@ export function ReopenMonthDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleReopen} disabled={loading} variant="outline"
+          <Button onClick={handleReopen} disabled={loading} aria-busy={loading} variant="outline"
             className="border-primary/30 text-primary hover:bg-primary/5"
           >
             {loading ? "Reopening…" : "Reopen Month"}

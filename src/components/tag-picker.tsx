@@ -137,42 +137,51 @@ export function TagPicker({
     <div>
       {/* Popover trigger */}
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
+        <div
           className={cn(
-            "flex min-h-9 w-full items-center gap-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors",
-            "hover:bg-accent hover:text-accent-foreground",
-            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-            error && "border-destructive",
-            selectedTags.length === 0 && "text-muted-foreground"
+            "flex min-h-9 w-full flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors",
+            "focus-within:ring-3 focus-within:ring-ring/50",
+            error && "border-destructive"
           )}
         >
-          <Tags className="h-4 w-4 shrink-0" />
-          {selectedTags.length === 0 ? (
-            <span className="flex-1 text-left">Select tags...</span>
-          ) : (
-            <span className="flex flex-1 flex-wrap gap-1">
-              {selectedTags.map((tag) => (
-                <Badge
-                  key={tag._id}
-                  variant="secondary"
-                  className="gap-1 pr-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTag(tag._id);
-                  }}
-                >
-                  {tag.path}
-                  <X className="h-3 w-3" />
-                </Badge>
-              ))}
+          <Tags
+            className="h-4 w-4 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          {selectedTags.map((tag) => (
+            <Badge key={tag._id} variant="secondary" className="gap-1 pr-1">
+              {tag.path}
+              <button
+                type="button"
+                aria-label={`Remove ${tag.path}`}
+                onClick={() => removeTag(tag._id)}
+                className="focus-ring inline-flex items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            </Badge>
+          ))}
+          <PopoverTrigger
+            aria-label="Select tags"
+            className={cn(
+              "flex min-w-12 flex-1 items-center justify-between gap-1 rounded-sm text-left outline-none",
+              selectedTags.length === 0 && "text-muted-foreground"
+            )}
+          >
+            <span className="flex-1 truncate">
+              {selectedTags.length === 0 ? "Select tags..." : ""}
             </span>
-          )}
-          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-        </PopoverTrigger>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 opacity-50"
+              aria-hidden="true"
+            />
+          </PopoverTrigger>
+        </div>
         <PopoverContent className="w-[320px] p-0" align="start">
           <div className="p-2 border-b">
             <Input
               ref={inputRef}
+              aria-label="Search or create a tag"
               placeholder="Search or type a new tag..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}

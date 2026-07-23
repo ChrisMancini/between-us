@@ -147,12 +147,23 @@ function TagRow({
         onClick={onToggle}
       >
         <td className="pl-4 py-2.5 w-6">
-          <ChevronRight
-            className={cn(
-              "h-3.5 w-3.5 text-muted-foreground transition-transform",
-              isOpen && "rotate-90"
-            )}
-          />
+          <button
+            type="button"
+            onClick={(ev) => {
+              ev.stopPropagation();
+              onToggle();
+            }}
+            aria-expanded={isOpen}
+            aria-label={`${isOpen ? "Collapse" : "Expand"} details for ${tag.tagPath}`}
+            className="focus-ring inline-flex items-center justify-center rounded-sm text-muted-foreground"
+          >
+            <ChevronRight
+              className={cn(
+                "h-3.5 w-3.5 transition-transform",
+                isOpen && "rotate-90"
+              )}
+            />
+          </button>
         </td>
         <td className="px-4 py-2.5 font-medium">{tag.tagPath}</td>
         <td className={`px-4 py-2.5 text-right tabular-nums ${PERSON_COLORS[persons[0].colorIndex].accent}`}>

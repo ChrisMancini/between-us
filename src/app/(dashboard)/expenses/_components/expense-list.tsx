@@ -6,6 +6,7 @@ import type { SerializedTag } from "@/lib/models/tag";
 import type { SettlementExpenseRow } from "@/lib/settlement-calc";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollSentinel } from "@/components/scroll-sentinel";
+import { LiveRegion } from "@/components/a11y/live-region";
 import { usePersons } from "@/components/persons-context";
 import { BulkEditBar } from "./bulk-edit-bar";
 import { ExpenseRow } from "./expense-row";
@@ -80,11 +81,11 @@ export function ExpenseList({
   if (expenses.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-primary/20 bg-card py-16 text-center">
-        <p className="text-sm text-muted-foreground">
+        <LiveRegion visible className="text-sm text-muted-foreground">
           {isFiltered
             ? "No expenses match your filters."
             : "No expenses yet. Add your first one above."}
-        </p>
+        </LiveRegion>
       </div>
     );
   }

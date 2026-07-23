@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { ExpenseDetailContent } from "@/components/expense-detail-popover";
+import { LiveRegion } from "@/components/a11y/live-region";
 import { PersonBadge } from "@/components/person-badge";
 import { usePersons } from "@/components/persons-context";
 import { badgeProps } from "@/lib/person-utils";
@@ -105,11 +106,21 @@ export function ActivityLink({ children, activity }: ActivityLinkProps) {
   return <>{children}</>;
 }
 
-/** A centered status line (loading / error) for the fetch-backed popovers. */
+/**
+ * A centered status line (loading / error) for the fetch-backed popovers.
+ * Loading is announced politely (`role="status"`); an error interrupts with
+ * `role="alert"` so a screen reader user hears why the popover has no content.
+ */
 function PopoverMessage({ message, loading }: { message: string; loading?: boolean }) {
   return (
     <div className={`px-4 ${loading ? "py-8" : "py-4"} text-center`}>
-      <p className="text-sm text-muted-foreground">{message}</p>
+      <LiveRegion
+        visible
+        politeness={loading ? "polite" : "assertive"}
+        className="text-sm text-muted-foreground"
+      >
+        {message}
+      </LiveRegion>
     </div>
   );
 }
@@ -155,7 +166,7 @@ function PositionedActivityPopover({
     <div className="relative">
       <button
         onClick={handleClick}
-        className="w-full text-left hover:bg-muted/60 transition-colors cursor-pointer"
+        className="focus-ring-inset w-full text-left hover:bg-muted/60 transition-colors cursor-pointer"
       >
         {children}
       </button>

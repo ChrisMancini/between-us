@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, ChevronDown } from "lucide-react";
@@ -41,10 +41,15 @@ export function DashboardWidget({
     transition,
   };
 
+  const headingId = useId();
+  const contentId = useId();
+
   return (
     <div
       ref={setNodeRef}
       style={style}
+      role="group"
+      aria-labelledby={headingId}
       className={`rounded-xl border border-primary/10 bg-card shadow-sm overflow-hidden ${
         isDragging ? "opacity-50" : ""
       }`}
@@ -52,14 +57,18 @@ export function DashboardWidget({
       <div className="flex items-center border-b border-primary/10 bg-primary/5 px-5 py-3">
         <button
           type="button"
-          className="hidden lg:flex -ml-1 mr-2 cursor-grab touch-none items-center text-muted-foreground hover:text-foreground"
+          className="focus-ring hidden lg:flex -ml-1 mr-2 cursor-grab touch-none items-center rounded-md text-muted-foreground hover:text-foreground"
           {...attributes}
           {...listeners}
+          aria-label={`Reorder ${title}`}
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-primary/70">
+        <h2
+          id={headingId}
+          className="flex-1 text-xs font-semibold uppercase tracking-wide text-primary/70"
+        >
           {title}
           {collapsed && badge != null && badge > 0 && (
             <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground align-text-top">
@@ -74,23 +83,28 @@ export function DashboardWidget({
               )}
             />
           )}
-        </p>
+        </h2>
 
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="ml-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="focus-ring ml-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
           aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+          aria-expanded={!collapsed}
+          aria-controls={contentId}
         >
           <ChevronDown
             className={`h-4 w-4 transition-transform ${
               collapsed ? "-rotate-90" : ""
             }`}
+            aria-hidden="true"
           />
         </button>
       </div>
 
       <div
+        id={contentId}
+        inert={collapsed || undefined}
         className="grid transition-[grid-template-rows] duration-200 ease-in-out"
         style={{ gridTemplateRows: collapsed ? "0fr" : "1fr" }}
       >

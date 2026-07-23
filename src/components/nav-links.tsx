@@ -21,7 +21,7 @@ export function NavLinks({ isAdmin }: { isAdmin: boolean }) {
             key={item.href}
             href={item.href}
             className={cn(
-              "relative px-3.5 py-1 text-sm font-medium transition-colors rounded-md",
+              "focus-ring relative px-3.5 py-1 text-sm font-medium transition-colors rounded-md",
               isActive
                 ? "text-primary"
                 : "text-muted-foreground hover:text-foreground"

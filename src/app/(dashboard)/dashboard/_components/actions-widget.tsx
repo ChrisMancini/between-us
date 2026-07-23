@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LiveRegion } from "@/components/a11y/live-region";
 import { CircleDollarSign, AlertTriangle, AlertOctagon, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePersons } from "@/components/persons-context";
@@ -66,7 +67,7 @@ export function ActionsWidget({
   if (isEmpty) {
     return (
       <div className="py-8 text-center">
-        <p className="text-sm text-muted-foreground">Nothing to do right now.</p>
+        <LiveRegion visible className="text-sm text-muted-foreground">Nothing to do right now.</LiveRegion>
       </div>
     );
   }
@@ -180,10 +181,11 @@ function PaymentActionItem({
             size="sm"
             variant="outline"
             disabled={isLoading}
+            aria-busy={isLoading}
             onClick={() => onAction(action._id, "pay")}
           >
             {isLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" aria-hidden="true" />
             ) : null}
             Mark Paid
           </Button>
@@ -192,10 +194,11 @@ function PaymentActionItem({
           <Button
             size="sm"
             disabled={isLoading}
+            aria-busy={isLoading}
             onClick={() => onAction(action._id, "confirm")}
           >
             {isLoading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" aria-hidden="true" />
             ) : null}
             Confirm Receipt
           </Button>

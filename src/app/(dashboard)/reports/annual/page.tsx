@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { LiveRegion } from "@/components/a11y/live-region";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/db";
 import { Expense } from "@/lib/models/expense";
@@ -155,9 +156,9 @@ export default async function AnnualReportPage({ searchParams }: PageProps) {
 
       {!hasExpenses ? (
         <div className="rounded-xl border border-dashed border-primary/20 bg-card py-12 text-center">
-          <p className="text-sm text-muted-foreground">
+          <LiveRegion visible className="text-sm text-muted-foreground">
             No expenses for {year}.
-          </p>
+          </LiveRegion>
         </div>
       ) : (
         <>

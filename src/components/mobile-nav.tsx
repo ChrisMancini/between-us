@@ -56,7 +56,7 @@ export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
                   className={cn(
                     // 44px min touch target; active state uses weight + a left
                     // accent bar (shape), never colour alone (color-blind support).
-                    "flex min-h-11 items-center gap-2 rounded-md border-l-2 px-3 text-sm transition-colors",
+                    "focus-ring flex min-h-11 items-center gap-2 rounded-md border-l-2 px-3 text-sm transition-colors",
                     isActive
                       ? "border-primary bg-accent font-semibold text-foreground"
                       : "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"

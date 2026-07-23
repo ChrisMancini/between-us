@@ -92,6 +92,7 @@ export function BulkDeleteConfirmDialog({
                   })
                 }
                 disabled={loading || eligible.length === 0}
+                aria-busy={loading}
               >
                 {loading ? "Deleting…" : "Delete"}
               </Button>

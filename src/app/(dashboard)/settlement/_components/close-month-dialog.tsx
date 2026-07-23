@@ -208,7 +208,7 @@ export function CloseMonthDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleClose} disabled={loading}>
+          <Button onClick={handleClose} disabled={loading} aria-busy={loading}>
             {loading ? "Closing…" : isReclose ? "Confirm & Re-close" : "Confirm & Close"}
           </Button>
         </DialogFooter>

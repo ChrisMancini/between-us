@@ -46,11 +46,11 @@ export function RunSchedulerButton() {
 
   return (
     <div className="space-y-3">
-      <Button onClick={handleRun} disabled={running}>
+      <Button onClick={handleRun} disabled={running} aria-busy={running}>
         {running ? (
-          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
         ) : (
-          <Play className="mr-2 h-3.5 w-3.5" />
+          <Play className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
         )}
         {running ? "Running…" : "Run scheduler now"}
       </Button>

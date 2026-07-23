@@ -128,7 +128,7 @@ export function EditExpenseDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || dateIsSettled}>
+            <Button type="submit" disabled={isSubmitting || dateIsSettled} aria-busy={isSubmitting}>
               {isSubmitting ? "Saving…" : "Save Changes"}
             </Button>
           </DialogFooter>

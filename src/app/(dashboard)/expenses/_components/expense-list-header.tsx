@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { LiveRegion } from "@/components/a11y/live-region";
 
 interface ExpenseListHeaderProps {
   bulkEditMode: boolean;
@@ -42,11 +43,11 @@ export function ExpenseListHeader({
             Expenses
           </p>
           <div className="flex items-center gap-2">
-            <p className="text-xs text-muted-foreground">
+            <LiveRegion visible className="text-xs text-muted-foreground">
               {itemCount === totalCount
                 ? `${totalCount} ${totalCount === 1 ? "expense" : "expenses"}`
                 : `Showing 1–${itemCount} of ${totalCount}`}
-            </p>
+            </LiveRegion>
             <Button
               variant="outline"
               size="sm"
